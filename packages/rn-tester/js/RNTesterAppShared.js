@@ -41,6 +41,7 @@ import {
   useColorScheme,
   useWindowDimensions,
 } from 'react-native';
+import ArrayBufferExample from './examples/ArrayBuffer/ArrayBufferExample.js';
 
 // In Bridgeless mode, in dev, enable static view config validator
 if (global.RN$Bridgeless === true && __DEV__) {
@@ -66,6 +67,8 @@ const RNTesterApp = ({
   },
   customBackButton?: BackButton,
 }): React.Node => {
+  return <ArrayBufferExample />;
+
   const [state, dispatch] = useReducer(
     RNTesterNavigationReducer,
     initialNavigationState,
@@ -284,7 +287,7 @@ const RNTesterApp = ({
       ) : null}
       {!shouldHideChrome && (
         <RNTTitleBar
-          title={title}
+          title="XD"
           theme={theme}
           documentationURL={activeModule?.documentationURL}>
           {activeModule && BackButtonComponent ? (

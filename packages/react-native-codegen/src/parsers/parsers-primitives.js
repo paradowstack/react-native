@@ -11,6 +11,7 @@
 'use strict';
 
 import type {
+  ArrayBufferTypeAnnotation,
   BooleanTypeAnnotation,
   DoubleTypeAnnotation,
   EventTypeAnnotation,
@@ -133,6 +134,14 @@ function emitVoid(nullable: boolean): Nullable<VoidTypeAnnotation> {
 function emitStringish(nullable: boolean): Nullable<StringTypeAnnotation> {
   return wrapNullable(nullable, {
     type: 'StringTypeAnnotation',
+  });
+}
+
+function emitArrayBuffer(
+  nullable: boolean,
+): Nullable<ArrayBufferTypeAnnotation> {
+  return wrapNullable(nullable, {
+    type: 'ArrayBufferTypeAnnotation',
   });
 }
 
@@ -639,6 +648,8 @@ function emitPartial(
   return emitObject(nullable, partialProperties);
 }
 
+let map = {};
+
 function emitCommonTypes(
   hasteModuleName: string,
   types: TypeDeclarationMap,
@@ -664,12 +675,12 @@ function emitCommonTypes(
     VoidTypeAnnotation: emitVoid,
     StringTypeAnnotation: emitString,
     MixedTypeAnnotation: cxxOnly ? emitMixed : emitGenericObject,
+    ArrayBuffer: emitArrayBuffer,
   };
 
   const typeAnnotationName = parser.convertKeywordToTypeAnnotation(
     typeAnnotation.type,
   );
-
   // $FlowFixMe[invalid-computed-prop]
   const simpleEmitter = typeMap[typeAnnotationName];
   if (simpleEmitter) {
@@ -678,6 +689,11 @@ function emitCommonTypes(
 
   const genericTypeAnnotationName =
     parser.getTypeAnnotationName(typeAnnotation);
+
+  if (!map[genericTypeAnnotationName]) {
+    map[genericTypeAnnotationName] = [];
+    console.log(typeAnnotation.type, genericTypeAnnotationName);
+  }
 
   // $FlowFixMe[invalid-computed-prop]
   const emitter = typeMap[genericTypeAnnotationName];

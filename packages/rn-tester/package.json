@@ -44,6 +44,9 @@
       "javaPackageName": "com.facebook.fbreact.specs"
     },
     "ios": {
+      "modulesProvider": {
+        "BuffersManager": "RCTNativeBuffersManager"
+      },
       "modules": {
         "SampleTurboModule": {
           "unstableRequiresMainQueueSetup": true

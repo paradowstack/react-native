@@ -589,6 +589,26 @@ Array Object::asArray(Runtime& runtime) && {
   return std::move(*this).getArray(runtime);
 }
 
+ArrayBuffer Object::asArrayBuffer(Runtime& runtime) const& {
+  if (!isArrayBuffer(runtime)) {
+    throw JSError(
+        runtime,
+        "Object is " + kindToString(Value(runtime, *this), &runtime) +
+            ", expected an array buffer");
+  }
+  return getArrayBuffer(runtime);
+}
+
+ArrayBuffer Object::asArrayBuffer(Runtime& runtime) && {
+  if (!isArrayBuffer(runtime)) {
+    throw JSError(
+        runtime,
+        "Object is " + kindToString(Value(runtime, *this), &runtime) +
+            ", expected an array buffer");
+  }
+  return std::move(*this).getArrayBuffer(runtime);
+}
+
 Function Object::asFunction(Runtime& runtime) const& {
   if (!isFunction(runtime)) {
     throw JSError(

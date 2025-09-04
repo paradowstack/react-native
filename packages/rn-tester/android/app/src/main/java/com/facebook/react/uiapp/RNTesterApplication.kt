@@ -12,6 +12,7 @@ package com.facebook.react.uiapp
 import android.app.Application
 import com.facebook.fbreact.specs.SampleLegacyModule
 import com.facebook.fbreact.specs.SampleTurboModule
+import com.facebook.react.uiapp.test.NativeBuffersManager
 import com.facebook.react.BaseReactPackage
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -45,6 +46,7 @@ internal class RNTesterApplication : Application(), ReactApplication {
                         when (name) {
                           SampleTurboModule.NAME -> SampleTurboModule(reactContext)
                           SampleLegacyModule.NAME -> SampleLegacyModule(reactContext)
+                          NativeBuffersManager.NAME -> NativeBuffersManager(reactContext)
                           else -> null
                         }
 
@@ -71,6 +73,15 @@ internal class RNTesterApplication : Application(), ReactApplication {
                                       needsEagerInit = false,
                                       isCxxModule = false,
                                       isTurboModule = false,
+                                  ),
+                            NativeBuffersManager.NAME to
+                                  ReactModuleInfo(
+                                      NativeBuffersManager.NAME,
+                                      "NativeBuffersManager",
+                                      canOverrideExistingModule = false,
+                                      needsEagerInit = false,
+                                      isCxxModule = false,
+                                      isTurboModule = true,
                                   ),
                           )
                         }

@@ -43,6 +43,8 @@ function getCppTypeForAnnotation(
       return 'Float';
     case 'MixedTypeAnnotation':
       return 'folly::dynamic';
+    case 'ArrayBufferTypeAnnotation':
+      return 'jsi::ArrayBuffer';
     default:
       (type: empty);
       throw new Error(`Received invalid typeAnnotation ${type}`);

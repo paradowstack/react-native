@@ -66,6 +66,8 @@ struct ConverterBase {
         return std::move(value).getObject(rt_).getArray(rt_);
       } else if constexpr (std::is_same_v<BaseT, jsi::Function>) {
         return std::move(value).getObject(rt_).getFunction(rt_);
+      } else if constexpr (std::is_same_v<BaseT, jsi::ArrayBuffer>) {
+        return std::move(value).getObject(rt_).getArrayBuffer(rt_);
       }
     } else {
       return std::move(value_);
@@ -117,6 +119,9 @@ struct Converter<jsi::Value> : public ConverterBase<jsi::Value> {
   operator jsi::Function() && {
     return std::move(value_).asObject(rt_).asFunction(rt_);
   }
+  operator jsi::ArrayBuffer() && {
+    return std::move(value_).asObject(rt_).asArrayBuffer(rt_);
+  }
 };
 
 template <>
@@ -129,6 +134,10 @@ struct Converter<jsi::Object> : public ConverterBase<jsi::Object> {
 
   operator jsi::Function() && {
     return std::move(value_).asFunction(rt_);
+  }
+
+  operator jsi::ArrayBuffer() && {
+    return std::move(value_).asArrayBuffer(rt_);
   }
 };
 
