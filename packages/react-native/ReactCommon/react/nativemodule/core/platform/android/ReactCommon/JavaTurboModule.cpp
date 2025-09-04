@@ -328,6 +328,20 @@ JNIArgs convertJSIArgsToJNIArgs(
     const jsi::Value* arg = &args[argIndex];
     jvalue* jarg = &jargs[argIndex];
 
+    if (type == "Ljava/nio/ByteBuffer;") {
+      if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
+        throw JavaTurboModuleArgumentConversionException(
+            "ArrayBuffer", argIndex, methodName, arg, &rt);
+      }
+      const auto arrayBuffer = arg->asObject(rt).asArrayBuffer(rt);
+      const auto len = arrayBuffer.size(rt);
+      const auto data = arrayBuffer.data(rt);
+      const auto directBuffer = env->NewDirectByteBuffer(
+          static_cast<void*>(data), static_cast<jlong>(len));
+      jarg->l = makeGlobalIfNecessary(directBuffer);
+      continue;
+    }
+
     if (type == "D") {
       if (!arg->isNumber()) {
         throw JavaTurboModuleArgumentConversionException(
@@ -962,6 +976,49 @@ jsi::Value JavaTurboModule::invokeJavaMethod(
           });
       TMPL::asyncMethodCallEnd(moduleName, methodName);
       return jsPromise;
+    }
+    case ArrayBufferKind: {
+      auto returnObject =
+          (jobject)env->CallObjectMethodA(instance, methodID, jargs.data());
+      checkJNIErrorForMethodCall();
+
+      TMPL::syncMethodCallExecutionEnd(moduleName, methodName);
+      TMPL::syncMethodCallReturnConversionStart(moduleName, methodName);
+
+      auto returnValue = jsi::Value::null();
+      if (returnObject != nullptr) {
+        auto jResult = jni::adopt_local(returnObject);
+        auto byteBuffer = jResult.get();
+
+        struct ByteArrayMutableBuffer : jsi::MutableBuffer {
+         public:
+          ByteArrayMutableBuffer(uint8_t* data, size_t size)
+              : _data{data}, _size{size} {}
+
+          uint8_t* data() override {
+            return _data;
+          }
+          size_t size() const override {
+            return _size;
+          }
+
+         private:
+          uint8_t* _data{};
+          size_t _size{};
+        };
+
+        auto size = env->GetDirectBufferCapacity(byteBuffer);
+        auto data = (uint8_t*)env->GetDirectBufferAddress(byteBuffer);
+        auto mutableBuffer =
+            std::make_shared<ByteArrayMutableBuffer>(data, size);
+        auto arrayBuffer = jsi::ArrayBuffer{runtime, mutableBuffer};
+        auto obj = jsi::Value{runtime, arrayBuffer};
+        returnValue = std::move(obj);
+      }
+
+      TMPL::syncMethodCallReturnConversionEnd(moduleName, methodName);
+      TMPL::syncMethodCallEnd(moduleName, methodName);
+      return returnValue;
     }
     default:
       throw std::runtime_error(

@@ -64,6 +64,10 @@ export interface FunctionTypeAnnotation<P, R> {
   readonly returnTypeAnnotation: R;
 }
 
+export interface ArrayBufferTypeAnnotation {
+  readonly type: 'ArrayBufferTypeAnnotation';
+}
+
 export interface NamedShape<T> {
   readonly name: string;
   readonly optional: boolean;

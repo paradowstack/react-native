@@ -57,7 +57,7 @@ bool NativeCxxModuleExample::getBool(jsi::Runtime& /*rt*/, bool arg) {
 }
 
 ConstantsStruct NativeCxxModuleExample::getConstants(jsi::Runtime& /*rt*/) {
-  return ConstantsStruct{true, 69, "react-native"};
+  return ConstantsStruct{true, 691, "react-native"};
 }
 
 CustomEnumInt NativeCxxModuleExample::getCustomEnum(
@@ -73,6 +73,12 @@ std::shared_ptr<CustomHostObject> NativeCxxModuleExample::getCustomHostObject(
 }
 
 std::string NativeCxxModuleExample::consumeCustomHostObject(
+    jsi::Runtime& /*rt*/,
+    std::shared_ptr<CustomHostObject> arg) {
+  auto value = arg->getValue();
+  return value->a_ + std::to_string(value->b_);
+}
+std::string NativeCxxModuleExample::vomitCustomHostObject(
     jsi::Runtime& /*rt*/,
     std::shared_ptr<CustomHostObject> arg) {
   auto value = arg->getValue();
@@ -158,8 +164,8 @@ ValueStruct NativeCxxModuleExample::getValue(
     jsi::Runtime& /*rt*/,
     double x,
     std::string y,
-    ObjectStruct z) {
-  ValueStruct result{x, std::move(y), std::move(z)};
+    ObjectStruct z, jsi::ArrayBuffer a) {
+  ValueStruct result{x, std::move(y), std::move(z), std::move(a)};
   return result;
 }
 
@@ -186,10 +192,11 @@ void NativeCxxModuleExample::voidFunc(jsi::Runtime& /*rt*/) {
   emitOnPress();
   emitOnClick<std::string>("value from callback on click!");
   emitOnChange(ObjectStruct{1, "two", std::nullopt});
-  emitOnSubmit(std::vector{
-      ObjectStruct{1, "two", std::nullopt},
-      ObjectStruct{3, "four", std::nullopt},
-      ObjectStruct{5, "six", std::nullopt}});
+  emitOnSubmit(
+      std::vector{
+          ObjectStruct{1, "two", std::nullopt},
+          ObjectStruct{3, "four", std::nullopt},
+          ObjectStruct{5, "six", std::nullopt}});
   emitOnEvent(NativeCxxModuleExampleEnumNone::NA);
 }
 
@@ -217,13 +224,14 @@ void NativeCxxModuleExample::emitCustomDeviceEvent(
       eventName,
       [jsInvoker = jsInvoker_](
           jsi::Runtime& rt, std::vector<jsi::Value>& args) {
-        args.emplace_back(jsi::Array::createWithElements(
-            rt,
-            jsi::Value(true),
-            jsi::Value(42),
-            jsi::String::createFromAscii(rt, "stringArg"),
-            bridging::toJs(
-                rt, CustomDeviceEvent{"one", 2, std::nullopt}, jsInvoker)));
+        args.emplace_back(
+            jsi::Array::createWithElements(
+                rt,
+                jsi::Value(true),
+                jsi::Value(42),
+                jsi::String::createFromAscii(rt, "stringArg"),
+                bridging::toJs(
+                    rt, CustomDeviceEvent{"one", 2, std::nullopt}, jsInvoker)));
       });
 }
 

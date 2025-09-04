@@ -47,6 +47,7 @@ export type ValueStruct = {
   x: number,
   y: string,
   z: ObjectStruct,
+  buffer: ArrayBuffer,
 };
 
 export type CustomHostObject = {};
@@ -77,16 +78,22 @@ export type CustomDeviceEvent = {
 
 export interface Spec extends TurboModule {
   +onPress: CodegenTypes.EventEmitter<void>;
+  +onVeryVeryLongPress: CodegenTypes.EventEmitter<void>;
   +onClick: CodegenTypes.EventEmitter<string>;
   +onChange: CodegenTypes.EventEmitter<ObjectStruct>;
   +onSubmit: CodegenTypes.EventEmitter<ObjectStruct[]>;
   +onEvent: CodegenTypes.EventEmitter<EnumNone>;
+  +onData: CodegenTypes.EventEmitter<ArrayBuffer>;
+  getBuffer(): ArrayBuffer;
+  returningBuffer: () => Promise<ArrayBuffer>;
+  takingBuffer: (buffer: ArrayBuffer) => void;
   +getArray: (arg: Array<ObjectStruct | null>) => Array<ObjectStruct | null>;
   +getBool: (arg: boolean) => boolean;
   +getConstants: () => ConstantsStruct;
   +getCustomEnum: (arg: EnumInt) => EnumInt;
   +getCustomHostObject: () => CustomHostObject;
   +consumeCustomHostObject: (customHostObject: CustomHostObject) => string;
+  +vomitCustomHostObject: (customHostObject: CustomHostObject) => string;
   +getBinaryTreeNode: (arg: BinaryTreeNode) => BinaryTreeNode;
   +getGraphNode: (arg: GraphNode) => GraphNode;
   +getNumEnum: (arg: EnumInt) => EnumInt;
@@ -97,7 +104,12 @@ export interface Spec extends TurboModule {
   +getSet: (arg: Array<number>) => Array<number>;
   +getString: (arg: string) => string;
   +getUnion: (x: UnionFloat, y: UnionString, z: UnionObject) => string;
-  +getValue: (x: number, y: string, z: ObjectStruct) => ValueStruct;
+  +getValue: (
+    x: number,
+    y: string,
+    z: ObjectStruct,
+    a: ArrayBuffer,
+  ) => ValueStruct;
   +getValueWithCallback: (callback: (value: string) => void) => void;
   +setValueCallbackWithSubscription: (
     callback: (value: string) => void,

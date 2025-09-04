@@ -68,6 +68,10 @@ export type ObjectTypeAnnotation<+T> = $ReadOnly<{
   baseTypes?: $ReadOnlyArray<string>,
 }>;
 
+export type ArrayBufferTypeAnnotation = $ReadOnly<{
+  type: 'ArrayBufferTypeAnnotation',
+}>;
+
 export type MixedTypeAnnotation = $ReadOnly<{
   type: 'MixedTypeAnnotation',
 }>;

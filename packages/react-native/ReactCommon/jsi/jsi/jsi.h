@@ -1077,6 +1077,16 @@ class JSI_EXPORT Object : public Pointer {
   /// object.  If \c isArrayBuffer() would return false, this will assert.
   ArrayBuffer getArrayBuffer(Runtime& runtime) &&;
 
+  /// \return an ArrayBuffer instance which refers to the same underlying
+  /// object.  If \c isArrayBuffer() would return false, this will throw
+  /// JSIException.
+  ArrayBuffer asArrayBuffer(Runtime& runtime) const&;
+
+  /// \return an ArrayBuffer instance which refers to the same underlying
+  /// object.  If \c isArrayBuffer() would return false, this will throw
+  /// JSIException.
+  ArrayBuffer asArrayBuffer(Runtime& runtime) &&;
+
   /// \return a Function instance which refers to the same underlying
   /// object.  If \c isFunction() would return false, this will assert.
   Function getFunction(Runtime& runtime) const&;
@@ -1660,6 +1670,7 @@ class JSI_EXPORT Value {
     StringKind,
     ObjectKind,
     PointerKind = SymbolKind,
+    ArrayBufferKind,
   };
 
   union Data {

@@ -62,6 +62,8 @@ export interface Spec extends TurboModule {
 
   // Android-only
   +getImageUrl?: () => Promise<string | null>;
+
+  getBuffer(): ArrayBuffer;
 }
 
 export default (TurboModuleRegistry.getEnforcing<Spec>(
