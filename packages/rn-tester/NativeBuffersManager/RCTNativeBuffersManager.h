@@ -11,7 +11,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RCTNativeBuffersManager : NSObject <NativeBuffersManagerSpec>
+@interface RCTNativeBuffersManager : NativeBuffersManagerSpecBase <NativeBuffersManagerSpec>
 
 @end
 

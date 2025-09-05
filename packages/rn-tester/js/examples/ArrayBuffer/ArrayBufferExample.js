@@ -8,8 +8,6 @@
  * @format
  */
 
-import manager from '../../../NativeBuffersManager/NativeBuffersManager';
-import React, {useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -18,8 +16,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import manager from '../../../NativeBuffersManager/NativeBuffersManager';
 
-const SIZE = 8;
+const SIZE = 1;
 
 const ArrayBufferExample = () => {
   const [buffer, setBuffer] = useState(null);
@@ -30,6 +30,24 @@ const ArrayBufferExample = () => {
   const [arrayBufferTime, setArrayBufferTime] = useState(null);
   const [generateTime, setGenerateTime] = useState(null);
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const eventSubscriptions = [];
+    eventSubscriptions
+      .push
+      // manager.onMyString(value => console.log(`onMyString ${value}`)),
+      ();
+    eventSubscriptions.push(
+      manager.onMyBuffer(value => {
+        const view = new Uint8Array(value);
+        // console.log(`onMyBuffer ${view}`);
+      }),
+    );
+    // Optionally, clean up subscriptions on unmount
+    return () => {
+      eventSubscriptions.forEach(sub => sub.remove && sub.remove());
+    };
+  }, []);
 
   const generateBuffer = () => {
     setGenerateTime(null);
@@ -72,6 +90,7 @@ const ArrayBufferExample = () => {
           ),
         );
         manager.processBase64(base64);
+        manager.processUnion({text: base64});
         const end = performance.now();
         setBase64Time((end - start).toFixed(2));
         setLoadingBase64(false);
@@ -86,6 +105,8 @@ const ArrayBufferExample = () => {
       setTimeout(() => {
         const start = performance.now();
         manager.processBuffer(buffer);
+        manager.processUnion({buffer: buffer});
+        manager.processArrayBufferStruct({buffer: buffer});
         const end = performance.now();
         setArrayBufferTime((end - start).toFixed(2));
         setLoadingArrayBuffer(false);
