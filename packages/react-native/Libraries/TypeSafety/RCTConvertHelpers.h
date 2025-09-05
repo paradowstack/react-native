@@ -62,6 +62,8 @@ NSString *RCTBridgingToOptionalString(id value);
 std::optional<double> RCTBridgingToOptionalDouble(id value);
 double RCTBridgingToDouble(id value);
 NSArray *RCTBridgingToArray(id value);
+NSData *RCTBridgingToOptionalData(id value);
+NSData *RCTBridgingToData(id value);
 
 template <typename T>
 facebook::react::LazyVector<T> RCTBridgingToVec(id value, T (^ctor)(id element))

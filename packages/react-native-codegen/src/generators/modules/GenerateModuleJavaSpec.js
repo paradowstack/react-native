@@ -151,6 +151,8 @@ function translateEventEmitterTypeToJavaType(
     case 'ArrayTypeAnnotation':
       imports.add('com.facebook.react.bridge.ReadableArray');
       return 'ReadableArray';
+    case 'ArrayBufferTypeAnnotation':
+      return 'java.nio.ByteBuffer';
     case 'DoubleTypeAnnotation':
     case 'FloatTypeAnnotation':
     case 'Int32TypeAnnotation':

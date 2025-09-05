@@ -135,6 +135,8 @@ function toObjCType(
         )}>`,
         isRequired,
       );
+    case 'ArrayBufferTypeAnnotation':
+      return wrapObjCOptional('id<NSData>', isRequired);
     case 'TypeAliasTypeAnnotation':
       const structName = capitalize(typeAnnotation.name);
       const namespacedStructName = getNamespacedStructName(
@@ -232,6 +234,8 @@ function toObjCValue(
       return RCTConvertVecToArray(
         `^id(${elementObjCType} ${localVarName}) { return ${elementObjCValue}; }`,
       );
+    case 'ArrayBufferTypeAnnotation':
+      return wrapPrimitive('NSData');
     case 'TypeAliasTypeAnnotation':
       return !isRequired
         ? `${value}.has_value() ? ${value}.value().buildUnsafeRawValue() : nil`

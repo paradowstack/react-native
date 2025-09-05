@@ -35,6 +35,8 @@ function getEventEmitterTypeObjCType(
       return 'NSDictionary *';
     case 'ArrayTypeAnnotation':
       return 'NSArray<id<NSObject>> *';
+    case 'ArrayBufferTypeAnnotation':
+      return 'NSMutableData *';
     case 'DoubleTypeAnnotation':
     case 'FloatTypeAnnotation':
     case 'Int32TypeAnnotation':
