@@ -126,7 +126,7 @@ function toObjCType(
         isRequired,
       );
     case 'ArrayBufferTypeAnnotation':
-      return wrapObjCOptional('NSData *', isRequired);
+      return wrapObjCOptional('NSMutableData *', isRequired);
     case 'TypeAliasTypeAnnotation':
       const structName = capitalize(typeAnnotation.name);
       const namespacedStructName = getNamespacedStructName(
@@ -220,7 +220,7 @@ function toObjCValue(
         `^${elementObjCType}(id ${localVarName}) { return ${elementObjCValue}; }`,
       );
     case 'ArrayBufferTypeAnnotation':
-      return RCTBridgingTo('Data');
+      return value;
     case 'TypeAliasTypeAnnotation':
       const structName = capitalize(typeAnnotation.name);
       const namespacedStructName = getNamespacedStructName(

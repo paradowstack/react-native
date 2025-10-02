@@ -61,6 +61,7 @@ RCT_JSON_CONVERTER(NSNumber)
 
 RCT_CUSTOM_CONVERTER(NSSet *, NSSet, [NSSet setWithArray:json])
 RCT_CUSTOM_CONVERTER(NSData *, NSData, [json dataUsingEncoding:NSUTF8StringEncoding])
+//RCT_CUSTOM_CONVERTER(NSMutableData *, NSMutableData, [[json dataUsingEncoding:NSUTF8StringEncoding] mutableCopy])
 
 + (NSIndexSet *)NSIndexSet:(id)json
 {

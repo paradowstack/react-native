@@ -136,7 +136,7 @@ function toObjCType(
         isRequired,
       );
     case 'ArrayBufferTypeAnnotation':
-      return wrapObjCOptional('id<NSData>', isRequired);
+      return wrapObjCOptional('NSMutableData *', isRequired);
     case 'TypeAliasTypeAnnotation':
       const structName = capitalize(typeAnnotation.name);
       const namespacedStructName = getNamespacedStructName(
@@ -235,7 +235,7 @@ function toObjCValue(
         `^id(${elementObjCType} ${localVarName}) { return ${elementObjCValue}; }`,
       );
     case 'ArrayBufferTypeAnnotation':
-      return wrapPrimitive('NSData');
+      return value;
     case 'TypeAliasTypeAnnotation':
       return !isRequired
         ? `${value}.has_value() ? ${value}.value().buildUnsafeRawValue() : nil`

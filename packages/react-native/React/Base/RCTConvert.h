@@ -54,6 +54,7 @@ RCT_EXTERN void RCTSetDefaultColorSpace(RCTColorSpace colorSpace);
 
 + (NSSet *)NSSet:(id)json;
 + (NSData *)NSData:(id)json;
+//+ (NSMutableData *)NSMutableData:(id)json;
 + (NSIndexSet *)NSIndexSet:(id)json;
 
 + (NSURLRequestCachePolicy)NSURLRequestCachePolicy:(id)json;

@@ -50,10 +50,10 @@ NSArray *RCTBridgingToArray(id value)
   return [RCTConvert NSArray:value];
 }
 
-NSData * RCTBridgingToData(id value) {
-	return [RCTConvert NSData:RCTNilIfNull(value)];
+NSMutableData * RCTBridgingToMutableData(id value) {
+	return value;
 }
 
-NSData * RCTBridgingToOptionalData(id value) {
-	return RCTBridgingToData(value);
+NSMutableData * RCTBridgingToOptionalMutableData(id value) {
+	return RCTBridgingToMutableData(value);
 }

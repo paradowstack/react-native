@@ -8,6 +8,8 @@
  * @format
  */
 
+import manager from '../../../NativeBuffersManager/NativeBuffersManager';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -16,8 +18,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useEffect, useRef, useState} from 'react';
-import manager from '../../../NativeBuffersManager/NativeBuffersManager';
 
 const SIZE = 1;
 
@@ -91,6 +91,8 @@ const ArrayBufferExample = () => {
         );
         manager.processBase64(base64);
         manager.processUnion({text: base64});
+        manager.processStringStruct({text: base64});
+        console.log(`Constants string: ${manager.getConstants().text}`);
         const end = performance.now();
         setBase64Time((end - start).toFixed(2));
         setLoadingBase64(false);
@@ -107,6 +109,10 @@ const ArrayBufferExample = () => {
         manager.processBuffer(buffer);
         manager.processUnion({buffer: buffer});
         manager.processArrayBufferStruct({buffer: buffer});
+        console.log(
+          `Constants buffer: ${new Uint8Array(manager.getConstants().buffer)}`,
+        );
+        manager.processArrayOfBuffers([buffer]);
         const end = performance.now();
         setArrayBufferTime((end - start).toFixed(2));
         setLoadingArrayBuffer(false);

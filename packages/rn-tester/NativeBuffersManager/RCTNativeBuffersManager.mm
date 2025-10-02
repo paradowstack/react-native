@@ -11,13 +11,29 @@
 #include <memory>
 #include <cstring>
 
-@implementation RCTNativeBuffersManager
+static NSUInteger getBase64Length(NSString *string) {
+  NSData *data = [[NSData alloc]
+    initWithBase64EncodedString:string options:0];
+  return (NSUInteger)[data length];
+}
+
+@implementation RCTNativeBuffersManager {
+  facebook::react::ModuleConstants<JS::NativeBuffersManager::Constants> _constants;
+}
 
 + (NSString *)moduleName { 
   return @"BuffersManager";
 }
 
-- (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params { 
+- (void)initialize
+{
+  _constants = facebook::react::typedConstants<JS::NativeBuffersManager::Constants>({
+    .text = @"heavy-data",
+    .buffer = [NSMutableData dataWithData:[@"heavy-data" dataUsingEncoding:NSUTF8StringEncoding]]
+  });
+}
+
+- (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {
   return std::make_shared<facebook::react::NativeBuffersManagerSpecJSI>(params);
 }
 
@@ -30,11 +46,8 @@
 }
 
 - (void)processBase64:(nonnull NSString *)buffer {
-  NSData *data = [[NSData alloc]
-    initWithBase64EncodedString:buffer options:0];
-  NSUInteger length = (unsigned long)[data length];
+  NSUInteger length = getBase64Length(buffer);
   NSLog(@"Base64 buffer length: %lu", length);
-  
   [self emitOnMyString:@"strong"];
 }
 
@@ -45,7 +58,8 @@
     return @"buffer";
   } else if ([object objectForKey:@"text"] != nil) {
     NSString *textData = [object objectForKey:@"text"];
-    NSLog(@"Union text length: %lu", (unsigned long)[textData length]);
+    NSUInteger length = getBase64Length(textData);
+    NSLog(@"Union text length: %lu", length);
     return @"text";
   } else {
     return @"other";
@@ -62,11 +76,29 @@
 
 - (NSString * _Nullable)processStringStruct:(JS::NativeBuffersManager::StringStruct &)object { 
   if (object.text()) {
-    NSLog(@"Struct text length: %lu", (unsigned long)[object.text() length]);
+    NSUInteger length = getBase64Length(object.text());
+    NSLog(@"Struct text length: %lu", length);
   }
   return NULL;
 }
 
+- (nonnull facebook::react::ModuleConstants<JS::NativeBuffersManager::Constants>)constantsToExport {
+  return (facebook::react::ModuleConstants<JS::NativeBuffersManager::Constants>)[self getConstants];
+}
+
+
+- (nonnull facebook::react::ModuleConstants<JS::NativeBuffersManager::Constants>)getConstants {
+  return _constants;
+}
+
+- (NSMutableData * _Nullable)processArrayOfBuffers:(nonnull NSArray *)buffers {
+  if ([buffers count] > 0) {
+    NSMutableData* buffer = [buffers objectAtIndex:0];
+    NSLog(@"Buffer from Array length: %lu", (unsigned long)[buffer length]);
+    return buffer;
+ }
+  return NULL;
+}
 
 
 @end

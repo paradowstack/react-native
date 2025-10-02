@@ -15,11 +15,16 @@ import {TurboModuleRegistry} from 'react-native';
 export type Union = {text: string} | {buffer: ArrayBuffer};
 
 export type ArrayBufferStruct = {
-  buffer: ?ArrayBuffer,
+  buffer: ArrayBuffer,
 };
 
 export type StringStruct = {
   text: ?string,
+};
+
+export type ConstantsStruct = {
+  text: string,
+  buffer: ArrayBuffer,
 };
 
 export interface Spec extends TurboModule {
@@ -31,6 +36,8 @@ export interface Spec extends TurboModule {
   processUnion: (object: Union) => string;
   processArrayBufferStruct: (object: ArrayBufferStruct) => ?ArrayBuffer;
   processStringStruct: (object: StringStruct) => ?string;
+  getConstants: () => ConstantsStruct;
+  processArrayOfBuffers: (buffers: Array<ArrayBuffer>) => ?ArrayBuffer;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('BuffersManager');
