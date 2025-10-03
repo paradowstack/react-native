@@ -17,7 +17,7 @@ public interface WritableMap : ReadableMap {
 
   public fun putArray(key: String, value: ReadableArray?)
 
-  public fun putByteBuffer(key: String, value: Int?)
+  public fun putByteBuffer(key: String, value: ByteBuffer?)
 
   public fun putBoolean(key: String, value: Boolean)
 
