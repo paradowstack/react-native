@@ -7,6 +7,8 @@
 
 package com.facebook.react.bridge
 
+import java.nio.ByteBuffer
+
 /**
  * Type representing a piece of data with unknown runtime type. Useful for allowing javascript to
  * pass one of multiple types down to the native layer.
@@ -17,6 +19,8 @@ public interface Dynamic {
   public val isNull: Boolean
 
   public fun asArray(): ReadableArray?
+
+  public fun asByteBuffer(): ByteBuffer?
 
   public fun asBoolean(): Boolean
 

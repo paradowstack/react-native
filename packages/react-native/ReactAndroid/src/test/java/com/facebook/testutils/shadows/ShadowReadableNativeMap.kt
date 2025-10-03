@@ -16,6 +16,7 @@ import com.facebook.react.bridge.ReadableType
 import java.util.HashMap
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import java.nio.ByteBuffer
 
 @Implements(ReadableNativeMap::class)
 open class ShadowReadableNativeMap : ShadowNativeMap(), ReadableMap {
@@ -35,6 +36,9 @@ open class ShadowReadableNativeMap : ShadowNativeMap(), ReadableMap {
   @Implementation override fun getString(name: String): String? = backingMap.getString(name)
 
   @Implementation override fun getArray(name: String): ReadableArray? = backingMap.getArray(name)
+
+
+  @Implementation override fun getByteBuffer(name: String): ByteBuffer? = backingMap.getByteBuffer(name)
 
   @Implementation override fun getMap(name: String): ReadableMap? = backingMap.getMap(name)
 

@@ -8,6 +8,7 @@
 package com.facebook.react.bridge
 
 import androidx.core.util.Pools.SimplePool
+import java.nio.ByteBuffer
 
 /** Implementation of Dynamic wrapping a ReadableMap. */
 internal class DynamicFromMap
@@ -36,6 +37,9 @@ private constructor() : Dynamic {
   override fun asString(): String? = accessMapSafely { map, name -> map.getString(name) }
 
   override fun asArray(): ReadableArray? = accessMapSafely { map, name -> map.getArray(name) }
+
+
+  override fun asByteBuffer(): ByteBuffer? = accessMapSafely { map, name -> map.getByteBuffer(name) }
 
   override fun asMap(): ReadableMap? = accessMapSafely { map, name -> map.getMap(name) }
 

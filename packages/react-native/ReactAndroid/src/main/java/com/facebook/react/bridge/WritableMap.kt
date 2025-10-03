@@ -7,6 +7,8 @@
 
 package com.facebook.react.bridge
 
+import java.nio.ByteBuffer
+
 /** Interface for a mutable map. Used to pass arguments from Kotlin to JS. */
 public interface WritableMap : ReadableMap {
   public fun copy(): WritableMap
@@ -14,6 +16,8 @@ public interface WritableMap : ReadableMap {
   public fun merge(source: ReadableMap)
 
   public fun putArray(key: String, value: ReadableArray?)
+
+  public fun putByteBuffer(key: String, value: Int?)
 
   public fun putBoolean(key: String, value: Boolean)
 

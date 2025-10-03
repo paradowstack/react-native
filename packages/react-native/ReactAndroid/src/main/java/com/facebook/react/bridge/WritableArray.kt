@@ -7,9 +7,13 @@
 
 package com.facebook.react.bridge
 
+import java.nio.ByteBuffer
+
 /** Interface for a mutable array. Used to pass arguments from Kotlin to JS. */
 public interface WritableArray : ReadableArray {
   public fun pushArray(array: ReadableArray?)
+
+  public fun pushByteBuffer(value: ByteBuffer?)
 
   public fun pushBoolean(value: Boolean)
 

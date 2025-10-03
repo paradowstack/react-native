@@ -9,6 +9,7 @@ package com.facebook.react.bridge
 
 import com.facebook.jni.HybridClassBase
 import com.facebook.proguard.annotations.DoNotStripAny
+import java.nio.ByteBuffer
 
 /**
  * An implementation of [Dynamic] that has a C++ implementation.
@@ -39,6 +40,9 @@ private class DynamicNative : HybridClassBase(), Dynamic {
   external override fun asString(): String
 
   external override fun asArray(): ReadableArray
+
+
+  external override fun asByteBuffer(): ByteBuffer?
 
   external override fun asMap(): ReadableMap
 

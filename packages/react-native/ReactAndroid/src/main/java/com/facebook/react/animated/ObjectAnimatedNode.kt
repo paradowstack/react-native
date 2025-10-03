@@ -69,6 +69,7 @@ internal class ObjectAnimatedNode(
           }
         }
         ReadableType.Array -> result.pushArray(collectViewUpdatesHelper(source.getArray(i)))
+        ReadableType.ByteBuffer -> result.pushByteBuffer(source.getByteBuffer(i))
       }
     }
     return result
@@ -112,6 +113,8 @@ internal class ObjectAnimatedNode(
         }
         ReadableType.Array ->
             result.putArray(propKey, collectViewUpdatesHelper(source.getArray(propKey)))
+        ReadableType.ByteBuffer ->
+          result.putByteBuffer(propKey, source.getByteBuffer(propKey))
       }
     }
     return result

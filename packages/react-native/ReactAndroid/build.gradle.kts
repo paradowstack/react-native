@@ -278,6 +278,8 @@ val preparePrefab by
       outputDir.set(prefabHeadersDir)
     }
 
+print("prefabHeadersDir: $prefabHeadersDir")
+
 val createNativeDepsDirectories by
     tasks.registering {
       downloadsDir.mkdirs()

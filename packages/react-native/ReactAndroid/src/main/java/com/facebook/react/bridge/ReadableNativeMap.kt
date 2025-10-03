@@ -10,6 +10,7 @@ package com.facebook.react.bridge
 import android.annotation.SuppressLint
 import com.facebook.infer.annotation.Assertions
 import com.facebook.proguard.annotations.DoNotStripAny
+import java.nio.ByteBuffer
 
 /**
  * Implementation of a read-only map in native memory. This will generally be constructed and filled
@@ -143,7 +144,10 @@ public open class ReadableNativeMap protected constructor() : NativeMap(), Reada
   override fun getString(name: String): String? = getNullableValue(name, String::class.java)
 
   override fun getArray(name: String): ReadableArray? =
-      getNullableValue(name, ReadableArray::class.java)
+    getNullableValue(name, ReadableArray::class.java)
+
+  override fun getByteBuffer(name: String): ByteBuffer? =
+    getNullableValue(name, ByteBuffer::class.java)
 
   override fun getMap(name: String): ReadableNativeMap? =
       getNullableValue(name, ReadableNativeMap::class.java)
@@ -207,6 +211,7 @@ public open class ReadableNativeMap protected constructor() : NativeMap(), Reada
         ReadableType.Null,
         ReadableType.Boolean,
         ReadableType.Number,
+        ReadableType.ByteBuffer,
         ReadableType.String -> {}
         ReadableType.Map -> hashMap[key] = Assertions.assertNotNull(getMap(key)).toHashMap()
         ReadableType.Array -> hashMap[key] = Assertions.assertNotNull(getArray(key)).toArrayList()

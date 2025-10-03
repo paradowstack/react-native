@@ -9,6 +9,7 @@ package com.facebook.react.bridge
 
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import java.nio.ByteBuffer
 import java.util.ArrayList
 import java.util.Arrays
 import kotlin.jvm.JvmStatic
@@ -82,6 +83,10 @@ public open class ReadableNativeArray protected constructor() : NativeArray(), R
   override fun getArray(index: Int): ReadableNativeArray? =
       localArray[index] as ReadableNativeArray?
 
+
+  override fun getByteBuffer(index: Int): ByteBuffer? =
+    localArray[index] as ByteBuffer?;
+
   override fun getMap(index: Int): ReadableNativeMap? = localArray[index] as ReadableNativeMap?
 
   override fun getType(index: Int): ReadableType = localTypeArray[index]
@@ -114,6 +119,7 @@ public open class ReadableNativeArray protected constructor() : NativeArray(), R
         ReadableType.String -> arrayList.add(getString(i))
         ReadableType.Map -> arrayList.add(getMap(i)?.toHashMap())
         ReadableType.Array -> arrayList.add(getArray(i)?.toArrayList())
+        ReadableType.ByteBuffer -> arrayList.add(getByteBuffer(i))
       }
     }
     return arrayList

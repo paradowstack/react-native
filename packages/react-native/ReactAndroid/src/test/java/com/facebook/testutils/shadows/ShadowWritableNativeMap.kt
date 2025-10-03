@@ -13,6 +13,7 @@ import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.WritableNativeMap
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import java.nio.ByteBuffer
 
 @Implements(WritableNativeMap::class)
 class ShadowWritableNativeMap : ShadowReadableNativeMap(), WritableMap {
@@ -35,6 +36,9 @@ class ShadowWritableNativeMap : ShadowReadableNativeMap(), WritableMap {
 
   @Implementation
   override fun putArray(key: String, value: ReadableArray?): Unit = backingMap.putArray(key, value)
+
+  @Implementation 
+  override fun putByteBuffer(key: String, value: ByteBuffer?): Unit = backingMap.putByteBuffer(key, value)
 
   @Implementation
   override fun putMap(key: String, value: ReadableMap?): Unit = backingMap.putMap(key, value)

@@ -80,6 +80,11 @@ void WritableNativeMap::putNativeMap(
   map_.insert(std::move(key), otherMap->consume());
 }
 
+void WritableNativeMap::putByteBuffer(std::string key, jobject value) {
+  throwIfConsumed();
+//  map_.insert(std::move(key), value);
+}
+
 void WritableNativeMap::mergeNativeMap(ReadableNativeMap* other) {
   throwIfConsumed();
   other->throwIfConsumed();
@@ -99,6 +104,7 @@ void WritableNativeMap::registerNatives() {
       makeNativeMethod("putString", WritableNativeMap::putString),
       makeNativeMethod("putNativeArray", WritableNativeMap::putNativeArray),
       makeNativeMethod("putNativeMap", WritableNativeMap::putNativeMap),
+      makeNativeMethod("putByteBuffer", WritableNativeMap::putByteBuffer),
       makeNativeMethod("mergeNativeMap", WritableNativeMap::mergeNativeMap),
       makeNativeMethod("initHybrid", WritableNativeMap::initHybrid),
   });

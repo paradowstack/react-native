@@ -9,6 +9,7 @@ package com.facebook.react.bridge
 
 import com.facebook.infer.annotation.Assertions
 import com.facebook.proguard.annotations.DoNotStrip
+import java.nio.ByteBuffer
 
 /**
  * Implementation of a write-only map stored in native memory. Use [Arguments.createMap] if you need
@@ -46,7 +47,9 @@ public class WritableNativeMap : ReadableNativeMap(), WritableMap {
     putNativeArray(key, value as ReadableNativeArray?)
   }
 
-  // Note: this **DOES NOT** consume the source map
+  external override fun putByteBuffer(key: String, value: ByteBuffer?);
+
+    // Note: this **DOES NOT** consume the source map
   override fun merge(source: ReadableMap) {
     Assertions.assertCondition(source is ReadableNativeMap, "Illegal type provided")
     mergeNativeMap(source as ReadableNativeMap)

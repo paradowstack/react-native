@@ -10,6 +10,7 @@ package com.facebook.react.bridge
 import android.os.Bundle
 import android.os.Parcelable
 import com.facebook.proguard.annotations.DoNotStrip
+import java.nio.ByteBuffer
 import java.util.AbstractList
 import kotlin.math.round
 
@@ -52,6 +53,7 @@ public object Arguments {
         is String -> nativeArray.pushString(value)
         is WritableNativeArray -> nativeArray.pushArray(value)
         is WritableNativeMap -> nativeArray.pushMap(value)
+        is ByteBuffer -> nativeArray.pushString("TODOME")
         else -> throw IllegalArgumentException("Could not convert ${value.javaClass}")
       }
     }
@@ -88,6 +90,7 @@ public object Arguments {
       is String -> nativeMap.putString(key, nativeObjectValue)
       is WritableNativeArray -> nativeMap.putArray(key, nativeObjectValue)
       is WritableNativeMap -> nativeMap.putMap(key, nativeObjectValue)
+      is ByteBuffer -> nativeMap.putString(key, "TODOME")
       else -> throw IllegalArgumentException("Could not convert ${nativeObjectValue.javaClass}")
     }
   }
@@ -156,7 +159,13 @@ public object Arguments {
         String::class.java -> arguments.pushString(argument.toString())
         WritableNativeMap::class.java -> arguments.pushMap(argument as WritableNativeMap)
         WritableNativeArray::class.java -> arguments.pushArray(argument as WritableNativeArray)
-        else -> throw RuntimeException("Cannot convert argument of type $argumentClass")
+        else -> {
+          if (ByteBuffer::class.java.isAssignableFrom(argument.javaClass)) {
+            arguments.pushString("TODOME");
+          } else {
+            throw RuntimeException("Cannot convert argument of type $argumentClass")
+          }
+        }
       }
     }
     return arguments
