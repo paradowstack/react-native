@@ -30,6 +30,7 @@ export enum EnumStr {
 export type UnionFloat = 1.44 | 2.88 | 5.76;
 export type UnionString = 'One' | 'Two' | 'Three';
 export type UnionObject = {value: number} | {low: string};
+export type BufferUnion = {value: number} | {buffer: ArrayBuffer};
 
 export type ConstantsStruct = {
   const1: boolean,
@@ -48,6 +49,11 @@ export type ValueStruct = {
   y: string,
   z: ObjectStruct,
   buffer: ArrayBuffer,
+};
+
+export type BufferStruct = {
+  text: string,
+  value: ArrayBuffer,
 };
 
 export type CustomHostObject = {};
@@ -84,6 +90,7 @@ export interface Spec extends TurboModule {
   +onSubmit: CodegenTypes.EventEmitter<ObjectStruct[]>;
   +onEvent: CodegenTypes.EventEmitter<EnumNone>;
   +onData: CodegenTypes.EventEmitter<ArrayBuffer>;
+  +onArray: CodegenTypes.EventEmitter<Array<string>>;
   getBuffer(): ArrayBuffer;
   returningBuffer: () => Promise<ArrayBuffer>;
   takingBuffer: (buffer: ArrayBuffer) => void;
@@ -126,6 +133,9 @@ export interface Spec extends TurboModule {
   +voidFuncAssert: () => void;
   +getObjectAssert: (arg: ObjectStruct) => ObjectStruct;
   +promiseAssert: () => Promise<void>;
+  +processBufferUnion: (arg: BufferUnion) => void;
+  +getBufferStruct: () => BufferStruct;
+  +processBufferStruct: (arg: BufferStruct) => void;
 }
 
 export default (TurboModuleRegistry.get<Spec>(

@@ -55,6 +55,9 @@ public open class ReadableNativeMap protected constructor() : NativeMap(), Reada
           localMap = HashMap<String, Any?>()
           val values = importValues()
           for (i in 0 until length) {
+            if (keys[i] == "buffer") {
+              println("[MY-DEBUG] imported key: ${keys[i]}, value: ${values[i]}")
+            }
             localMap[keys[i]] = values[i]
           }
           localMapStorage = localMap
@@ -146,8 +149,13 @@ public open class ReadableNativeMap protected constructor() : NativeMap(), Reada
   override fun getArray(name: String): ReadableArray? =
     getNullableValue(name, ReadableArray::class.java)
 
-  override fun getByteBuffer(name: String): ByteBuffer? =
-    getNullableValue(name, ByteBuffer::class.java)
+  override fun getByteBuffer(name: String): ByteBuffer? {
+    println("lol")
+    val result = getNullableValue(name, ByteBuffer::class.java)
+    println("lol2")
+    if (!hasKey(name)) println("NoSuchKeyException: $name")
+    return result
+  }
 
   override fun getMap(name: String): ReadableNativeMap? =
       getNullableValue(name, ReadableNativeMap::class.java)

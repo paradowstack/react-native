@@ -41,12 +41,22 @@ template <>
 struct Bridging<ObjectStruct>
     : NativeCxxModuleExampleObjectStructBridging<ObjectStruct> {};
 
-using ValueStruct =
-    NativeCxxModuleExampleValueStruct<double, std::string, ObjectStruct, jsi::ArrayBuffer>;
+using ValueStruct = NativeCxxModuleExampleValueStruct<
+    double,
+    std::string,
+    ObjectStruct,
+    jsi::ArrayBuffer>;
 
 template <>
 struct Bridging<ValueStruct>
     : NativeCxxModuleExampleValueStructBridging<ValueStruct> {};
+
+using BufferStruct =
+    NativeCxxModuleExampleBufferStruct<std::string, jsi::ArrayBuffer>;
+
+template <>
+struct Bridging<BufferStruct>
+    : NativeCxxModuleExampleBufferStructBridging<BufferStruct> {};
 
 #pragma mark - enums
 enum class CustomEnumInt : int32_t { A = 23, B = 42 };
@@ -175,6 +185,28 @@ class NativeCxxModuleExample
  public:
   NativeCxxModuleExample(std::shared_ptr<CallInvoker> jsInvoker);
 
+  void processBufferUnion(jsi::Runtime& rt, jsi::Object arg) {
+    if (arg.hasProperty(rt, "value")) {
+      auto value = arg.getProperty(rt, "value").asNumber();
+      std::cout << "Received union with value: " << value << std::endl;
+    } else if (arg.hasProperty(rt, "buffer")) {
+      auto buffer =
+          arg.getProperty(rt, "buffer").asObject(rt).asArrayBuffer(rt);
+      std::cout << "Received union with buffer size: " << buffer.size(rt)
+                << std::endl;
+
+    } else {
+      throw jsi::JSError(rt, "Invalid union object");
+    }
+  }
+  BufferStruct getBufferStruct(jsi::Runtime& rt) {
+    return {"text", getBuffer(rt)};
+  }
+  void processBufferStruct(jsi::Runtime& rt, BufferStruct arg) {
+    std::cout << "Received struct with text: " << arg.text
+              << " and buffer size: " << arg.value.size(rt) << std::endl;
+  }
+
   std::string printBuffer(jsi::Runtime& rt, jsi::ArrayBuffer& buffer) {
     std::ostringstream oss;
     oss << "[";
@@ -273,8 +305,12 @@ class NativeCxxModuleExample
   std::string
   getUnion(jsi::Runtime& rt, float x, const std::string& y, jsi::Object z);
 
-  ValueStruct
-			getValue(jsi::Runtime& rt, double x, std::string y, ObjectStruct z, jsi::ArrayBuffer a);
+  ValueStruct getValue(
+      jsi::Runtime& rt,
+      double x,
+      std::string y,
+      ObjectStruct z,
+      jsi::ArrayBuffer a);
 
   AsyncPromise<std::string> getValueWithPromise(jsi::Runtime& rt, bool error);
 

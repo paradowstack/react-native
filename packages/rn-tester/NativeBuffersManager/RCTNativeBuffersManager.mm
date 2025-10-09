@@ -10,6 +10,24 @@
 #include <random>
 #include <memory>
 #include <cstring>
+#import <objc/runtime.h>
+
+@interface LoggingMutableData : NSMutableData
+@end
+
+@implementation LoggingMutableData
+
++ (instancetype)dataWithData:(NSData *)data {
+  LoggingMutableData *instance = (LoggingMutableData *)[[NSMutableData alloc] initWithData:data];
+  object_setClass(instance, [LoggingMutableData class]);
+  return instance;
+}
+
+- (void)dealloc {
+  NSLog(@"LoggingMutableData deallocated");
+}
+
+@end
 
 static NSUInteger getBase64Length(NSString *string) {
   NSData *data = [[NSData alloc]
@@ -44,6 +62,12 @@ static NSUInteger getBase64Length(NSString *string) {
 
   [self emitOnMyBuffer:buffer];
 }
+
+
+- (nonnull NSMutableData *)getBuffer {
+  return [_constants objectForKey:@"buffer"];
+}
+
 
 - (void)processBase64:(nonnull NSString *)buffer {
   NSUInteger length = getBase64Length(buffer);
@@ -98,6 +122,13 @@ static NSUInteger getBase64Length(NSString *string) {
     return buffer;
  }
   return NULL;
+}
+
+- (void)processUnsafe:(nonnull NSDictionary *)buffer { 
+  NSMutableData *mutableBuffer = (NSMutableData *)buffer;
+  NSUInteger length = [mutableBuffer length] / sizeof(uint8_t);
+  NSLog(@"UnsafeBuffer length: %lu", (unsigned long)length);
+
 }
 
 

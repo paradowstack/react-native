@@ -71,9 +71,8 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public String processUnion(ReadableMap object) {
     if (object.hasKey("buffer") && !object.isNull("buffer")) {
-      // Handle buffer case - buffers are passed as java.nio.ByteBuffer objects
-      // The actual extraction would depend on how ByteBuffers are handled in unions
-      System.out.println("Union buffer length: [ByteBuffer union processing]");
+      System.out.println("Union buffer type: " + object.getType("buffer").name());
+      System.out.println("Union buffer length: " + object.getByteBuffer("buffer").remaining());
       return "buffer";
     } else if (object.hasKey("text") && !object.isNull("text")) {
       String textData = object.getString("text");
@@ -89,15 +88,7 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public ByteBuffer processArrayBufferStruct(ReadableMap object) {
     if (object.hasKey("buffer") && !object.isNull("buffer")) {
-      // Handle buffer from struct - buffers are passed as java.nio.ByteBuffer objects
-      // In React Native, ByteBuffers in structs need special handling
-      // The actual extraction would depend on the bridge implementation
-      
-      // This is a placeholder for ByteBuffer extraction from ReadableMap
-      System.out.println("Struct buffer length: [ByteBuffer struct processing]");
-      
-      // Note: The actual implementation would need to properly extract
-      // the ByteBuffer from the ReadableMap structure
+      System.out.println("Struct buffer length: " + object.getByteBuffer("buffer").remaining());
     }
     return null;
   }
@@ -125,17 +116,7 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public ByteBuffer processArrayOfBuffers(ReadableArray buffers) {
     if (buffers.size() > 0) {
-      // Handle first buffer in array - buffers are passed as java.nio.ByteBuffer objects
-      // In React Native, ByteBuffers in arrays are typically accessed via native methods
-      // For now, we'll simulate getting the first buffer
-      // Note: Actual implementation may need to handle the ReadableArray differently
-      // depending on how ByteBuffers are serialized in the bridge
-      
-      // This is a placeholder - the actual ByteBuffer extraction would depend on
-      // the specific React Native bridge implementation for ByteBuffer arrays
-      System.out.println("Buffer from Array length: [ByteBuffer array processing]");
-      
-      // Return a sample ByteBuffer for demonstration
+      System.out.println("Buffer from Array length: " + buffers.getByteBuffer(0).remaining());
       String sampleData = "sample-buffer-data";
       ByteBuffer buffer = ByteBuffer.wrap(sampleData.getBytes());
       System.out.println("Buffer from Array length: " + buffer.remaining());

@@ -34,6 +34,7 @@ public class WritableNativeMap : ReadableNativeMap(), WritableMap {
   external override fun putString(key: String, value: String?)
 
   override fun putMap(key: String, value: ReadableMap?) {
+    println("putting as map key: $key")
     Assertions.assertCondition(value == null || value is ReadableNativeMap, "Illegal type provided")
     putNativeMap(key, value as ReadableNativeMap?)
   }
@@ -47,7 +48,13 @@ public class WritableNativeMap : ReadableNativeMap(), WritableMap {
     putNativeArray(key, value as ReadableNativeArray?)
   }
 
-  external override fun putByteBuffer(key: String, value: ByteBuffer?);
+  override fun putByteBuffer(key: String, value: ByteBuffer?) {
+    println("putByteBuffer called with key: $key")
+    if (value != null) {
+      putNativeByteBuffer(key, value as Object)
+      return
+    }
+  }
 
     // Note: this **DOES NOT** consume the source map
   override fun merge(source: ReadableMap) {
@@ -64,6 +71,8 @@ public class WritableNativeMap : ReadableNativeMap(), WritableMap {
   private external fun putNativeMap(key: String, value: ReadableNativeMap?)
 
   private external fun putNativeArray(key: String, value: ReadableNativeArray?)
+
+  private external fun putNativeByteBuffer(key: String, value: Object)
 
   private external fun mergeNativeMap(source: ReadableNativeMap)
 

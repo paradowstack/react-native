@@ -162,6 +162,7 @@ public object Arguments {
         else -> {
           if (ByteBuffer::class.java.isAssignableFrom(argument.javaClass)) {
             arguments.pushString("TODOME");
+            println("[MY-DEBUG] fromJavaArgs called")
           } else {
             throw RuntimeException("Cannot convert argument of type $argumentClass")
           }

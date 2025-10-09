@@ -18,6 +18,7 @@ public abstract class NativeMap : HybridClassBase() {
   private companion object {
     init {
       ReactNativeJniCommonSoLoader.staticInit()
+      println("[MY-DEBUG] NativeMap initialized")
     }
   }
 }

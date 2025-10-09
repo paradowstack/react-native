@@ -9,6 +9,7 @@
  */
 
 import manager from '../../../NativeBuffersManager/NativeBuffersManager';
+import native from '../../../NativeCxxModuleExample/NativeCxxModuleExample';
 import React, {useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
@@ -33,14 +34,20 @@ const ArrayBufferExample = () => {
 
   useEffect(() => {
     const eventSubscriptions = [];
-    eventSubscriptions
-      .push
-      // manager.onMyString(value => console.log(`onMyString ${value}`)),
-      ();
+    // eventSubscriptions
+    // .push
+    // manager.onMyString(value => console.log(`onMyString ${value}`)),
+    // ();
+    // eventSubscriptions.push(
+    // manager.onMyBuffer(value => {
+    // const view = new Uint8Array(value);
+    // console.log(`onMyBuffer ${view}`);
+    // }),
+    // );
     eventSubscriptions.push(
-      manager.onMyBuffer(value => {
+      native.onData(value => {
         const view = new Uint8Array(value);
-        // console.log(`onMyBuffer ${view}`);
+        console.log(`onData, length ${view.byteLength}`);
       }),
     );
     // Optionally, clean up subscriptions on unmount
@@ -107,12 +114,20 @@ const ArrayBufferExample = () => {
       setTimeout(() => {
         const start = performance.now();
         manager.processBuffer(buffer);
+        manager.processUnsafe(buffer);
         manager.processUnion({buffer: buffer});
-        manager.processArrayBufferStruct({buffer: buffer});
+        manager.processArrayBufferStruct({ocb: 'OCB', buffer: buffer});
         console.log(
           `Constants buffer: ${new Uint8Array(manager.getConstants().buffer)}`,
         );
         manager.processArrayOfBuffers([buffer]);
+
+        native.processBufferUnion({buffer: buffer});
+        native.processBufferStruct({text: 'OCB', value: buffer});
+        console.log(
+          `Native C++ module buffer: ${new Uint8Array(native.getBufferStruct().value).byteLength}`,
+        );
+
         const end = performance.now();
         setArrayBufferTime((end - start).toFixed(2));
         setLoadingArrayBuffer(false);

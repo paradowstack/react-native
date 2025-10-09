@@ -164,7 +164,8 @@ ValueStruct NativeCxxModuleExample::getValue(
     jsi::Runtime& /*rt*/,
     double x,
     std::string y,
-    ObjectStruct z, jsi::ArrayBuffer a) {
+    ObjectStruct z,
+    jsi::ArrayBuffer a) {
   ValueStruct result{x, std::move(y), std::move(z), std::move(a)};
   return result;
 }

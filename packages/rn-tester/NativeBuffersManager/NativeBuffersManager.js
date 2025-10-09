@@ -8,13 +8,14 @@
  * @format
  */
 
-import type {CodegenTypes, TurboModule} from 'react-native';
+import {CodegenTypes, TurboModule} from 'react-native';
 
 import {TurboModuleRegistry} from 'react-native';
 
 export type Union = {text: string} | {buffer: ArrayBuffer};
 
 export type ArrayBufferStruct = {
+  ocb: string,
   buffer: ArrayBuffer,
 };
 
@@ -32,7 +33,9 @@ export interface Spec extends TurboModule {
   +onMyBuffer: CodegenTypes.EventEmitter<ArrayBuffer>;
 
   processBuffer(buffer: ArrayBuffer): void;
+  getBuffer(): ArrayBuffer;
   processBase64(buffer: string): void;
+  processUnsafe(buffer: CodegenTypes.UnsafeObject): void;
   processUnion: (object: Union) => string;
   processArrayBufferStruct: (object: ArrayBufferStruct) => ?ArrayBuffer;
   processStringStruct: (object: StringStruct) => ?string;
