@@ -34,6 +34,7 @@ export interface Spec extends TurboModule {
 
   processBuffer(buffer: ArrayBuffer): void;
   getBuffer(): ArrayBuffer;
+  getAsyncBuffer(): Promise<ArrayBuffer>;
   processBase64(buffer: string): void;
   processUnsafe(buffer: CodegenTypes.UnsafeObject): void;
   processUnion: (object: Union) => string;

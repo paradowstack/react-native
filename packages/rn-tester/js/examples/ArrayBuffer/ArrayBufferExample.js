@@ -128,6 +128,11 @@ const ArrayBufferExample = () => {
           `Native C++ module buffer: ${new Uint8Array(native.getBufferStruct().value).byteLength}`,
         );
 
+        manager.getAsyncBuffer().then(b => {
+          const view = new Uint8Array(b);
+          console.log(`getAsyncBuffer, length ${b} ${view.byteLength}`);
+        });
+
         const end = performance.now();
         setArrayBufferTime((end - start).toFixed(2));
         setLoadingArrayBuffer(false);

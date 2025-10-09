@@ -60,6 +60,23 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
     emitOnMyBuffer(buffer);
   }
 
+
+  @Override
+  public java.nio.ByteBuffer getBuffer() {
+      byte[] array = new byte[4];
+      new Random().nextBytes(array);
+      return java.nio.ByteBuffer.wrap(array);
+  }
+
+  @Override
+  public void getAsyncBuffer(Promise promise) {
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+      byte[] array = new byte[4];
+      new Random().nextBytes(array);
+      promise.resolve(java.nio.ByteBuffer.wrap(array));
+    }, 100);
+  }
+
   @Override
   public void processBase64(String buffer) {
     int length = getBase64Length(buffer);
@@ -123,5 +140,10 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
       return buffer;
     }
     return null;
+  }
+
+  @Override
+  public  void processUnsafe(ReadableMap buffer) {
+    
   }
 }
