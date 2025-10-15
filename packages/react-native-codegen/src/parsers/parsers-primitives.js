@@ -144,6 +144,11 @@ function emitArrayBuffer(
     type: 'ArrayBufferTypeAnnotation',
   });
 }
+function emitUint8Array(nullable: boolean): Nullable<Uint8ArrayTypeAnnotation> {
+  return wrapNullable(nullable, {
+    type: 'Uint8ArrayTypeAnnotation',
+  });
+}
 
 function emitFunction(
   nullable: boolean,
@@ -676,6 +681,7 @@ function emitCommonTypes(
     StringTypeAnnotation: emitString,
     MixedTypeAnnotation: cxxOnly ? emitMixed : emitGenericObject,
     ArrayBuffer: emitArrayBuffer,
+    TypedArray: emitUint8Array,
   };
 
   const typeAnnotationName = parser.convertKeywordToTypeAnnotation(
@@ -692,7 +698,7 @@ function emitCommonTypes(
 
   if (!map[genericTypeAnnotationName]) {
     map[genericTypeAnnotationName] = [];
-    console.log(typeAnnotation.type, genericTypeAnnotationName);
+    console.log(typeAnnotation, typeAnnotation.type, genericTypeAnnotationName);
   }
 
   // $FlowFixMe[invalid-computed-prop]
