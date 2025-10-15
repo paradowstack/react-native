@@ -55,7 +55,7 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public void processBuffer(java.nio.ByteBuffer buffer) {
     int length = buffer.remaining();
-    System.out.println("Buffer length: " + length);
+    System.out.println("[JAVA] Buffer length: " + length);
     
     emitOnMyBuffer(buffer);
   }
@@ -80,7 +80,7 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public void processBase64(String buffer) {
     int length = getBase64Length(buffer);
-    System.out.println("Base64 buffer length: " + length);
+    System.out.println("[JAVA] Base64 buffer length: " + length);
     
     emitOnMyString("strong");
   }
@@ -88,13 +88,13 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public String processUnion(ReadableMap object) {
     if (object.hasKey("buffer") && !object.isNull("buffer")) {
-      System.out.println("Union buffer type: " + object.getType("buffer").name());
-      System.out.println("Union buffer length: " + object.getByteBuffer("buffer").remaining());
+      System.out.println("[JAVA] Union buffer type: " + object.getType("buffer").name());
+      System.out.println("[JAVA] Union buffer length: " + object.getByteBuffer("buffer").remaining());
       return "buffer";
     } else if (object.hasKey("text") && !object.isNull("text")) {
       String textData = object.getString("text");
       int length = getBase64Length(textData);
-      System.out.println("Union text length: " + length);
+      System.out.println("[JAVA] Union text length: " + length);
       return "text";
     } else {
       return "other";
@@ -105,7 +105,7 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public ByteBuffer processArrayBufferStruct(ReadableMap object) {
     if (object.hasKey("buffer") && !object.isNull("buffer")) {
-      System.out.println("Struct buffer length: " + object.getByteBuffer("buffer").remaining());
+      System.out.println("[JAVA] Struct buffer length: " + object.getByteBuffer("buffer").remaining());
     }
     return null;
   }
@@ -116,7 +116,7 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
     if (object.hasKey("text") && !object.isNull("text")) {
       String textData = object.getString("text");
       int length = getBase64Length(textData);
-      System.out.println("Struct text length: " + length);
+      System.out.println("[JAVA] Struct text length: " + length);
     }
     return null;
   }
@@ -133,17 +133,27 @@ public class NativeBuffersManager extends NativeBuffersManagerSpec {
   @Override
   public ByteBuffer processArrayOfBuffers(ReadableArray buffers) {
     if (buffers.size() > 0) {
-      System.out.println("Buffer from Array length: " + buffers.getByteBuffer(0).remaining());
+      System.out.println("[JAVA] Buffer from Array length: " + buffers.getByteBuffer(0).remaining());
       String sampleData = "sample-buffer-data";
       ByteBuffer buffer = ByteBuffer.wrap(sampleData.getBytes());
-      System.out.println("Buffer from Array length: " + buffer.remaining());
+      System.out.println("[JAVA] Buffer from Array length: " + buffer.remaining());
       return buffer;
     }
     return null;
   }
 
   @Override
-  public  void processUnsafe(ReadableMap buffer) {
+  public void processUnsafe(ReadableMap buffer) {
     
   }
+
+  @Override
+  public void processOptionalBuffer(@Nullable java.nio.ByteBuffer buffer) {
+    if (buffer != null) {
+      System.out.println("[JAVA] Optional buffer length: " + buffer.remaining());
+    } else {
+      System.out.println("[JAVA] Optional buffer is null");
+    }
+  }
+
 }

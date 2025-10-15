@@ -33,6 +33,7 @@ export interface Spec extends TurboModule {
   +onMyBuffer: CodegenTypes.EventEmitter<ArrayBuffer>;
 
   processBuffer(buffer: ArrayBuffer): void;
+  processOptionalBuffer(buffer: ?ArrayBuffer): void;
   getBuffer(): ArrayBuffer;
   getAsyncBuffer(): Promise<ArrayBuffer>;
   processBase64(buffer: string): void;

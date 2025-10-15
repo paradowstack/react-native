@@ -94,6 +94,8 @@ export interface Spec extends TurboModule {
   getBuffer(): ArrayBuffer;
   returningBuffer: () => Promise<ArrayBuffer>;
   takingBuffer: (buffer: ArrayBuffer) => void;
+  getOptionalBuffer: (size: CodegenTypes.Int32) => ?ArrayBuffer;
+  takingOptionalBuffer: (buffer: ?ArrayBuffer) => void;
   +getArray: (arg: Array<ObjectStruct | null>) => Array<ObjectStruct | null>;
   +getBool: (arg: boolean) => boolean;
   +getConstants: () => ConstantsStruct;

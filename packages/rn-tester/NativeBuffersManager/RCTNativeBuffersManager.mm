@@ -75,6 +75,16 @@ static NSUInteger getBase64Length(NSString *string) {
   [self emitOnMyString:@"strong"];
 }
 
+- (nonnull NSMutableData *)getBuffer:(NSInteger)size { 
+  NSMutableData *buffer = [NSMutableData dataWithLength:size];
+    uint8_t *bytes = (uint8_t *)[buffer mutableBytes];
+    for (NSInteger i = 0; i < size; ++i) {
+      bytes[i] = arc4random_uniform(256);
+    }
+    return buffer;
+}
+
+
 - (nonnull NSString *)processUnion:(nonnull NSDictionary *)object { 
   if ([object objectForKey:@"buffer"] != nil) {
     NSData *bufferData = [object objectForKey:@"buffer"];
@@ -129,6 +139,26 @@ static NSUInteger getBase64Length(NSString *string) {
   NSUInteger length = [mutableBuffer length] / sizeof(uint8_t);
   NSLog(@"UnsafeBuffer length: %lu", (unsigned long)length);
 
+}
+
+- (void)getAsyncBuffer:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPromiseRejectBlock)reject {
+  auto size = 8;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    NSMutableData *buffer = [NSMutableData dataWithLength:size];
+    uint8_t *bytes = (uint8_t *)[buffer mutableBytes];
+    for (NSInteger i = 0; i < size; ++i) {
+      bytes[i] = arc4random_uniform(256);
+    }
+    resolve(buffer);
+  });
+}
+
+- (void)processOptionalBuffer:(NSMutableData * _Nullable)buffer { 
+  if (buffer != nil) {
+    NSLog(@"Optional buffer length: %lu", (unsigned long)[buffer length]);
+  } else {
+    NSLog(@"Optional buffer is null");
+  }
 }
 
 

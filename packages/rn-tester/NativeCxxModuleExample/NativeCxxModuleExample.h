@@ -188,11 +188,11 @@ class NativeCxxModuleExample
   void processBufferUnion(jsi::Runtime& rt, jsi::Object arg) {
     if (arg.hasProperty(rt, "value")) {
       auto value = arg.getProperty(rt, "value").asNumber();
-      std::cout << "Received union with value: " << value << std::endl;
+      std::cout << "[C++] Received union with value: " << value << std::endl;
     } else if (arg.hasProperty(rt, "buffer")) {
       auto buffer =
           arg.getProperty(rt, "buffer").asObject(rt).asArrayBuffer(rt);
-      std::cout << "Received union with buffer size: " << buffer.size(rt)
+      std::cout << "[C++] Received union with buffer size: " << buffer.size(rt)
                 << std::endl;
 
     } else {
@@ -203,7 +203,7 @@ class NativeCxxModuleExample
     return {"text", getBuffer(rt)};
   }
   void processBufferStruct(jsi::Runtime& rt, BufferStruct arg) {
-    std::cout << "Received struct with text: " << arg.text
+    std::cout << "[C++] Received struct with text: " << arg.text
               << " and buffer size: " << arg.value.size(rt) << std::endl;
   }
 
@@ -220,8 +220,7 @@ class NativeCxxModuleExample
     return oss.str();
   }
 
-  jsi::ArrayBuffer getBuffer(jsi::Runtime& rt) {
-    auto length = 8;
+  jsi::ArrayBuffer createBuffer(jsi::Runtime& rt, int length = 8) {
     auto data = new uint8_t[length];
     for (size_t i = 0; i < length; ++i) {
       data[i] = static_cast<uint8_t>(rand() % 256);
@@ -229,6 +228,9 @@ class NativeCxxModuleExample
     auto mutableBuffer = std::make_shared<NSDataMutableBuffer>(data, length);
     auto arrayBuffer = jsi::ArrayBuffer(rt, mutableBuffer);
     return arrayBuffer;
+  }
+  jsi::ArrayBuffer getBuffer(jsi::Runtime& rt) {
+    return createBuffer(rt);
   }
 
   AsyncPromise<jsi::ArrayBuffer> returningBuffer(jsi::Runtime& rt) {
@@ -241,14 +243,33 @@ class NativeCxxModuleExample
     auto mutableBuffer = std::make_shared<NSDataMutableBuffer>(data, length);
     auto arrayBuffer = jsi::ArrayBuffer(rt, mutableBuffer);
 
-    std::cout << "Sending buffer: " << printBuffer(rt, arrayBuffer)
+    std::cout << "[C++] Sending buffer: " << printBuffer(rt, arrayBuffer)
               << std::endl;
     promise.resolve(std::move(arrayBuffer));
     return promise;
   }
   void takingBuffer(jsi::Runtime& rt, jsi::ArrayBuffer buffer) {
-    std::cout << "Received buffer: " << printBuffer(rt, buffer);
+    std::cout << "[C++] Received buffer: " << printBuffer(rt, buffer);
     std::cout << "]" << std::endl;
+  }
+
+  std::optional<jsi::ArrayBuffer> getOptionalBuffer(
+      jsi::Runtime& rt,
+      int size) {
+    if (size % 2) {
+      return createBuffer(rt, size);
+    }
+    return {};
+  }
+  void takingOptionalBuffer(
+      jsi::Runtime& rt,
+      std::optional<jsi::ArrayBuffer> buffer) {
+    if (buffer) {
+      std::cout << "[C++] Received optional buffer with size: "
+                << buffer->size(rt) << std::endl;
+    } else {
+      std::cout << "[C++] Received null optional buffer" << std::endl;
+    }
   }
 
   void getValueWithCallback(

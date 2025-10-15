@@ -114,24 +114,34 @@ const ArrayBufferExample = () => {
       setTimeout(() => {
         const start = performance.now();
         manager.processBuffer(buffer);
-        manager.processUnsafe(buffer);
-        manager.processUnion({buffer: buffer});
-        manager.processArrayBufferStruct({ocb: 'OCB', buffer: buffer});
-        console.log(
-          `Constants buffer: ${new Uint8Array(manager.getConstants().buffer)}`,
-        );
-        manager.processArrayOfBuffers([buffer]);
+        console.log(buffer.byteLength);
+        // manager.processBuffer(new Uint8Array(buffer));
+        // manager.processUnsafe(buffer);
+        // // manager.processUnion({buffer: buffer});
+        // // manager.processArrayBufferStruct({ocb: 'OCB', buffer: buffer});
+        // console.log(
+        //   `Constants buffer: ${new Uint8Array(manager.getConstants().buffer)}`,
+        // );
+        // // manager.processArrayOfBuffers([buffer]);
 
-        native.processBufferUnion({buffer: buffer});
-        native.processBufferStruct({text: 'OCB', value: buffer});
-        console.log(
-          `Native C++ module buffer: ${new Uint8Array(native.getBufferStruct().value).byteLength}`,
-        );
+        // native.processBufferUnion({buffer: buffer});
+        // native.processBufferStruct({text: 'OCB', value: buffer});
+        // console.log(
+        //   `Native C++ module buffer: ${new Uint8Array(native.getBufferStruct().value).byteLength}`,
+        // );
 
-        manager.getAsyncBuffer().then(b => {
-          const view = new Uint8Array(b);
-          console.log(`getAsyncBuffer, length ${b} ${view.byteLength}`);
-        });
+        // manager.getAsyncBuffer().then(b => {
+        //   const view = new Uint8Array(b);
+        //   console.log(`getAsyncBuffer, length ${b} ${view.byteLength}`);
+        // });
+
+        // manager.processOptionalBuffer(null);
+        // native.takingOptionalBuffer(null);
+        // const b = native.getOptionalBuffer(7);
+        // console.log(
+        //   'Native C++ module optional buffer: ' +
+        //     (b ? `${new Uint8Array(b).byteLength}` : 'null'),
+        // );
 
         const end = performance.now();
         setArrayBufferTime((end - start).toFixed(2));

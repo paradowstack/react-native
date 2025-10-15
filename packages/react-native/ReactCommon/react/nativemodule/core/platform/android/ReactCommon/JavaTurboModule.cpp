@@ -328,20 +328,6 @@ JNIArgs convertJSIArgsToJNIArgs(
     const jsi::Value* arg = &args[argIndex];
     jvalue* jarg = &jargs[argIndex];
 
-    if (type == "Ljava/nio/ByteBuffer;") {
-      if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
-        throw JavaTurboModuleArgumentConversionException(
-            "ArrayBuffer", argIndex, methodName, arg, &rt);
-      }
-      const auto arrayBuffer = arg->asObject(rt).asArrayBuffer(rt);
-      const auto len = arrayBuffer.size(rt);
-      const auto data = arrayBuffer.data(rt);
-      const auto directBuffer = env->NewDirectByteBuffer(
-          static_cast<void*>(data), static_cast<jlong>(len));
-      jarg->l = makeGlobalIfNecessary(directBuffer);
-      continue;
-    }
-
     if (type == "D") {
       if (!arg->isNumber()) {
         throw JavaTurboModuleArgumentConversionException(
@@ -448,6 +434,18 @@ JNIArgs convertJSIArgsToJNIArgs(
       auto dynamicFromValue = jsi::dynamicFromValue(rt, *arg);
       auto jParams = JDynamicNative::newObjectCxxArgs(dynamicFromValue);
       jarg->l = makeGlobalIfNecessary(jParams.release());
+    } else if (type == "Ljava/nio/ByteBuffer;") {
+      if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
+        throw JavaTurboModuleArgumentConversionException(
+            "ArrayBuffer", argIndex, methodName, arg, &rt);
+      }
+      const auto arrayBuffer = arg->asObject(rt).asArrayBuffer(rt);
+      const auto len = arrayBuffer.size(rt);
+      const auto data = arrayBuffer.data(rt);
+      const auto directBuffer = env->NewDirectByteBuffer(
+          static_cast<void*>(data), static_cast<jlong>(len));
+      jarg->l = makeGlobalIfNecessary(directBuffer);
+      continue;
     } else {
       throw JavaTurboModuleInvalidArgumentTypeException(
           type, argIndex, methodName);
