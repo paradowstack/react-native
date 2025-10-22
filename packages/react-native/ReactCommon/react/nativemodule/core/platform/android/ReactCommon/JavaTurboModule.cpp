@@ -10,10 +10,12 @@
 
 #include <cxxreact/MoveWrapper.h>
 #include <cxxreact/TraceSection.h>
+#include <fbjni/ByteBuffer.h>
 #include <fbjni/fbjni.h>
 #include <glog/logging.h>
 #include <jsi/jsi.h>
 
+#include <ReactCommon/ExternalMutableBuffer.h>
 #include <ReactCommon/TurboModule.h>
 #include <ReactCommon/TurboModulePerfLogger.h>
 #include <jsi/JSIDynamic.h>
@@ -434,17 +436,17 @@ JNIArgs convertJSIArgsToJNIArgs(
       auto dynamicFromValue = jsi::dynamicFromValue(rt, *arg);
       auto jParams = JDynamicNative::newObjectCxxArgs(dynamicFromValue);
       jarg->l = makeGlobalIfNecessary(jParams.release());
-    } else if (type == "Ljava/nio/ByteBuffer;") {
+    } else if (type == jni::JByteBuffer::kJavaDescriptor) {
       if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
         throw JavaTurboModuleArgumentConversionException(
             "ArrayBuffer", argIndex, methodName, arg, &rt);
       }
-      const auto arrayBuffer = arg->asObject(rt).asArrayBuffer(rt);
-      const auto len = arrayBuffer.size(rt);
-      const auto data = arrayBuffer.data(rt);
-      const auto directBuffer = env->NewDirectByteBuffer(
-          static_cast<void*>(data), static_cast<jlong>(len));
-      jarg->l = makeGlobalIfNecessary(directBuffer);
+
+      auto arrayBuffer = arg->asObject(rt).asArrayBuffer(rt);
+      auto len = arrayBuffer.size(rt);
+      auto data = arrayBuffer.data(rt);
+      auto directBuffer = jni::JByteBuffer::wrapBytes(data, len);
+      jarg->l = makeGlobalIfNecessary(directBuffer.release());
       continue;
     } else {
       throw JavaTurboModuleInvalidArgumentTypeException(
@@ -985,30 +987,12 @@ jsi::Value JavaTurboModule::invokeJavaMethod(
 
       auto returnValue = jsi::Value::null();
       if (returnObject != nullptr) {
-        auto jResult = jni::adopt_local(returnObject);
-        auto byteBuffer = jResult.get();
-
-        struct ByteArrayMutableBuffer : jsi::MutableBuffer {
-         public:
-          ByteArrayMutableBuffer(uint8_t* data, size_t size)
-              : _data{data}, _size{size} {}
-
-          uint8_t* data() override {
-            return _data;
-          }
-          size_t size() const override {
-            return _size;
-          }
-
-         private:
-          uint8_t* _data{};
-          size_t _size{};
-        };
-
-        auto size = env->GetDirectBufferCapacity(byteBuffer);
-        auto data = (uint8_t*)env->GetDirectBufferAddress(byteBuffer);
+        auto bufferObj = jni::adopt_local(
+            static_cast<jni::JByteBuffer::javaobject>(returnObject));
+        auto size = bufferObj->getDirectSize();
+        auto data = bufferObj->getDirectBytes();
         auto mutableBuffer =
-            std::make_shared<ByteArrayMutableBuffer>(data, size);
+            std::make_shared<ExternalMutableBuffer>(data, size);
         auto arrayBuffer = jsi::ArrayBuffer{runtime, mutableBuffer};
         auto obj = jsi::Value{runtime, arrayBuffer};
         returnValue = std::move(obj);

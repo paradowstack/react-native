@@ -14,6 +14,7 @@
 #import <React/RCTModuleMethod.h>
 #import <React/RCTUtils.h>
 #import <ReactCommon/CallInvoker.h>
+#import <ReactCommon/ExternalMutableBuffer.h>
 #import <ReactCommon/TurboModule.h>
 #import <ReactCommon/TurboModulePerfLogger.h>
 #import <cxxreact/TraceSection.h>
@@ -93,24 +94,7 @@ static jsi::ArrayBuffer convertNSDataToJSIArrayBuffer(jsi::Runtime &runtime, NSD
 {
 	auto length = [value length];
 	auto data = (uint8_t*)[value bytes];
-
-	class NSDataMutableBuffer : public facebook::jsi::MutableBuffer {
-	 public:
-		NSDataMutableBuffer(uint8_t* data, size_t size) : _data{data}, _size{size} {}
-		
-		uint8_t* data() override {
-			return _data;
-		}
-		size_t size() const override {
-			return _size;
-		}
-
-	 private:
-		uint8_t* _data{};
-		size_t _size{};
-	};
-	
-	auto mutableBuffer = std::make_shared<NSDataMutableBuffer>(data, length);
+	auto mutableBuffer = std::make_shared<ExternalMutableBuffer>(data, length);
 	auto arrayBuffer = jsi::ArrayBuffer(runtime, mutableBuffer);
 	return arrayBuffer;
 }

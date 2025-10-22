@@ -21,6 +21,12 @@ import {
 } from 'react-native';
 
 const SIZE = 1;
+const smallBuffer = new ArrayBuffer(4);
+const smallBufferView = new Uint8Array(smallBuffer);
+smallBufferView[0] = 40;
+smallBufferView[1] = 50;
+smallBufferView[2] = 60;
+smallBufferView[3] = 70;
 
 const ArrayBufferExample = () => {
   const [buffer, setBuffer] = useState(null);
@@ -114,7 +120,22 @@ const ArrayBufferExample = () => {
       setTimeout(() => {
         const start = performance.now();
         manager.processBuffer(buffer);
-        console.log(buffer.byteLength);
+        console.log(`Processing buffer: ${buffer.byteLength}`);
+        const b = manager.getBuffer();
+        console.log(`Retrieved buffer: ${b.byteLength}`);
+
+        // return fetch('http://localhost:3000/send', {
+        //   method: 'POST',
+        //   body: smallBuffer,
+        // })
+        //   .then(response => response.json())
+        //   .then(json => {
+        //     return json.movies;
+        //   })
+        //   .catch(error => {
+        //     console.error(error);
+        //   });
+
         // manager.processBuffer(new Uint8Array(buffer));
         // manager.processUnsafe(buffer);
         // // manager.processUnion({buffer: buffer});

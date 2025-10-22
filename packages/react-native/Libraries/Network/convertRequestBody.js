@@ -26,6 +26,14 @@ export type RequestBody =
   | $ArrayBufferView;
 
 function convertRequestBody(body: RequestBody): Object {
+  console.log(
+    'convertRequestBody body type:',
+    typeof body,
+    body instanceof Blob,
+    body instanceof FormData,
+    body instanceof ArrayBuffer,
+    ArrayBuffer.isView(body),
+  );
   if (typeof body === 'string') {
     return {string: body};
   }
