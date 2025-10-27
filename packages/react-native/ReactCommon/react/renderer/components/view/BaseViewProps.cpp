@@ -12,6 +12,7 @@
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BackgroundImagePropsConversions.h>
 #include <react/renderer/components/view/BoxShadowPropsConversions.h>
+#include <react/renderer/components/view/ClipPathPropsConversions.h>
 #include <react/renderer/components/view/FilterPropsConversions.h>
 #include <react/renderer/components/view/conversions.h>
 #include <react/renderer/components/view/primitives.h>
@@ -373,7 +374,16 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "removeClippedSubviews",
                     sourceProps.removeClippedSubviews,
-                    false)) {}
+                    false)),
+      clipPath(
+          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+              ? sourceProps.clipPath
+              : convertRawProp(
+                    context,
+                    rawProps,
+                    "clipPath",
+                    sourceProps.clipPath,
+                    {})) {}
 
 #define VIEW_EVENT_CASE(eventType)                      \
   case CONSTEXPR_RAW_PROPS_KEY_HASH("on" #eventType): { \
@@ -422,7 +432,8 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(onLayout);
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsable);
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
+		RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
+		RAW_SET_PROP_SWITCH_CASE_BASIC(clipPath);
     RAW_SET_PROP_SWITCH_CASE_BASIC(cursor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineOffset);

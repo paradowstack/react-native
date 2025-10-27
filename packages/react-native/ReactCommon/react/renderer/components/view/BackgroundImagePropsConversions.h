@@ -11,6 +11,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/graphics/BackgroundImage.h>
+#include <iostream>
 
 namespace facebook::react {
 

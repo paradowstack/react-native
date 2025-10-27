@@ -1259,6 +1259,25 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       self.currentContainerView.layer.cornerRadius = borderMetrics.borderRadii.topLeft.horizontal;
     }
   }
+	
+	if (!_props->clipPath) return;
+	
+	auto size = 20;
+  UIBezierPath *path = [UIBezierPath bezierPathWithRect:CGRectMake(size, size, size, size)];
+
+	// No 	change
+	CAShapeLayer *shapeLayer = [CAShapeLayer layer];
+	shapeLayer.path = path.CGPath;
+
+	// This should not be transparent since we need
+	// the camera preview to be seen through here
+	shapeLayer.fillColor = [UIColor whiteColor].CGColor;
+
+	// No change
+	shapeLayer.strokeColor = [UIColor blueColor].CGColor;
+	shapeLayer.lineWidth = 5;
+	
+	layer.mask = shapeLayer;
 }
 
 // Shapes the given layer to match the shape of this View's layer. This is

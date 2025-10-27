@@ -898,6 +898,7 @@ export type ____ViewStyle_InternalBase = $ReadOnly<{
     | $ReadOnlyArray<BackgroundRepeatValue>
     | string,
   isolation?: 'auto' | 'isolate',
+  clipPath?: string,
 }>;
 
 export type ____ViewStyle_InternalCore = $ReadOnly<{

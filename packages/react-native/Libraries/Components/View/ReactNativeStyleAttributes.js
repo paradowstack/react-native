@@ -203,7 +203,7 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
   outlineStyle: true,
   outlineWidth: true,
   pointerEvents: true,
-
+  clipPath: true,
   /**
    * Text
    */

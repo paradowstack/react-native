@@ -196,7 +196,7 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableNativeCSSParsing() override {
-    return false;
+    return true;
   }
 
   bool enableNetworkEventReporting() override {
@@ -212,7 +212,7 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableSwiftUIBasedFilters() override {
-    return false;
+    return true;
   }
 
   bool enableViewCulling() override {

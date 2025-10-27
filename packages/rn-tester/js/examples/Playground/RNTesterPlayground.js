@@ -11,15 +11,18 @@
 import type {RNTesterModuleExample} from '../../types/RNTesterTypes';
 
 import RNTesterText from '../../components/RNTesterText';
+import * as BoxShadowExample from '../../examples/BoxShadow/BoxShadowExample';
 import * as React from 'react';
 import {StyleSheet, View} from 'react-native';
+
+const Example = BoxShadowExample.examples[4];
 
 function Playground() {
   return (
     <View style={styles.container}>
-      <RNTesterText>
-        Edit "RNTesterPlayground.js" to change this file
-      </RNTesterText>
+      <RNTesterText>{Example.title}</RNTesterText>
+      <RNTesterText>{Example.description}</RNTesterText>
+      <Example.render />
     </View>
   );
 }
@@ -27,6 +30,9 @@ function Playground() {
 const styles = StyleSheet.create({
   container: {
     padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    rowGap: 16,
   },
 });
 
