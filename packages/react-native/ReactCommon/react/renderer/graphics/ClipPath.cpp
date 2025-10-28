@@ -14,152 +14,265 @@
 
 namespace facebook::react {
 
-bool Circle::operator==(const Circle& other) const {
+bool CircleShape::operator==(const CircleShape& other) const {
   return cx == other.cx && cy == other.cy && r == other.r;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-void Circle::toString(std::stringstream& ss) const {
-  ss << "circle(" << r << "px at " << cx << "px " << cy << "px)";
+void CircleShape::toString(std::stringstream& ss) const {
+  ss << "circle(" << r << "px";
+  if (cx || cy) {
+    ss << " at ";
+    if (cx) {
+      ss << cx->toString();
+    }
+    if (cy) {
+      ss << " " << cy->toString();
+    }
+  }
 }
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
-folly::dynamic Circle::toDynamic() const {
+folly::dynamic CircleShape::toDynamic() const {
   folly::dynamic result = folly::dynamic::object();
-  result["cx"] = cx;
-  result["cy"] = cy;
-  result["r"] = r;
+  result["r"] = r.toDynamic();
+  if (cx) {
+    result["cx"] = cx->toDynamic();
+  }
+  if (cy) {
+    result["cy"] = cy->toDynamic();
+  }
   return result;
 }
 #endif
 
-bool Ellipse::operator==(const Ellipse& other) const {
+bool EllipseShape::operator==(const EllipseShape& other) const {
   return cx == other.cx && cy == other.cy && rx == other.rx && ry == other.ry;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-void Ellipse::toString(std::stringstream& ss) const {
-  ss << "ellipse(" << rx << "px " << ry << "px at " << cx << "px " << cy
-     << "px)";
+void EllipseShape::toString(std::stringstream& ss) const {
+  ss << "ellipse(" << rx << "px " << ry << "px";
+  if (cx || cy) {
+    ss << " at ";
+    if (cx) {
+      ss << cx->toString();
+    }
+    if (cy) {
+      ss << " " << cy->toString();
+    }
+  }
 }
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
-folly::dynamic Ellipse::toDynamic() const {
+folly::dynamic EllipseShape::toDynamic() const {
   folly::dynamic result = folly::dynamic::object();
-  result["cx"] = cx;
-  result["cy"] = cy;
-  result["rx"] = rx;
-  result["ry"] = ry;
+  result["rx"] = r.toDynamic();
+  result["ry"] = r.toDynamic();
+  if (cx) {
+    result["cx"] = cx->toDynamic();
+  }
+  if (cy) {
+    result["cy"] = cy->toDynamic();
+  }
   return result;
 }
 #endif
 
-bool Rectangle::operator==(const Rectangle& other) const {
+bool InsetShape::operator==(const InsetShape& other) const {
+  return top == other.top && right == other.right && bottom == other.bottom &&
+      left == other.left;
+}
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+void InsetShape::toString(std::stringstream& ss) const {
+  ss << "inset(" << top.toString() << " " << right.toString() << " "
+     << bottom.toString() << " " << left.toString() << ")";
+}
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic InsetShape::toDynamic() const {
+  folly::dynamic result = folly::dynamic::object();
+  result["top"] = top.toDynamic();
+  result["right"] = right.toDynamic();
+  result["bottom"] = bottom.toDynamic();
+  result["left"] = left.toDynamic();
+  return result;
+}
+#endif
+
+bool PolygonShape::operator==(const PolygonShape& other) const {
+  return points == other.points;
+}
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+void PolygonShape::toString(std::stringstream& ss) const {
+  ss << "polygon(";
+  for (size_t i = 0; i < points.size(); i++) {
+    if (i > 0) {
+      ss << ", ";
+    }
+    ss << points[i].first.toString() << " " << points[i].second.toString();
+  }
+  ss << ")";
+}
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic PolygonShape::toDynamic() const {
+  folly::dynamic result = folly::dynamic::array();
+  for (const auto& point : points) {
+    folly::dynamic pointObj = folly::dynamic::object();
+    pointObj["x"] = point.first.toDynamic();
+    pointObj["y"] = point.second.toDynamic();
+    result.push_back(pointObj);
+  }
+  return result;
+}
+#endif
+
+// RectShape implementations
+bool RectShape::operator==(const RectShape& other) const {
+  return top == other.top && right == other.right && bottom == other.bottom &&
+      left == other.left;
+}
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+void RectShape::toString(std::stringstream& ss) const {
+  ss << "rect(" << top.toString() << ", " << right.toString() << ", "
+     << bottom.toString() << ", " << left.toString() << ")";
+}
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic RectShape::toDynamic() const {
+  return folly::dynamic::object()("top", top.toDynamic())(
+      "right", right.toDynamic())("bottom", bottom.toDynamic())(
+      "left", left.toDynamic());
+}
+#endif
+
+// XywhShape implementations
+bool XywhShape::operator==(const XywhShape& other) const {
   return x == other.x && y == other.y && width == other.width &&
       height == other.height;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-void Rectangle::toString(std::stringstream& ss) const {
-  ss << "rectangle(" << x << "px " << y << "px " << width << "px " << height
-     << "px)";
+void XywhShape::toString(std::stringstream& ss) const {
+  ss << "xywh(" << x.toString() << " " << y.toString() << " "
+     << width.toString() << " " << height.toString() << ")";
 }
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
-folly::dynamic Rectangle::toDynamic() const {
-  folly::dynamic result = folly::dynamic::object();
-  result["x"] = x;
-  result["y"] = y;
-  result["width"] = width;
-  result["height"] = height;
-  return result;
+folly::dynamic XywhShape::toDynamic() const {
+  return folly::dynamic::object()("x", x.toDynamic())("y", y.toDynamic())(
+      "width", width.toDynamic())("height", height.toDynamic());
 }
 #endif
 
-#ifdef RN_SERIALIZABLE_STATE
-folly::dynamic toDynamic(const ClipPath& clipPath) {
-  if (std::holds_alternative<GeometryBox>(clipPath)) {
-    folly::dynamic result = folly::dynamic::object();
-    switch (std::get<GeometryBox>(clipPath)) {
-      case MarginBox:
-        result["type"] = "margin-box";
-        break;
-      case BorderBox:
-        result["type"] = "border-box";
-        break;
-      case ContentBox:
-        result["type"] = "content-box";
-        break;
-      case PaddingBox:
-        result["type"] = "padding-box";
-        break;
-      case FillBox:
-        result["type"] = "fill-box";
-        break;
-      case StrokeBox:
-        result["type"] = "stroke-box";
-        break;
-      case ViewBox:
-        result["type"] = "view-box";
-        break;
-    }
-    return result;
-  } else if (std::holds_alternative<BasicShape>(clipPath)) {
-    return std::visit(
-        [&](const auto& shape) { return shape.toDynamic(); },
-        std::get<BasicShape>(clipPath));
-  }
-  return folly::dynamic(nullptr);
+// PathShape implementations
+bool PathShape::operator==(const PathShape& other) const {
+  return pathData == other.pathData;
 }
-#endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-std::string toString(std::vector<ClipPath>& value) {
+void PathShape::toString(std::stringstream& ss) const {
+  ss << "path(\"" << pathData << "\")";
+}
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic PathShape::toDynamic() const {
+  return folly::dynamic::object()("pathData", pathData);
+}
+#endif
+
+bool ClipPath::operator==(const ClipPath& other) const {
+  return shape == other.shape && geometryBox == other.geometryBox;
+}
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+std::string ClipPath::toString() const {
   std::stringstream ss;
 
-  ss << "[";
-  for (size_t i = 0; i < value.size(); i++) {
-    if (i > 0) {
-      ss << ", ";
-    }
+  if (shape) {
+    std::visit([&](const auto& s) { s.toString(ss); }, *shape);
+  }
 
-    const auto& clipPath = value[i];
-    if (std::holds_alternative<GeometryBox>(clipPath)) {
-      switch (std::get<GeometryBox>(clipPath)) {
-        case MarginBox:
-          ss << "margin-box";
-          break;
-        case BorderBox:
-          ss << "border-box";
-          break;
-        case ContentBox:
-          ss << "content-box";
-          break;
-        case PaddingBox:
-          ss << "padding-box";
-          break;
-        case FillBox:
-          ss << "fill-box";
-          break;
-        case StrokeBox:
-          ss << "stroke-box";
-          break;
-        case ViewBox:
-          ss << "view-box";
-          break;
-      }
-    } else if (std::holds_alternative<BasicShape>(clipPath)) {
-      std::visit(
-          [&](const auto& shape) { shape.toString(ss); },
-          std::get<BasicShape>(clipPath));
+  if (geometryBox) {
+    if (shape) {
+      ss << " ";
+    }
+    switch (*geometryBox) {
+      case GeometryBox::MarginBox:
+        ss << "margin-box";
+        break;
+      case GeometryBox::BorderBox:
+        ss << "border-box";
+        break;
+      case GeometryBox::ContentBox:
+        ss << "content-box";
+        break;
+      case GeometryBox::PaddingBox:
+        ss << "padding-box";
+        break;
+      case GeometryBox::FillBox:
+        ss << "fill-box";
+        break;
+      case GeometryBox::StrokeBox:
+        ss << "stroke-box";
+        break;
+      case GeometryBox::ViewBox:
+        ss << "view-box";
+        break;
     }
   }
-  ss << "]";
 
   return ss.str();
+}
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic ClipPath::toDynamic() const {
+  folly::dynamic result = folly::dynamic::object();
+
+  if (shape) {
+    result["shape"] =
+        std::visit([](const auto& s) { return s.toDynamic(); }, *shape);
+  }
+
+  if (geometryBox) {
+    switch (*geometryBox) {
+      case GeometryBox::MarginBox:
+        result["geometryBox"] = "margin-box";
+        break;
+      case GeometryBox::BorderBox:
+        result["geometryBox"] = "border-box";
+        break;
+      case GeometryBox::ContentBox:
+        result["geometryBox"] = "content-box";
+        break;
+      case GeometryBox::PaddingBox:
+        result["geometryBox"] = "padding-box";
+        break;
+      case GeometryBox::FillBox:
+        result["geometryBox"] = "fill-box";
+        break;
+      case GeometryBox::StrokeBox:
+        result["geometryBox"] = "stroke-box";
+        break;
+      case GeometryBox::ViewBox:
+        result["geometryBox"] = "view-box";
+        break;
+    }
+  }
+
+  return result;
 }
 #endif
 

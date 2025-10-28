@@ -14,10 +14,132 @@
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/css/CSSClipPath.h>
 #include <react/renderer/css/CSSValueParser.h>
-#include <react/renderer/graphics/ClipPath.h>
 #include <unordered_map>
 
 namespace facebook::react {
+
+namespace {
+ValueUnit convertLengthPercentageToValueUnit(
+    const std::variant<CSSLength, CSSPercentage>& value) {
+  if (std::holds_alternative<CSSLength>(value)) {
+    return {std::get<CSSLength>(value).value, UnitType::Point};
+  } else {
+    return {std::get<CSSPercentage>(value).value, UnitType::Percent};
+  }
+}
+
+GeometryBox convertCSSGeometryBox(CSSGeometryBox cssBox) {
+  switch (cssBox) {
+    case CSSGeometryBox::MarginBox:
+      return GeometryBox::MarginBox;
+    case CSSGeometryBox::BorderBox:
+      return GeometryBox::BorderBox;
+    case CSSGeometryBox::ContentBox:
+      return GeometryBox::ContentBox;
+    case CSSGeometryBox::PaddingBox:
+      return GeometryBox::PaddingBox;
+    case CSSGeometryBox::FillBox:
+      return GeometryBox::FillBox;
+    case CSSGeometryBox::StrokeBox:
+      return GeometryBox::StrokeBox;
+    case CSSGeometryBox::ViewBox:
+      return GeometryBox::ViewBox;
+  }
+}
+} // namespace
+
+std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
+  ClipPath result;
+
+  // Convert shape if present
+  if (cssClipPath.shape) {
+    const auto& cssShape = *cssClipPath.shape;
+
+    if (std::holds_alternative<CSSCircleShape>(cssShape)) {
+      auto cssCircle = std::get<CSSCircleShape>(cssShape);
+      CircleShape circle;
+      if (cssCircle.radius) {
+        circle.r = convertLengthPercentageToValueUnit(*cssCircle.radius);
+      }
+      if (cssCircle.cx) {
+        circle.cx = convertLengthPercentageToValueUnit(*cssCircle.cx);
+      }
+      if (cssCircle.cy) {
+        circle.cy = convertLengthPercentageToValueUnit(*cssCircle.cy);
+      }
+      result.shape = circle;
+    } else if (std::holds_alternative<CSSEllipseShape>(cssShape)) {
+      auto cssEllipse = std::get<CSSEllipseShape>(cssShape);
+      EllipseShape ellipse;
+      if (cssEllipse.rx) {
+        ellipse.rx = convertLengthPercentageToValueUnit(*cssEllipse.rx);
+      }
+      if (cssEllipse.ry) {
+        ellipse.ry = convertLengthPercentageToValueUnit(*cssEllipse.ry);
+      }
+      if (cssEllipse.cx) {
+        ellipse.cx = convertLengthPercentageToValueUnit(*cssEllipse.cx);
+      }
+      if (cssEllipse.cy) {
+        ellipse.cy = convertLengthPercentageToValueUnit(*cssEllipse.cy);
+      }
+      result.shape = ellipse;
+    } else if (std::holds_alternative<CSSInsetShape>(cssShape)) {
+      auto cssInset = std::get<CSSInsetShape>(cssShape);
+      InsetShape inset;
+      if (cssInset.top) {
+        inset.top = convertLengthPercentageToValueUnit(*cssInset.top);
+      }
+      if (cssInset.right) {
+        inset.right = convertLengthPercentageToValueUnit(*cssInset.right);
+      }
+      if (cssInset.bottom) {
+        inset.bottom = convertLengthPercentageToValueUnit(*cssInset.bottom);
+      }
+      if (cssInset.left) {
+        inset.left = convertLengthPercentageToValueUnit(*cssInset.left);
+      }
+      result.shape = inset;
+    } else if (std::holds_alternative<CSSPolygonShape>(cssShape)) {
+      auto cssPolygon = std::get<CSSPolygonShape>(cssShape);
+      PolygonShape polygon;
+      for (const auto& point : cssPolygon.points) {
+        polygon.points.push_back(
+            {convertLengthPercentageToValueUnit(point.first),
+             convertLengthPercentageToValueUnit(point.second)});
+      }
+      result.shape = polygon;
+    } else if (std::holds_alternative<CSSRectShape>(cssShape)) {
+      auto cssRect = std::get<CSSRectShape>(cssShape);
+      RectShape rect;
+      rect.top = convertLengthPercentageToValueUnit(cssRect.top);
+      rect.right = convertLengthPercentageToValueUnit(cssRect.right);
+      rect.bottom = convertLengthPercentageToValueUnit(cssRect.bottom);
+      rect.left = convertLengthPercentageToValueUnit(cssRect.left);
+      result.shape = rect;
+    } else if (std::holds_alternative<CSSXywhShape>(cssShape)) {
+      auto cssXywh = std::get<CSSXywhShape>(cssShape);
+      XywhShape xywh;
+      xywh.x = convertLengthPercentageToValueUnit(cssXywh.x);
+      xywh.y = convertLengthPercentageToValueUnit(cssXywh.y);
+      xywh.width = convertLengthPercentageToValueUnit(cssXywh.width);
+      xywh.height = convertLengthPercentageToValueUnit(cssXywh.height);
+      result.shape = xywh;
+    } else if (std::holds_alternative<CSSPathShape>(cssShape)) {
+      auto cssPath = std::get<CSSPathShape>(cssShape);
+      PathShape path;
+      path.pathData = cssPath.pathData;
+      result.shape = path;
+    }
+  }
+
+  // Convert geometry box if present
+  if (cssClipPath.geometryBox) {
+    result.geometryBox = convertCSSGeometryBox(*cssClipPath.geometryBox);
+  }
+
+  return result;
+}
 
 void parseProcessedClipPath(
     const PropsParserContext& context,
@@ -112,9 +234,6 @@ void parseProcessedClipPath(
 
   //   ClipPaths.push_back(ClipPath);
   // }
-
-  ClipPath path;
-  result = path;
 }
 
 // std::optional<ClipPath> fromCSSShadow(const CSSShadow& cssShadow) {
@@ -140,20 +259,31 @@ void parseProcessedClipPath(
 void parseUnprocessedClipPathString(
     std::string&& value,
     std::optional<ClipPath>& result) {
-  auto clipPath = parseCSSProperty<CSSShadowList>((std::string)value);
-  if (!std::holds_alternative<CSSShadowList>(clipPath)) {
+  auto clipPath = parseCSSProperty<CSSClipPath>((std::string)value);
+  if (std::holds_alternative<std::monostate>(clipPath)) {
     result = {};
     return;
   }
 
-  for (const auto& cssShadow : std::get<CSSShadowList>(clipPath)) {
-    if (auto ClipPath = fromCSSShadow(cssShadow)) {
-      result.push_back(*ClipPath);
-    } else {
-      result = {};
-      return;
-    }
-  }
+  result = fromCSSClipPath(std::get<CSSClipPath>(clipPath));
+
+  // std::vector<ClipPath> results;
+  // auto filterList = parseCSSProperty<CSSClipPathList>((std::string)value);
+  // if (!std::holds_alternative<CSSClipPathList>(filterList)) {
+  //   results = {};
+  //   return;
+  // }
+
+  // for (const auto& cssFilter : std::get<CSSClipPathList>(filterList)) {
+  //   if (auto filter = fromCSSClipPath(cssFilter)) {
+  //     results.push_back(*filter);
+  // 		result = *filter;
+  // 		return;
+  //   } else {
+  //     results = {};
+  //     return;
+  //   }
+  // }
 }
 
 std::optional<ClipPath> parseClipPathRawValue(

@@ -17,6 +17,7 @@
 #import <React/RCTBackgroundImageUtils.h>
 #import <React/RCTBorderDrawing.h>
 #import <React/RCTBoxShadow.h>
+#import <React/RCTClipPath.h>
 #import <React/RCTConversions.h>
 #import <React/RCTLinearGradient.h>
 #import <React/RCTLocalizedString.h>
@@ -1223,7 +1224,15 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 
   // clipping
   self.currentContainerView.layer.mask = nil;
-  if (self.currentContainerView.clipsToBounds) {
+
+  // Handle clip-path property
+  if (_props->clipPath.has_value()) {
+    CAShapeLayer *maskLayer = RCTClipPathCreateMaskLayer(_props->clipPath.value(), layer.bounds);
+    if (maskLayer != nil) {
+      self.currentContainerView.layer.mask = maskLayer;
+    }
+  } else if (self.currentContainerView.clipsToBounds) {
+    // Handle regular clipsToBounds clipping when no clip-path is specified
     BOOL clipToPaddingBox = ReactNativeFeatureFlags::enableIOSViewClipToPaddingBox();
     if (!clipToPaddingBox) {
       if (borderMetrics.borderRadii.isUniform()) {
@@ -1259,25 +1268,6 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       self.currentContainerView.layer.cornerRadius = borderMetrics.borderRadii.topLeft.horizontal;
     }
   }
-	
-	if (!_props->clipPath) return;
-	
-	auto size = 20;
-  UIBezierPath *path = [UIBezierPath bezierPathWithRect:CGRectMake(size, size, size, size)];
-
-	// No 	change
-	CAShapeLayer *shapeLayer = [CAShapeLayer layer];
-	shapeLayer.path = path.CGPath;
-
-	// This should not be transparent since we need
-	// the camera preview to be seen through here
-	shapeLayer.fillColor = [UIColor whiteColor].CGColor;
-
-	// No change
-	shapeLayer.strokeColor = [UIColor blueColor].CGColor;
-	shapeLayer.lineWidth = 5;
-	
-	layer.mask = shapeLayer;
 }
 
 // Shapes the given layer to match the shape of this View's layer. This is

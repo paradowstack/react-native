@@ -9,6 +9,7 @@
 
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/ValueUnit.h>
 #include <optional>
 #include <sstream>
 
@@ -18,15 +19,15 @@
 
 namespace facebook::react {
 
-struct Circle {
-  Float cx{};
-  Float cy{};
-  Float r{};
+struct CircleShape {
+  ValueUnit r{};
+  std::optional<ValueUnit> cx{};
+  std::optional<ValueUnit> cy{};
 
-  bool operator==(const Circle& other) const;
+  bool operator==(const CircleShape &other) const;
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream& ss) const;
+  void toString(std::stringstream &ss) const;
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -34,16 +35,16 @@ struct Circle {
 #endif
 };
 
-struct Ellipse {
-  Float cx{};
-  Float cy{};
-  Float rx{};
-  Float ry{};
+struct EllipseShape {
+  ValueUnit rx{};
+  ValueUnit ry{};
+  std::optional<ValueUnit> cx{};
+  std::optional<ValueUnit> cy{};
 
-  bool operator==(const Ellipse& other) const;
+  bool operator==(const EllipseShape &other) const;
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream& ss) const;
+  void toString(std::stringstream &ss) const;
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -51,16 +52,16 @@ struct Ellipse {
 #endif
 };
 
-struct Rectangle {
-  Float x{};
-  Float y{};
-  Float width{};
-  Float height{};
+struct InsetShape {
+  ValueUnit top{};
+  ValueUnit right{};
+  ValueUnit bottom{};
+  ValueUnit left{};
 
-  bool operator==(const Rectangle& other) const;
+  bool operator==(const InsetShape &other) const;
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream& ss) const;
+  void toString(std::stringstream &ss) const;
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -68,9 +69,71 @@ struct Rectangle {
 #endif
 };
 
-using BasicShape = std::variant<Circle, Ellipse, Rectangle>;
+struct PolygonShape {
+  std::vector<std::pair<ValueUnit, ValueUnit>> points;
 
-enum GeometryBox {
+  bool operator==(const PolygonShape &other) const;
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+  void toString(std::stringstream &ss) const;
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic() const;
+#endif
+};
+
+struct RectShape {
+  ValueUnit top{};
+  ValueUnit right{};
+  ValueUnit bottom{};
+  ValueUnit left{};
+
+  bool operator==(const RectShape &other) const;
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+  void toString(std::stringstream &ss) const;
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic() const;
+#endif
+};
+
+struct XywhShape {
+  ValueUnit x{};
+  ValueUnit y{};
+  ValueUnit width{};
+  ValueUnit height{};
+
+  bool operator==(const XywhShape &other) const;
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+  void toString(std::stringstream &ss) const;
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic() const;
+#endif
+};
+
+struct PathShape {
+  std::string pathData;
+
+  bool operator==(const PathShape &other) const;
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+  void toString(std::stringstream &ss) const;
+#endif
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic() const;
+#endif
+};
+
+using BasicShape = std::variant<CircleShape, EllipseShape, InsetShape, PolygonShape, RectShape, XywhShape, PathShape>;
+
+enum class GeometryBox : uint8_t {
   MarginBox,
   BorderBox,
   ContentBox,
@@ -80,14 +143,19 @@ enum GeometryBox {
   ViewBox,
 };
 
-using ClipPath = std::variant<BasicShape, GeometryBox>;
+struct ClipPath {
+  std::optional<BasicShape> shape;
+  std::optional<GeometryBox> geometryBox;
 
-#ifdef RN_SERIALIZABLE_STATE
-folly::dynamic toDynamic(const ClipPath& clipPath);
-#endif
+  bool operator==(const ClipPath &other) const;
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-std::string toString(std::vector<ClipPath>& value);
+  std::string toString() const;
 #endif
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic() const;
+#endif
+};
 
 } // namespace facebook::react
