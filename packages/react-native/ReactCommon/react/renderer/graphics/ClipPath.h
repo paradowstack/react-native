@@ -57,6 +57,7 @@ struct InsetShape {
   ValueUnit right{};
   ValueUnit bottom{};
   ValueUnit left{};
+  std::optional<ValueUnit> borderRadius{};
 
   bool operator==(const InsetShape &other) const;
 
@@ -88,6 +89,7 @@ struct RectShape {
   ValueUnit right{};
   ValueUnit bottom{};
   ValueUnit left{};
+  std::optional<ValueUnit> borderRadius{};
 
   bool operator==(const RectShape &other) const;
 
@@ -105,6 +107,7 @@ struct XywhShape {
   ValueUnit y{};
   ValueUnit width{};
   ValueUnit height{};
+  std::optional<ValueUnit> borderRadius{};
 
   bool operator==(const XywhShape &other) const;
 

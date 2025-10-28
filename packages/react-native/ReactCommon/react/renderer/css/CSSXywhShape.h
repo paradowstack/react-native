@@ -15,6 +15,7 @@
 #include <react/renderer/css/CSSLengthPercentage.h>
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSValueParser.h>
+#include <react/utils/fnv1a.h>
 #include <react/utils/iequals.h>
 
 namespace facebook::react {
@@ -28,10 +29,12 @@ struct CSSXywhShape {
   std::variant<CSSLength, CSSPercentage> y;
   std::variant<CSSLength, CSSPercentage> width;
   std::variant<CSSLength, CSSPercentage> height;
+  std::optional<std::variant<CSSLength, CSSPercentage>> borderRadius;
 
   bool operator==(const CSSXywhShape &other) const
   {
-    return x == other.x && y == other.y && width == other.width && height == other.height;
+    return x == other.x && y == other.y && width == other.width && height == other.height &&
+        borderRadius == other.borderRadius;
   }
 };
 
@@ -100,7 +103,25 @@ struct CSSDataTypeParser<CSSXywhShape> {
       heightValue = std::get<CSSPercentage>(height);
     }
 
-    return CSSXywhShape{.x = xValue, .y = yValue, .width = widthValue, .height = heightValue};
+    parser.consumeWhitespace();
+
+    auto roundResult = parser.consumeComponentValue<bool>([](const CSSPreservedToken &token) -> bool {
+      return token.type() == CSSTokenType::Ident && fnv1aLowercase(token.stringValue()) == fnv1a("round");
+    });
+
+    std::optional<std::variant<CSSLength, CSSPercentage>> borderRadius;
+    if (roundResult) {
+      parser.consumeWhitespace();
+      auto radius = parseNextCSSValue<CSSLengthPercentage>(parser);
+      if (std::holds_alternative<CSSLength>(radius)) {
+        borderRadius = std::get<CSSLength>(radius);
+      } else if (std::holds_alternative<CSSPercentage>(radius)) {
+        borderRadius = std::get<CSSPercentage>(radius);
+      }
+    }
+
+    return CSSXywhShape{
+        .x = xValue, .y = yValue, .width = widthValue, .height = heightValue, .borderRadius = borderRadius};
   }
 };
 

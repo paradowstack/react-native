@@ -73,6 +73,7 @@ static UIBezierPath *_Nullable RCTCreateInsetPath(const InsetShape &inset, CGRec
   CGFloat right = RCTResolveValueUnit(inset.right, bounds.size.width);
   CGFloat bottom = RCTResolveValueUnit(inset.bottom, bounds.size.height);
   CGFloat left = RCTResolveValueUnit(inset.left, bounds.size.width);
+  CGFloat borderRadius = inset.borderRadius.has_value() ? RCTResolveValueUnit(inset.borderRadius.value(), bounds.size.width) : 0.0f;
 
   CGRect insetRect = CGRectMake(
       left, top, bounds.size.width - left - right, bounds.size.height - top - bottom);
@@ -82,7 +83,7 @@ static UIBezierPath *_Nullable RCTCreateInsetPath(const InsetShape &inset, CGRec
     return nil;
   }
 
-  return [UIBezierPath bezierPathWithRect:insetRect];
+  return [UIBezierPath bezierPathWithRoundedRect:insetRect cornerRadius:borderRadius];
 }
 
 /**
@@ -122,6 +123,7 @@ static UIBezierPath *_Nullable RCTCreateRectPath(const RectShape &rect, CGRect b
   CGFloat right = RCTResolveValueUnit(rect.right, bounds.size.width);
   CGFloat bottom = RCTResolveValueUnit(rect.bottom, bounds.size.height);
   CGFloat left = RCTResolveValueUnit(rect.left, bounds.size.width);
+  CGFloat borderRadius = rect.borderRadius.has_value() ? RCTResolveValueUnit(rect.borderRadius.value(), bounds.size.width) : 0.0f;
 
   // CSS rect() interprets values as distances from edges, creating a clipping rectangle
   CGRect clipRect = CGRectMake(left, top, right - left, bottom - top);
@@ -131,7 +133,7 @@ static UIBezierPath *_Nullable RCTCreateRectPath(const RectShape &rect, CGRect b
     return nil;
   }
 
-  return [UIBezierPath bezierPathWithRect:clipRect];
+	return [UIBezierPath bezierPathWithRoundedRect:clipRect cornerRadius:borderRadius];
 }
 
 /**
@@ -143,6 +145,7 @@ static UIBezierPath *_Nullable RCTCreateXywhPath(const XywhShape &xywh, CGRect b
   CGFloat y = RCTResolveValueUnit(xywh.y, bounds.size.height);
   CGFloat width = RCTResolveValueUnit(xywh.width, bounds.size.width);
   CGFloat height = RCTResolveValueUnit(xywh.height, bounds.size.height);
+  CGFloat borderRadius = xywh.borderRadius.has_value() ? RCTResolveValueUnit(xywh.borderRadius.value(), bounds.size.width) : 0.0f;
 
   CGRect xywhRect = CGRectMake(x, y, width, height);
 
@@ -151,7 +154,7 @@ static UIBezierPath *_Nullable RCTCreateXywhPath(const XywhShape &xywh, CGRect b
     return nil;
   }
 
-  return [UIBezierPath bezierPathWithRect:xywhRect];
+  return [UIBezierPath bezierPathWithRoundedRect:xywhRect cornerRadius:borderRadius];
 }
 
 /**

@@ -83,13 +83,17 @@ folly::dynamic EllipseShape::toDynamic() const {
 
 bool InsetShape::operator==(const InsetShape& other) const {
   return top == other.top && right == other.right && bottom == other.bottom &&
-      left == other.left;
+      left == other.left && borderRadius == other.borderRadius;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 void InsetShape::toString(std::stringstream& ss) const {
   ss << "inset(" << top.toString() << " " << right.toString() << " "
-     << bottom.toString() << " " << left.toString() << ")";
+     << bottom.toString() << " " << left.toString();
+  if (borderRadius) {
+    ss << " round " << borderRadius->toString();
+  }
+  ss << ")";
 }
 #endif
 
@@ -137,13 +141,17 @@ folly::dynamic PolygonShape::toDynamic() const {
 // RectShape implementations
 bool RectShape::operator==(const RectShape& other) const {
   return top == other.top && right == other.right && bottom == other.bottom &&
-      left == other.left;
+      left == other.left && borderRadius == other.borderRadius;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 void RectShape::toString(std::stringstream& ss) const {
-  ss << "rect(" << top.toString() << ", " << right.toString() << ", "
-     << bottom.toString() << ", " << left.toString() << ")";
+  ss << "rect(" << top.toString() << " " << right.toString() << " "
+     << bottom.toString() << " " << left.toString() << " ";
+  if (borderRadius) {
+    ss << "round " << borderRadius->toString();
+  }
+  ss << ")";
 }
 #endif
 
@@ -158,13 +166,17 @@ folly::dynamic RectShape::toDynamic() const {
 // XywhShape implementations
 bool XywhShape::operator==(const XywhShape& other) const {
   return x == other.x && y == other.y && width == other.width &&
-      height == other.height;
+      height == other.height && borderRadius == other.borderRadius;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 void XywhShape::toString(std::stringstream& ss) const {
   ss << "xywh(" << x.toString() << " " << y.toString() << " "
-     << width.toString() << " " << height.toString() << ")";
+     << width.toString() << " " << height.toString();
+  if (borderRadius) {
+    ss << " round " << borderRadius->toString();
+  }
+  ss << ")";
 }
 #endif
 

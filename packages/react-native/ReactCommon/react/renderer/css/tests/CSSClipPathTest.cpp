@@ -11,15 +11,6 @@
 
 namespace facebook::react {
 
-namespace {
-
-CSSColorStop
-makeCSSColorStop(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) {
-  return CSSColorStop{.color = CSSColor{.r = r, .g = g, .b = b, .a = a}};
-}
-
-} // namespace
-
 class CSSClipPathTest : public ::testing::Test {};
 
 TEST_F(CSSClipPathTest, InsetSingleValue) {

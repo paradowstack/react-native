@@ -99,6 +99,10 @@ std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
       if (cssInset.left) {
         inset.left = convertLengthPercentageToValueUnit(*cssInset.left);
       }
+      if (cssInset.borderRadius) {
+        inset.borderRadius =
+            convertLengthPercentageToValueUnit(*cssInset.borderRadius);
+      }
       result.shape = inset;
     } else if (std::holds_alternative<CSSPolygonShape>(cssShape)) {
       auto cssPolygon = std::get<CSSPolygonShape>(cssShape);
@@ -116,6 +120,10 @@ std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
       rect.right = convertLengthPercentageToValueUnit(cssRect.right);
       rect.bottom = convertLengthPercentageToValueUnit(cssRect.bottom);
       rect.left = convertLengthPercentageToValueUnit(cssRect.left);
+      if (cssRect.borderRadius) {
+        rect.borderRadius =
+            convertLengthPercentageToValueUnit(*cssRect.borderRadius);
+      }
       result.shape = rect;
     } else if (std::holds_alternative<CSSXywhShape>(cssShape)) {
       auto cssXywh = std::get<CSSXywhShape>(cssShape);
@@ -124,6 +132,10 @@ std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
       xywh.y = convertLengthPercentageToValueUnit(cssXywh.y);
       xywh.width = convertLengthPercentageToValueUnit(cssXywh.width);
       xywh.height = convertLengthPercentageToValueUnit(cssXywh.height);
+      if (cssXywh.borderRadius) {
+        xywh.borderRadius =
+            convertLengthPercentageToValueUnit(*cssXywh.borderRadius);
+      }
       result.shape = xywh;
     } else if (std::holds_alternative<CSSPathShape>(cssShape)) {
       auto cssPath = std::get<CSSPathShape>(cssShape);

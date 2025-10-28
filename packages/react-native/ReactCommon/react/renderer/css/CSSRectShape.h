@@ -28,11 +28,9 @@ struct CSSRectShape {
   std::variant<CSSLength, CSSPercentage> right;
   std::variant<CSSLength, CSSPercentage> bottom;
   std::variant<CSSLength, CSSPercentage> left;
+  std::optional<std::variant<CSSLength, CSSPercentage>> borderRadius;
 
-  bool operator==(const CSSRectShape &other) const
-  {
-    return top == other.top && right == other.right && bottom == other.bottom && left == other.left;
-  }
+  bool operator==(const CSSRectShape &other) const = default;
 };
 
 template <>
@@ -100,7 +98,25 @@ struct CSSDataTypeParser<CSSRectShape> {
       leftValue = std::get<CSSPercentage>(left);
     }
 
-    return CSSRectShape{.top = topValue, .right = rightValue, .bottom = bottomValue, .left = leftValue};
+    parser.consumeWhitespace();
+
+    auto roundResult = parser.consumeComponentValue<bool>([](const CSSPreservedToken &token) -> bool {
+      return token.type() == CSSTokenType::Ident && fnv1aLowercase(token.stringValue()) == fnv1a("round");
+    });
+
+    std::optional<std::variant<CSSLength, CSSPercentage>> borderRadius;
+    if (roundResult) {
+      parser.consumeWhitespace();
+      auto radius = parseNextCSSValue<CSSLengthPercentage>(parser);
+      if (std::holds_alternative<CSSLength>(radius)) {
+        borderRadius = std::get<CSSLength>(radius);
+      } else if (std::holds_alternative<CSSPercentage>(radius)) {
+        borderRadius = std::get<CSSPercentage>(radius);
+      }
+    }
+
+    return CSSRectShape{
+        .top = topValue, .right = rightValue, .bottom = bottomValue, .left = leftValue, .borderRadius = borderRadius};
   }
 };
 

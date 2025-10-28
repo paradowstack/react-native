@@ -16,6 +16,7 @@
 #include <react/renderer/css/CSSLengthPercentage.h>
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSValueParser.h>
+#include <react/utils/fnv1a.h>
 #include <react/utils/iequals.h>
 
 namespace facebook::react {
@@ -25,10 +26,12 @@ struct CSSInsetShape {
   std::optional<std::variant<CSSLength, CSSPercentage>> bottom{};
   std::optional<std::variant<CSSLength, CSSPercentage>> left{};
   std::optional<std::variant<CSSLength, CSSPercentage>> right{};
+  std::optional<std::variant<CSSLength, CSSPercentage>> borderRadius{};
 
   bool operator==(const CSSInsetShape &rhs) const
   {
-    return top == rhs.top && bottom == rhs.bottom && left == rhs.left && right == rhs.right;
+    return top == rhs.top && bottom == rhs.bottom && left == rhs.left && right == rhs.right &&
+        borderRadius == rhs.borderRadius;
   }
 };
 
@@ -77,6 +80,22 @@ struct CSSDataTypeParser<CSSInsetShape> {
       shape.right = lengths[1];
       shape.bottom = lengths[2];
       shape.left = lengths[3];
+    }
+
+    parser.consumeWhitespace();
+
+    auto roundResult = parser.consumeComponentValue<bool>([](const CSSPreservedToken &token) -> bool {
+      return token.type() == CSSTokenType::Ident && fnv1aLowercase(token.stringValue()) == fnv1a("round");
+    });
+
+    if (roundResult) {
+      parser.consumeWhitespace();
+      auto radius = parseNextCSSValue<CSSLengthPercentage>(parser);
+      if (std::holds_alternative<CSSLength>(radius)) {
+        shape.borderRadius = std::get<CSSLength>(radius);
+      } else if (std::holds_alternative<CSSPercentage>(radius)) {
+        shape.borderRadius = std::get<CSSPercentage>(radius);
+      }
     }
 
     return shape;
