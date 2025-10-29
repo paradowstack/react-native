@@ -109,7 +109,8 @@ static UIBezierPath *_Nullable RCTCreatePolygonPath(const PolygonShape &polygon,
                              RCTResolveValueUnit(point.second, bounds.size.height))];
   }
 
-  [path closePath];
+	path.usesEvenOddFillRule = polygon.fillRule == FillRule::EvenOdd;
+	[path closePath];
   return path;
 }
 
@@ -206,10 +207,12 @@ CAShapeLayer *_Nullable RCTClipPathCreateMaskLayer(const ClipPath &clipPath, CGR
   // If path creation failed or resulted in an invalid path, return nil
   if (path == nil) {
     return nil;
-  }
+	}
 
   CAShapeLayer *maskLayer = [CAShapeLayer layer];
   maskLayer.path = path.CGPath;
-
+	if (path.usesEvenOddFillRule) {
+		maskLayer.fillRule = kCAFillRuleEvenOdd;
+	}
   return maskLayer;
 }

@@ -21,9 +21,32 @@
 
 namespace facebook::react {
 
+enum class CSSFillRule : uint8_t {
+  NonZero,
+  EvenOdd,
+};
+
+template <>
+struct CSSDataTypeParser<CSSFillRule> {
+  static auto consumePreservedToken(const CSSPreservedToken &token) -> std::optional<CSSFillRule>
+  {
+    if (token.type() == CSSTokenType::Ident) {
+      auto lowercase = fnv1aLowercase(token.stringValue());
+      if (lowercase == fnv1a("nonzero")) {
+        return CSSFillRule::NonZero;
+      } else if (lowercase == fnv1a("evenodd")) {
+        return CSSFillRule::EvenOdd;
+      }
+    }
+    return {};
+  }
+};
+
+static_assert(CSSDataType<CSSFillRule>);
+
 struct CSSPolygonShape {
   std::vector<std::pair<std::variant<CSSLength, CSSPercentage>, std::variant<CSSLength, CSSPercentage>>> points;
-  // Fill rule omitted for simplicity
+  std::optional<CSSFillRule> fillRule;
 
   bool operator==(const CSSPolygonShape &rhs) const = default;
 };
@@ -38,6 +61,14 @@ struct CSSDataTypeParser<CSSPolygonShape> {
     }
 
     CSSPolygonShape shape;
+
+    // Parse fill rule
+    auto firstValue = parseNextCSSValue<CSSFillRule>(parser);
+    if (std::holds_alternative<CSSFillRule>(firstValue)) {
+      shape.fillRule = std::get<CSSFillRule>(firstValue);
+      parser.consumeDelimiter(CSSDelimiter::Comma);
+      parser.consumeWhitespace();
+    }
 
     // Parse comma-separated pairs
     do {

@@ -70,8 +70,14 @@ struct InsetShape {
 #endif
 };
 
+enum class FillRule : uint8_t {
+  NonZero,
+  EvenOdd,
+};
+
 struct PolygonShape {
   std::vector<std::pair<ValueUnit, ValueUnit>> points;
+  std::optional<FillRule> fillRule;
 
   bool operator==(const PolygonShape &other) const;
 

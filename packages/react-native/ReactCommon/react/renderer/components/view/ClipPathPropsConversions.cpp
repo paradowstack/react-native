@@ -112,6 +112,11 @@ std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
             {convertLengthPercentageToValueUnit(point.first),
              convertLengthPercentageToValueUnit(point.second)});
       }
+      if (cssPolygon.fillRule == CSSFillRule::NonZero) {
+        polygon.fillRule = FillRule::NonZero;
+      } else if (cssPolygon.fillRule == CSSFillRule::EvenOdd) {
+        polygon.fillRule = FillRule::EvenOdd;
+      }
       result.shape = polygon;
     } else if (std::holds_alternative<CSSRectShape>(cssShape)) {
       auto cssRect = std::get<CSSRectShape>(cssShape);

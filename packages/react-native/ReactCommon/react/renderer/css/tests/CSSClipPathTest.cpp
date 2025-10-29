@@ -150,6 +150,30 @@ TEST_F(CSSClipPathTest, PolygonWithPercentages) {
   ASSERT_EQ(result, expected);
 }
 
+TEST_F(CSSClipPathTest, PolygonWithEvenOdd) {
+  auto result = parseCSSProperty<CSSClipPath>(
+      "polygon(evenodd, 0px 0px, 100px 0px, 100px 100px)");
+  decltype(result) expected = CSSClipPath{
+      .shape = CSSPolygonShape{
+          .points =
+              {
+                  {CSSLength{.value = 0.0f, .unit = CSSLengthUnit::Px},
+                   CSSLength{.value = 0.0f, .unit = CSSLengthUnit::Px}},
+                  {CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px},
+                   CSSLength{.value = 0.0f, .unit = CSSLengthUnit::Px}},
+                  {CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px},
+                   CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px}},
+              },
+          .fillRule = CSSFillRule::EvenOdd,
+      }};
+  ASSERT_EQ(result, expected);
+}
+
+TEST_F(CSSClipPathTest, PolygonWithInvalidFillRule) {
+  auto result = parseCSSProperty<CSSClipPath>(
+      "polygon(invalid, 0px 0px, 100px 0px, 100px 100px)");
+  ASSERT_TRUE(std::holds_alternative<std::monostate>(result));
+}
 TEST_F(CSSClipPathTest, GeometryBoxBorderBox) {
   auto result = parseCSSProperty<CSSClipPath>("border-box");
   decltype(result) expected =
