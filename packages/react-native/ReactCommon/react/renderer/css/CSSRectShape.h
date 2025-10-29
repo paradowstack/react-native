@@ -42,28 +42,28 @@ struct CSSDataTypeParser<CSSRectShape> {
     }
 
     // Parse: top, right, bottom, left (comma-separated)
-    auto top = parseNextCSSValue<CSSLengthPercentage>(parser);
+    auto top = parseNextCSSValue<CSSKeyword, CSSLengthPercentage>(parser);
     if (std::holds_alternative<std::monostate>(top)) {
       return std::nullopt;
     }
 
     parser.consumeWhitespace();
 
-    auto right = parseNextCSSValue<CSSLengthPercentage>(parser);
+    auto right = parseNextCSSValue<CSSKeyword, CSSLengthPercentage>(parser);
     if (std::holds_alternative<std::monostate>(right)) {
       return std::nullopt;
     }
 
     parser.consumeWhitespace();
 
-    auto bottom = parseNextCSSValue<CSSLengthPercentage>(parser);
+    auto bottom = parseNextCSSValue<CSSKeyword, CSSLengthPercentage>(parser);
     if (std::holds_alternative<std::monostate>(bottom)) {
       return std::nullopt;
     }
 
     parser.consumeWhitespace();
 
-    auto left = parseNextCSSValue<CSSLengthPercentage>(parser);
+    auto left = parseNextCSSValue<CSSKeyword, CSSLengthPercentage>(parser);
     if (std::holds_alternative<std::monostate>(left)) {
       return std::nullopt;
     }
@@ -78,24 +78,32 @@ struct CSSDataTypeParser<CSSRectShape> {
       topValue = std::get<CSSLength>(top);
     } else if (std::holds_alternative<CSSPercentage>(top)) {
       topValue = std::get<CSSPercentage>(top);
+    } else if (std::holds_alternative<CSSKeyword>(top)) {
+      topValue = CSSPercentage{0.0f};
     }
 
     if (std::holds_alternative<CSSLength>(right)) {
       rightValue = std::get<CSSLength>(right);
     } else if (std::holds_alternative<CSSPercentage>(right)) {
       rightValue = std::get<CSSPercentage>(right);
+    } else if (std::holds_alternative<CSSKeyword>(right)) {
+      rightValue = CSSPercentage{100.0f};
     }
 
     if (std::holds_alternative<CSSLength>(bottom)) {
       bottomValue = std::get<CSSLength>(bottom);
     } else if (std::holds_alternative<CSSPercentage>(bottom)) {
       bottomValue = std::get<CSSPercentage>(bottom);
+    } else if (std::holds_alternative<CSSKeyword>(bottom)) {
+      bottomValue = CSSPercentage{100.0f};
     }
 
     if (std::holds_alternative<CSSLength>(left)) {
       leftValue = std::get<CSSLength>(left);
     } else if (std::holds_alternative<CSSPercentage>(left)) {
       leftValue = std::get<CSSPercentage>(left);
+    } else if (std::holds_alternative<CSSKeyword>(left)) {
+      leftValue = CSSPercentage{0.0f};
     }
 
     parser.consumeWhitespace();
