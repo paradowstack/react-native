@@ -126,21 +126,7 @@ struct XywhShape {
 #endif
 };
 
-struct PathShape {
-  std::string pathData;
-
-  bool operator==(const PathShape &other) const;
-
-#if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream &ss) const;
-#endif
-
-#ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic toDynamic() const;
-#endif
-};
-
-using BasicShape = std::variant<CircleShape, EllipseShape, InsetShape, PolygonShape, RectShape, XywhShape, PathShape>;
+using BasicShape = std::variant<CircleShape, EllipseShape, InsetShape, PolygonShape, RectShape, XywhShape>;
 
 enum class GeometryBox : uint8_t {
   MarginBox,

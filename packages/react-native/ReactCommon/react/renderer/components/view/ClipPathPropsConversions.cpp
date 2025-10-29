@@ -142,11 +142,6 @@ std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
             convertLengthPercentageToValueUnit(*cssXywh.borderRadius);
       }
       result.shape = xywh;
-    } else if (std::holds_alternative<CSSPathShape>(cssShape)) {
-      auto cssPath = std::get<CSSPathShape>(cssShape);
-      PathShape path;
-      path.pathData = cssPath.pathData;
-      result.shape = path;
     }
   }
 

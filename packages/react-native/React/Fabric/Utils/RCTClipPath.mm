@@ -159,19 +159,6 @@ static UIBezierPath *_Nullable RCTCreateXywhPath(const XywhShape &xywh, CGRect b
 }
 
 /**
- * Creates a UIBezierPath for an SVG path shape.
- * Note: This is a placeholder implementation. Full SVG path parsing would require
- * a complete path data parser supporting all SVG path commands (M, L, C, Q, A, etc.).
- */
-static UIBezierPath *_Nullable RCTCreatePathFromSVG(const PathShape &pathShape, CGRect bounds)
-{
-  // TODO: Implement full SVG path parsing
-  // For now, return an empty path to prevent crashes
-  // A production implementation would parse pathShape.pathData and convert it to UIBezierPath
-  return nil;
-}
-
-/**
  * Creates a UIBezierPath from a BasicShape variant.
  */
 static UIBezierPath *_Nullable RCTCreatePathFromBasicShape(const BasicShape &basicShape, CGRect bounds)
@@ -188,8 +175,6 @@ static UIBezierPath *_Nullable RCTCreatePathFromBasicShape(const BasicShape &bas
     return RCTCreateRectPath(std::get<RectShape>(basicShape), bounds);
   } else if (std::holds_alternative<XywhShape>(basicShape)) {
     return RCTCreateXywhPath(std::get<XywhShape>(basicShape), bounds);
-  } else if (std::holds_alternative<PathShape>(basicShape)) {
-    return RCTCreatePathFromSVG(std::get<PathShape>(basicShape), bounds);
   }
 
   return nil;

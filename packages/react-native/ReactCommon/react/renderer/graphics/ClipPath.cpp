@@ -187,23 +187,6 @@ folly::dynamic XywhShape::toDynamic() const {
 }
 #endif
 
-// PathShape implementations
-bool PathShape::operator==(const PathShape& other) const {
-  return pathData == other.pathData;
-}
-
-#if RN_DEBUG_STRING_CONVERTIBLE
-void PathShape::toString(std::stringstream& ss) const {
-  ss << "path(\"" << pathData << "\")";
-}
-#endif
-
-#ifdef RN_SERIALIZABLE_STATE
-folly::dynamic PathShape::toDynamic() const {
-  return folly::dynamic::object()("pathData", pathData);
-}
-#endif
-
 bool ClipPath::operator==(const ClipPath& other) const {
   return shape == other.shape && geometryBox == other.geometryBox;
 }

@@ -17,7 +17,6 @@
 #include <react/renderer/css/CSSInsetShape.h>
 #include <react/renderer/css/CSSLength.h>
 #include <react/renderer/css/CSSLengthPercentage.h>
-#include <react/renderer/css/CSSPathShape.h>
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSPolygonShape.h>
 #include <react/renderer/css/CSSRectShape.h>
@@ -69,20 +68,14 @@ static_assert(CSSDataType<CSSGeometryBox>);
 /**
  * Variant type for basic shapes in clip-path
  */
-using CSSBasicShape = std::
-    variant<CSSInsetShape, CSSCircleShape, CSSEllipseShape, CSSPolygonShape, CSSRectShape, CSSXywhShape, CSSPathShape>;
+using CSSBasicShape =
+    std::variant<CSSInsetShape, CSSCircleShape, CSSEllipseShape, CSSPolygonShape, CSSRectShape, CSSXywhShape>;
 
 /**
  * Compound type for parsing basic shapes
  */
-using CSSBasicShapeTypes = CSSCompoundDataType<
-    CSSInsetShape,
-    CSSCircleShape,
-    CSSEllipseShape,
-    CSSPolygonShape,
-    CSSRectShape,
-    CSSXywhShape,
-    CSSPathShape>;
+using CSSBasicShapeTypes =
+    CSSCompoundDataType<CSSInsetShape, CSSCircleShape, CSSEllipseShape, CSSPolygonShape, CSSRectShape, CSSXywhShape>;
 
 /**
  * Representation of <clip-path>
@@ -128,8 +121,6 @@ struct CSSDataTypeParser<CSSClipPath> {
         result.shape = std::get<CSSRectShape>(shape);
       } else if (std::holds_alternative<CSSXywhShape>(shape)) {
         result.shape = std::get<CSSXywhShape>(shape);
-      } else if (std::holds_alternative<CSSPathShape>(shape)) {
-        result.shape = std::get<CSSPathShape>(shape);
       }
 
       if (std::holds_alternative<CSSGeometryBox>(geometryBox)) {
@@ -161,8 +152,6 @@ struct CSSDataTypeParser<CSSClipPath> {
         result.shape = std::get<CSSRectShape>(shapeAfter);
       } else if (std::holds_alternative<CSSXywhShape>(shapeAfter)) {
         result.shape = std::get<CSSXywhShape>(shapeAfter);
-      } else if (std::holds_alternative<CSSPathShape>(shapeAfter)) {
-        result.shape = std::get<CSSPathShape>(shapeAfter);
       }
 
       return result;
