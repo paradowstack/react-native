@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#import "RCTClipPath.h"
+#import "RCTBasicShapeUtils.h"
 
 #import <React/RCTConversions.h>
 
@@ -28,10 +28,9 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
   return (CGFloat)unit.value;
 }
 
-/**
- * Creates a UIBezierPath for a circle shape.
- */
-static UIBezierPath *_Nullable RCTCreateCirclePath(const CircleShape &circle, CGRect bounds)
+@implementation RCTBasicShapeUtils
+
++ (UIBezierPath *)createCirclePath:(const CircleShape &)circle bounds:(CGRect)bounds
 {
   CGFloat radius = RCTResolveValueUnit(circle.r, (bounds.size.width + bounds.size.height) / 2.0f);
   CGFloat cx = circle.cx.has_value() ? RCTResolveValueUnit(circle.cx.value(), bounds.size.width)
@@ -45,10 +44,7 @@ static UIBezierPath *_Nullable RCTCreateCirclePath(const CircleShape &circle, CG
   return [UIBezierPath bezierPathWithOvalInRect:circleRect];
 }
 
-/**
- * Creates a UIBezierPath for an ellipse shape.
- */
-static UIBezierPath *_Nullable RCTCreateEllipsePath(const EllipseShape &ellipse, CGRect bounds)
++ (UIBezierPath *)createEllipsePath:(const EllipseShape &)ellipse bounds:(CGRect)bounds
 {
   CGFloat rx = RCTResolveValueUnit(ellipse.rx, bounds.size.width);
   CGFloat ry = RCTResolveValueUnit(ellipse.ry, bounds.size.height);
@@ -64,10 +60,7 @@ static UIBezierPath *_Nullable RCTCreateEllipsePath(const EllipseShape &ellipse,
   return [UIBezierPath bezierPathWithOvalInRect:ellipseRect];
 }
 
-/**
- * Creates a UIBezierPath for an inset shape.
- */
-static UIBezierPath *_Nullable RCTCreateInsetPath(const InsetShape &inset, CGRect bounds)
++ (UIBezierPath *)createInsetPath:(const InsetShape &)inset bounds:(CGRect)bounds
 {
   CGFloat top = RCTResolveValueUnit(inset.top, bounds.size.height);
   CGFloat right = RCTResolveValueUnit(inset.right, bounds.size.width);
@@ -86,10 +79,7 @@ static UIBezierPath *_Nullable RCTCreateInsetPath(const InsetShape &inset, CGRec
   return [UIBezierPath bezierPathWithRoundedRect:insetRect cornerRadius:borderRadius];
 }
 
-/**
- * Creates a UIBezierPath for a polygon shape.
- */
-static UIBezierPath *_Nullable RCTCreatePolygonPath(const PolygonShape &polygon, CGRect bounds)
++ (UIBezierPath *)createPolygonPath:(const PolygonShape &)polygon bounds:(CGRect)bounds
 {
   if (polygon.points.empty()) {
     return nil;
@@ -99,31 +89,27 @@ static UIBezierPath *_Nullable RCTCreatePolygonPath(const PolygonShape &polygon,
 
   const auto &firstPoint = polygon.points[0];
   [path moveToPoint:CGPointMake(
-                        RCTResolveValueUnit(firstPoint.first, bounds.size.width),
-                        RCTResolveValueUnit(firstPoint.second, bounds.size.height))];
+        bounds.origin.x + RCTResolveValueUnit(firstPoint.first, bounds.size.width),
+        bounds.origin.y + RCTResolveValueUnit(firstPoint.second, bounds.size.height))];
 
   for (size_t i = 1; i < polygon.points.size(); i++) {
     const auto &point = polygon.points[i];
     [path addLineToPoint:CGPointMake(
-                             RCTResolveValueUnit(point.first, bounds.size.width),
-                             RCTResolveValueUnit(point.second, bounds.size.height))];
+        bounds.origin.x + RCTResolveValueUnit(point.first, bounds.size.width),
+        bounds.origin.y + RCTResolveValueUnit(point.second, bounds.size.height))];
   }
 
-	path.usesEvenOddFillRule = polygon.fillRule == FillRule::EvenOdd;
-	[path closePath];
+  path.usesEvenOddFillRule = polygon.fillRule == FillRule::EvenOdd;
+  [path closePath];
   return path;
 }
 
-/**
- * Creates a UIBezierPath for a rect shape.
- * Note: CSS rect() uses distances from edges (top, right, bottom, left).
- */
-static UIBezierPath *_Nullable RCTCreateRectPath(const RectShape &rect, CGRect bounds)
++ (UIBezierPath *)createRectPath:(const RectShape &)rect bounds:(CGRect)bounds
 {
-  CGFloat top = RCTResolveValueUnit(rect.top, bounds.size.height);
-  CGFloat right = RCTResolveValueUnit(rect.right, bounds.size.width);
-  CGFloat bottom = RCTResolveValueUnit(rect.bottom, bounds.size.height);
-  CGFloat left = RCTResolveValueUnit(rect.left, bounds.size.width);
+  CGFloat top = bounds.origin.y + RCTResolveValueUnit(rect.top, bounds.size.height);
+  CGFloat right = bounds.origin.x + RCTResolveValueUnit(rect.right, bounds.size.width);
+  CGFloat bottom = bounds.origin.y + RCTResolveValueUnit(rect.bottom, bounds.size.height);
+  CGFloat left = bounds.origin.x + RCTResolveValueUnit(rect.left, bounds.size.width);
   CGFloat borderRadius = rect.borderRadius.has_value() ? RCTResolveValueUnit(rect.borderRadius.value(), bounds.size.width) : 0.0f;
 
   // CSS rect() interprets values as distances from edges, creating a clipping rectangle
@@ -134,13 +120,10 @@ static UIBezierPath *_Nullable RCTCreateRectPath(const RectShape &rect, CGRect b
     return nil;
   }
 
-	return [UIBezierPath bezierPathWithRoundedRect:clipRect cornerRadius:borderRadius];
+  return [UIBezierPath bezierPathWithRoundedRect:clipRect cornerRadius:borderRadius];
 }
 
-/**
- * Creates a UIBezierPath for an xywh shape.
- */
-static UIBezierPath *_Nullable RCTCreateXywhPath(const XywhShape &xywh, CGRect bounds)
++ (UIBezierPath *)createXywhPath:(const XywhShape &)xywh bounds:(CGRect)bounds
 {
   CGFloat x = RCTResolveValueUnit(xywh.x, bounds.size.width);
   CGFloat y = RCTResolveValueUnit(xywh.y, bounds.size.height);
@@ -158,46 +141,23 @@ static UIBezierPath *_Nullable RCTCreateXywhPath(const XywhShape &xywh, CGRect b
   return [UIBezierPath bezierPathWithRoundedRect:xywhRect cornerRadius:borderRadius];
 }
 
-/**
- * Creates a UIBezierPath from a BasicShape variant.
- */
-static UIBezierPath *_Nullable RCTCreatePathFromBasicShape(const BasicShape &basicShape, CGRect bounds)
++ (UIBezierPath *)createPathFromBasicShape:(const BasicShape &)basicShape bounds:(CGRect)bounds
 {
   if (std::holds_alternative<CircleShape>(basicShape)) {
-    return RCTCreateCirclePath(std::get<CircleShape>(basicShape), bounds);
+    return [self createCirclePath:std::get<CircleShape>(basicShape) bounds:bounds];
   } else if (std::holds_alternative<EllipseShape>(basicShape)) {
-    return RCTCreateEllipsePath(std::get<EllipseShape>(basicShape), bounds);
+    return [self createEllipsePath:std::get<EllipseShape>(basicShape) bounds:bounds];
   } else if (std::holds_alternative<InsetShape>(basicShape)) {
-    return RCTCreateInsetPath(std::get<InsetShape>(basicShape), bounds);
+    return [self createInsetPath:std::get<InsetShape>(basicShape) bounds:bounds];
   } else if (std::holds_alternative<PolygonShape>(basicShape)) {
-    return RCTCreatePolygonPath(std::get<PolygonShape>(basicShape), bounds);
+    return [self createPolygonPath:std::get<PolygonShape>(basicShape) bounds:bounds];
   } else if (std::holds_alternative<RectShape>(basicShape)) {
-    return RCTCreateRectPath(std::get<RectShape>(basicShape), bounds);
+    return [self createRectPath:std::get<RectShape>(basicShape) bounds:bounds];
   } else if (std::holds_alternative<XywhShape>(basicShape)) {
-    return RCTCreateXywhPath(std::get<XywhShape>(basicShape), bounds);
+    return [self createXywhPath:std::get<XywhShape>(basicShape) bounds:bounds];
   }
 
   return nil;
 }
 
-CAShapeLayer *_Nullable RCTClipPathCreateMaskLayer(const ClipPath &clipPath, CGRect bounds)
-{
-  // If no shape is specified, no clipping should be applied
-  if (!clipPath.shape.has_value()) {
-    return nil;
-  }
-
-  UIBezierPath *path = RCTCreatePathFromBasicShape(clipPath.shape.value(), bounds);
-
-  // If path creation failed or resulted in an invalid path, return nil
-  if (path == nil) {
-    return nil;
-	}
-
-  CAShapeLayer *maskLayer = [CAShapeLayer layer];
-  maskLayer.path = path.CGPath;
-	if (path.usesEvenOddFillRule) {
-		maskLayer.fillRule = kCAFillRuleEvenOdd;
-	}
-  return maskLayer;
-}
+@end

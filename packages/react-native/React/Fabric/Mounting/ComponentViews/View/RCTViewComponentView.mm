@@ -17,7 +17,7 @@
 #import <React/RCTBackgroundImageUtils.h>
 #import <React/RCTBorderDrawing.h>
 #import <React/RCTBoxShadow.h>
-#import <React/RCTClipPath.h>
+#import <React/RCTClipPathUtils.h>
 #import <React/RCTConversions.h>
 #import <React/RCTLinearGradient.h>
 #import <React/RCTLocalizedString.h>
@@ -1227,7 +1227,14 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 
   // Handle clip-path property
   if (_props->clipPath.has_value()) {
-    CAShapeLayer *maskLayer = RCTClipPathCreateMaskLayer(_props->clipPath.value(), layer.bounds);
+    CGRect box = layer.bounds;
+    if (_props->clipPath->geometryBox.has_value()) {
+      box = [RCTClipPathUtils getGeometryBoxRect:_props->clipPath->geometryBox.value()
+                                   layoutMetrics:_layoutMetrics
+                                      yogaStyle:_props->yogaStyle
+                                          bounds:layer.bounds];
+    }
+    CALayer *maskLayer = [RCTClipPathUtils createClipPathLayer:_props->clipPath.value() bounds:box];
     if (maskLayer != nil) {
       self.currentContainerView.layer.mask = maskLayer;
     }
