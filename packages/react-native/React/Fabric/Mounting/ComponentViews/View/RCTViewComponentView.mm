@@ -1227,14 +1227,11 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 
   // Handle clip-path property
   if (_props->clipPath.has_value()) {
-    CGRect box = layer.bounds;
-    if (_props->clipPath->geometryBox.has_value()) {
-      box = [RCTClipPathUtils getGeometryBoxRect:_props->clipPath->geometryBox.value()
-                                   layoutMetrics:_layoutMetrics
-                                      yogaStyle:_props->yogaStyle
-                                          bounds:layer.bounds];
-    }
-    CALayer *maskLayer = [RCTClipPathUtils createClipPathLayer:_props->clipPath.value() bounds:box];
+    CALayer *maskLayer = [RCTClipPathUtils createClipPathLayer:_props->clipPath.value()
+                                                  layoutMetrics:_layoutMetrics
+                                                      yogaStyle:_props->yogaStyle
+                                                         bounds:layer.bounds
+																										cornerRadii:RCTCornerRadiiFromBorderRadii(borderMetrics.borderRadii)];
     if (maskLayer != nil) {
       self.currentContainerView.layer.mask = maskLayer;
     }

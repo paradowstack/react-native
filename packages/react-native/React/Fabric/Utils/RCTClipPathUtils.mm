@@ -16,7 +16,7 @@ using namespace facebook::react;
 
 + (CGRect)getGeometryBoxRect:(GeometryBox)geometryBox
                layoutMetrics:(const LayoutMetrics &)layoutMetrics
-                  yogaStyle:(const facebook::yoga::Style &)yogaStyle
+                   yogaStyle:(const facebook::yoga::Style &)yogaStyle
                       bounds:(CGRect)bounds
 {
   auto marginLeft = yogaStyle.margin(facebook::yoga::Edge::Left).value().unwrapOrDefault(0.0f);
@@ -46,13 +46,30 @@ using namespace facebook::react;
   return bounds;
 }
 
-+ (CALayer *)createClipPathLayer:(const ClipPath &)clipPath bounds:(CGRect)bounds
++ (CALayer *)createClipPathLayer:(const ClipPath &)clipPath
+                   layoutMetrics:(const LayoutMetrics &)layoutMetrics
+                       yogaStyle:(const facebook::yoga::Style &)yogaStyle
+                          bounds:(CGRect)bounds
+                     cornerRadii:(RCTCornerRadii)cornerRadii
 {
+  // Calculate the geometry box rect if specified
+  CGRect box = bounds;
+  if (clipPath.geometryBox.has_value()) {
+    box = [self getGeometryBoxRect:clipPath.geometryBox.value()
+                     layoutMetrics:layoutMetrics
+                         yogaStyle:yogaStyle
+                            bounds:bounds];
+  }
+  
   UIBezierPath *path = nil;
   if (clipPath.shape.has_value()) {
-    path = [RCTBasicShapeUtils createPathFromBasicShape:clipPath.shape.value() bounds:bounds];
+    path = [RCTBasicShapeUtils createPathFromBasicShape:clipPath.shape.value() bounds:box];
   } else if (clipPath.geometryBox.has_value()) {
-    path = [UIBezierPath bezierPathWithRect:bounds];
+    // For geometry box only (no shape), create a rounded rectangle using border radius
+    RCTCornerInsets cornerInsets = RCTGetCornerInsets(cornerRadii, UIEdgeInsetsZero);
+    CGPathRef cgPath = RCTPathCreateWithRoundedRect(box, cornerInsets, nil, NO);
+    path = [UIBezierPath bezierPathWithCGPath:cgPath];
+    CGPathRelease(cgPath);
   }
 
   // If path creation failed or resulted in an invalid path, return nil

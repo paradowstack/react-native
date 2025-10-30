@@ -7,9 +7,11 @@
 
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
+#import <react/renderer/components/view/primitives.h>
 #import <react/renderer/core/LayoutMetrics.h>
 #import <react/renderer/graphics/ClipPath.h>
 #import <yoga/style/Style.h>
+#import <React/RCTBorderDrawing.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -35,10 +37,17 @@ NS_ASSUME_NONNULL_BEGIN
  * Returns nil if the clip-path cannot be rendered (e.g., empty or invalid shape).
  *
  * @param clipPath The clip-path definition containing the shape and geometry box
- * @param bounds The bounds to use for rendering the clip-path shape
+ * @param layoutMetrics The layout metrics containing frame information
+ * @param yogaStyle The Yoga style containing margin, padding, and border values
+ * @param bounds The view bounds to use as fallback for BorderBox
+ * @param cornerRadii The corner radii to consider when creating the clip path
  * @return A CALayer to be used as a mask layer, or nil if the clip-path is invalid
  */
-+ (CALayer *_Nullable)createClipPathLayer:(const facebook::react::ClipPath &)clipPath bounds:(CGRect)bounds;
++ (CALayer *_Nullable)createClipPathLayer:(const facebook::react::ClipPath &)clipPath
+                            layoutMetrics:(const facebook::react::LayoutMetrics &)layoutMetrics
+                                yogaStyle:(const facebook::yoga::Style &)yogaStyle
+                                   bounds:(CGRect)bounds
+                              cornerRadii:(RCTCornerRadii)cornerRadii;
 
 @end
 

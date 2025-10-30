@@ -33,10 +33,8 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 + (UIBezierPath *)createCirclePath:(const CircleShape &)circle bounds:(CGRect)bounds
 {
   CGFloat radius = RCTResolveValueUnit(circle.r, (bounds.size.width + bounds.size.height) / 2.0f);
-  CGFloat cx = circle.cx.has_value() ? RCTResolveValueUnit(circle.cx.value(), bounds.size.width)
-                                     : bounds.size.width / 2.0f;
-  CGFloat cy = circle.cy.has_value() ? RCTResolveValueUnit(circle.cy.value(), bounds.size.height)
-                                     : bounds.size.height / 2.0f;
+  CGFloat cx = bounds.origin.x + (circle.cx.has_value() ? RCTResolveValueUnit(circle.cx.value(), bounds.size.width) : bounds.size.width / 2.0f);
+  CGFloat cy = bounds.origin.y + (circle.cy.has_value() ? RCTResolveValueUnit(circle.cy.value(), bounds.size.height) : bounds.size.height / 2.0f);
 
   CGFloat diameter = radius * 2.0f;
   CGRect circleRect = CGRectMake(cx - radius, cy - radius, diameter, diameter);
@@ -48,10 +46,8 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 {
   CGFloat rx = RCTResolveValueUnit(ellipse.rx, bounds.size.width);
   CGFloat ry = RCTResolveValueUnit(ellipse.ry, bounds.size.height);
-  CGFloat cx = ellipse.cx.has_value() ? RCTResolveValueUnit(ellipse.cx.value(), bounds.size.width)
-                                      : bounds.size.width / 2.0f;
-  CGFloat cy = ellipse.cy.has_value() ? RCTResolveValueUnit(ellipse.cy.value(), bounds.size.height)
-                                      : bounds.size.height / 2.0f;
+  CGFloat cx = bounds.origin.x + (ellipse.cx.has_value() ? RCTResolveValueUnit(ellipse.cx.value(), bounds.size.width) : bounds.size.width / 2.0f);
+  CGFloat cy = bounds.origin.y + (ellipse.cy.has_value() ? RCTResolveValueUnit(ellipse.cy.value(), bounds.size.height) : bounds.size.height / 2.0f);
 
   CGFloat diameterX = rx * 2.0f;
   CGFloat diameterY = ry * 2.0f;
@@ -62,10 +58,10 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
 + (UIBezierPath *)createInsetPath:(const InsetShape &)inset bounds:(CGRect)bounds
 {
-  CGFloat top = RCTResolveValueUnit(inset.top, bounds.size.height);
-  CGFloat right = RCTResolveValueUnit(inset.right, bounds.size.width);
-  CGFloat bottom = RCTResolveValueUnit(inset.bottom, bounds.size.height);
-  CGFloat left = RCTResolveValueUnit(inset.left, bounds.size.width);
+  CGFloat top = bounds.origin.y + RCTResolveValueUnit(inset.top, bounds.size.height);
+  CGFloat right = bounds.origin.x + RCTResolveValueUnit(inset.right, bounds.size.width);
+  CGFloat bottom = bounds.origin.y + RCTResolveValueUnit(inset.bottom, bounds.size.height);
+  CGFloat left = bounds.origin.x + RCTResolveValueUnit(inset.left, bounds.size.width);
   CGFloat borderRadius = inset.borderRadius.has_value() ? RCTResolveValueUnit(inset.borderRadius.value(), bounds.size.width) : 0.0f;
 
   CGRect insetRect = CGRectMake(
@@ -125,8 +121,8 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
 + (UIBezierPath *)createXywhPath:(const XywhShape &)xywh bounds:(CGRect)bounds
 {
-  CGFloat x = RCTResolveValueUnit(xywh.x, bounds.size.width);
-  CGFloat y = RCTResolveValueUnit(xywh.y, bounds.size.height);
+  CGFloat x = bounds.origin.x + RCTResolveValueUnit(xywh.x, bounds.size.width);
+  CGFloat y = bounds.origin.y + RCTResolveValueUnit(xywh.y, bounds.size.height);
   CGFloat width = RCTResolveValueUnit(xywh.width, bounds.size.width);
   CGFloat height = RCTResolveValueUnit(xywh.height, bounds.size.height);
   CGFloat borderRadius = xywh.borderRadius.has_value() ? RCTResolveValueUnit(xywh.borderRadius.value(), bounds.size.width) : 0.0f;
