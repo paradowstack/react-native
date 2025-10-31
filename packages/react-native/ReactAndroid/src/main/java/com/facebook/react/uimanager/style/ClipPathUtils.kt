@@ -10,22 +10,24 @@ package com.facebook.react.uimanager.style
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Path.FillType
+import com.facebook.react.uimanager.LengthPercentage
+import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil
 
 /** Utility class for converting ClipPath data structures to Android Path objects */
 public object ClipPathUtils {
 
   /**
-   * Resolves a ValueUnit to a pixel value based on the reference dimension
+   * Resolves a LengthPercentage to a pixel value based on the reference dimension
    *
-   * @param valueUnit The value and unit to resolve
+   * @param lengthPercentage The value and unit to resolve
    * @param referenceDimension The reference size (width or height) for percentage calculations
    * @return The resolved pixel value
    */
-  private fun resolveValueUnit(valueUnit: ValueUnit, referenceDimension: Float): Float {
-    return when (valueUnit.unit) {
-      UnitType.Point -> PixelUtil.toPixelFromDIP(valueUnit.value)
-      UnitType.Percent -> (valueUnit.value / 100f) * referenceDimension
+  private fun resolveLengthPercentage(lengthPercentage: LengthPercentage, referenceDimension: Float): Float {
+    return when (lengthPercentage.type) {
+      LengthPercentageType.POINT -> PixelUtil.toPixelFromDIP(lengthPercentage.resolve(1f))
+      LengthPercentageType.PERCENT -> lengthPercentage.resolve(referenceDimension)
     }
   }
 
@@ -59,19 +61,19 @@ public object ClipPathUtils {
 
     // Resolve radius (use smaller dimension as reference for percentages)
     val referenceDimension = minOf(bounds.width(), bounds.height())
-    val radius = resolveValueUnit(circle.r, referenceDimension)
+    val radius = resolveLengthPercentage(circle.r, referenceDimension)
 
     // Resolve center (default to center of bounds)
     val cx =
         if (circle.cx != null) {
-          bounds.left + resolveValueUnit(circle.cx, bounds.width())
+          bounds.left + resolveLengthPercentage(circle.cx, bounds.width())
         } else {
           bounds.centerX()
         }
 
     val cy =
         if (circle.cy != null) {
-          bounds.top + resolveValueUnit(circle.cy, bounds.height())
+          bounds.top + resolveLengthPercentage(circle.cy, bounds.height())
         } else {
           bounds.centerY()
         }
@@ -92,20 +94,20 @@ public object ClipPathUtils {
     val path = Path()
 
     // Resolve radii
-    val rx = resolveValueUnit(ellipse.rx, bounds.width())
-    val ry = resolveValueUnit(ellipse.ry, bounds.height())
+    val rx = resolveLengthPercentage(ellipse.rx, bounds.width())
+    val ry = resolveLengthPercentage(ellipse.ry, bounds.height())
 
     // Resolve center (default to center of bounds)
     val cx =
         if (ellipse.cx != null) {
-          bounds.left + resolveValueUnit(ellipse.cx, bounds.width())
+          bounds.left + resolveLengthPercentage(ellipse.cx, bounds.width())
         } else {
           bounds.centerX()
         }
 
     val cy =
         if (ellipse.cy != null) {
-          bounds.top + resolveValueUnit(ellipse.cy, bounds.height())
+          bounds.top + resolveLengthPercentage(ellipse.cy, bounds.height())
         } else {
           bounds.centerY()
         }
@@ -126,17 +128,17 @@ public object ClipPathUtils {
     val path = Path()
 
     // Calculate inset rectangle
-    val top = bounds.top + resolveValueUnit(inset.top, bounds.height())
-    val right = bounds.right - resolveValueUnit(inset.right, bounds.width())
-    val bottom = bounds.bottom - resolveValueUnit(inset.bottom, bounds.height())
-    val left = bounds.left + resolveValueUnit(inset.left, bounds.width())
+    val top = bounds.top + resolveLengthPercentage(inset.top, bounds.height())
+    val right = bounds.right - resolveLengthPercentage(inset.right, bounds.width())
+    val bottom = bounds.bottom - resolveLengthPercentage(inset.bottom, bounds.height())
+    val left = bounds.left + resolveLengthPercentage(inset.left, bounds.width())
 
     val rect = RectF(left, top, right, bottom)
 
     // Add border radius if specified
     if (inset.borderRadius != null) {
       val referenceDimension = minOf(rect.width(), rect.height())
-      val radius = resolveValueUnit(inset.borderRadius, referenceDimension)
+      val radius = resolveLengthPercentage(inset.borderRadius, referenceDimension)
       path.addRoundRect(rect, radius, radius, Path.Direction.CW)
     } else {
       path.addRect(rect, Path.Direction.CW)
@@ -168,14 +170,14 @@ public object ClipPathUtils {
 
     // Add points
     val firstPoint = polygon.points[0]
-    val firstX = bounds.left + resolveValueUnit(firstPoint.first, bounds.width())
-    val firstY = bounds.top + resolveValueUnit(firstPoint.second, bounds.height())
+    val firstX = bounds.left + resolveLengthPercentage(firstPoint.first, bounds.width())
+    val firstY = bounds.top + resolveLengthPercentage(firstPoint.second, bounds.height())
     path.moveTo(firstX, firstY)
 
     for (i in 1 until polygon.points.size) {
       val point = polygon.points[i]
-      val x = bounds.left + resolveValueUnit(point.first, bounds.width())
-      val y = bounds.top + resolveValueUnit(point.second, bounds.height())
+      val x = bounds.left + resolveLengthPercentage(point.first, bounds.width())
+      val y = bounds.top + resolveLengthPercentage(point.second, bounds.height())
       path.lineTo(x, y)
     }
 
@@ -194,17 +196,18 @@ public object ClipPathUtils {
     val path = Path()
 
     // CSS rect() uses distances from edges: rect(top, right, bottom, left)
-    val top = bounds.top + resolveValueUnit(rect.top, bounds.height())
-    val right = bounds.right - resolveValueUnit(rect.right, bounds.width())
-    val bottom = bounds.bottom - resolveValueUnit(rect.bottom, bounds.height())
-    val left = bounds.left + resolveValueUnit(rect.left, bounds.width())
+    val top = bounds.top + resolveLengthPercentage(rect.top, bounds.height())
+    val right = bounds.left + resolveLengthPercentage(rect.right, bounds.width())
+    val bottom = bounds.top + resolveLengthPercentage(rect.bottom, bounds.height())
+    val left = bounds.left + resolveLengthPercentage(rect.left, bounds.width())
 
     val rectF = RectF(left, top, right, bottom)
+    println("[MYDEBUG] Rect edges: top=$top, right=$right, bottom=$bottom, left=$left")
 
     // Add border radius if specified
     if (rect.borderRadius != null) {
       val referenceDimension = minOf(rectF.width(), rectF.height())
-      val radius = resolveValueUnit(rect.borderRadius, referenceDimension)
+      val radius = resolveLengthPercentage(rect.borderRadius, referenceDimension)
       path.addRoundRect(rectF, radius, radius, Path.Direction.CW)
     } else {
       path.addRect(rectF, Path.Direction.CW)
@@ -224,17 +227,17 @@ public object ClipPathUtils {
     val path = Path()
 
     // Calculate rectangle from x, y, width, height
-    val x = bounds.left + resolveValueUnit(xywh.x, bounds.width())
-    val y = bounds.top + resolveValueUnit(xywh.y, bounds.height())
-    val width = resolveValueUnit(xywh.width, bounds.width())
-    val height = resolveValueUnit(xywh.height, bounds.height())
+    val x = bounds.left + resolveLengthPercentage(xywh.x, bounds.width())
+    val y = bounds.top + resolveLengthPercentage(xywh.y, bounds.height())
+    val width = resolveLengthPercentage(xywh.width, bounds.width())
+    val height = resolveLengthPercentage(xywh.height, bounds.height())
 
     val rect = RectF(x, y, x + width, y + height)
 
     // Add border radius if specified
     if (xywh.borderRadius != null) {
       val referenceDimension = minOf(rect.width(), rect.height())
-      val radius = resolveValueUnit(xywh.borderRadius, referenceDimension)
+      val radius = resolveLengthPercentage(xywh.borderRadius, referenceDimension)
       path.addRoundRect(rect, radius, radius, Path.Direction.CW)
     } else {
       path.addRect(rect, Path.Direction.CW)

@@ -79,6 +79,7 @@ struct CSSDataTypeParser<CSSRectShape> {
     } else if (std::holds_alternative<CSSPercentage>(top)) {
       topValue = std::get<CSSPercentage>(top);
     } else if (std::holds_alternative<CSSKeyword>(top)) {
+      // TODOME: improve handling of auto
       topValue = CSSPercentage{0.0f};
     }
 

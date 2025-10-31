@@ -884,7 +884,6 @@ public class ReactScrollView extends ScrollView
       BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
     }
         
-    System.out.println("[MYDEBUG] onDraw called");
     super.onDraw(canvas);
   }
 
