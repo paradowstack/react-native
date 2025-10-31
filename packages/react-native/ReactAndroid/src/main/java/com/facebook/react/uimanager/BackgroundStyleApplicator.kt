@@ -20,7 +20,9 @@ import android.os.Build
 import android.view.View
 import android.widget.ImageView
 import androidx.annotation.ColorInt
+import com.facebook.react.R
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.common.annotations.UnstableReactNativeAPI
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.uimanager.PixelUtil.dpToPx
@@ -45,6 +47,9 @@ import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderRadiusStyle
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.BoxShadow
+import com.facebook.react.uimanager.style.ClipPath
+import com.facebook.react.uimanager.style.ClipPathUtils
+import com.facebook.react.uimanager.style.GeometryBox
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.OutlineStyle
 
@@ -469,6 +474,81 @@ public object BackgroundStyleApplicator {
    * @param view The view to apply the feedback underlay to
    * @param drawable The drawable to use as feedback underlay, or null to remove
    */
+  @JvmStatic
+  public fun setClipPath(view: View, clipPathMap: ReadableMap?) {
+    if (ViewUtil.getUIManagerType(view) != UIManagerType.FABRIC) {
+      return
+    }
+
+    println("[MYDEBUG] setClipPath called with map: $clipPathMap")
+    if (clipPathMap == null) {
+      view.setTag(R.id.clip_path, null)
+      view.invalidate()
+      return
+    }
+
+    val clipPath = ClipPath.parse(clipPathMap, view.context)
+    println("[MYDEBUG] Parsed clipPath: $clipPath")
+    view.setTag(R.id.clip_path, clipPath)
+    println("[MYDEBUG] ClipPath set on view: ${view.id}")
+    view.invalidate()
+    println("[MYDEBUG] View invalidated")
+  }
+
+  @JvmStatic
+  public fun applyClipPath(view: View, canvas: Canvas) {
+    println("[MYDEBUG] applyClipPath called")
+    val clipPath = view.getTag(R.id.clip_path) as? ClipPath ?: return
+
+    val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
+
+    println("[MYDEBUG] ClipPath to apply: $clipPath")
+    // Calculate geometry box bounds
+    val geometryBoxBounds = when (clipPath.geometryBox) {
+      GeometryBox.ContentBox -> {
+        val composite = getCompositeBackgroundDrawable(view)
+        val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
+        RectF(
+          bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f) + view.paddingLeft,
+          bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f) + view.paddingTop,
+          bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f) - view.paddingRight,
+          bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f) - view.paddingBottom
+        )
+      }
+      GeometryBox.PaddingBox -> {
+        val composite = getCompositeBackgroundDrawable(view)
+        val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
+        RectF(
+          bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f),
+          bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f),
+          bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f),
+          bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f)
+        )
+      }
+      GeometryBox.MarginBox -> {
+        // Margin box extends beyond the view bounds
+        // Note: This is an approximation since we don't have direct access to margin values in the view
+        bounds
+      }
+      GeometryBox.BorderBox, null -> {
+        // Default is border-box which is the view bounds
+        bounds
+      }
+      else -> bounds // FillBox, StrokeBox, ViewBox - use border-box as fallback
+    }
+
+    println("[MYDEBUG] Geometry box bounds: $geometryBoxBounds")
+    // Create path from the shape
+    val path: Path? = clipPath.shape?.let { shape ->
+      ClipPathUtils.createPathFromBasicShape(shape, geometryBoxBounds)
+    }
+
+    if (path != null) {
+      println("[MYDEBUG] Clipping canvas with path: $path")
+      canvas.clipPath(path)
+    }
+  }
+
   @JvmStatic
   public fun setFeedbackUnderlay(view: View, drawable: Drawable?) {
     view.background = ensureCompositeBackgroundDrawable(view).withNewFeedbackUnderlay(drawable)

@@ -15,7 +15,9 @@ import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
+import android.graphics.Region
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.view.MotionEvent
@@ -36,6 +38,7 @@ import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.touch.OnInterceptTouchEventListener
 import com.facebook.react.touch.ReactHitSlopView
 import com.facebook.react.touch.ReactInterceptingViewGroup
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
@@ -212,6 +215,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
 
     // Reset background, borders
     updateBackgroundDrawable(null)
+
+    // Reset clip path
+    setTag(R.id.clip_path, null)
 
     resetPointerEvents()
 
@@ -910,18 +916,43 @@ public open class ReactViewGroup public constructor(context: Context?) :
           (height + -overflowInset.bottom).toFloat(),
           null,
       )
+      val clipPath = getTag(R.id.clip_path)
+      if (clipPath != null) {
+        BackgroundStyleApplicator.applyClipPath(this, canvas)
+      }
       super.draw(canvas)
       canvas.restore()
     } else {
+      val clipPath = getTag(R.id.clip_path)
+      if (clipPath != null) {
+        BackgroundStyleApplicator.applyClipPath(this, canvas)
+      }
       super.draw(canvas)
     }
   }
 
   override fun dispatchDraw(canvas: Canvas) {
+    // Apply overflow clipping or filter clipping
     if (_overflow != Overflow.VISIBLE || getTag(R.id.filter) != null) {
+      println("[MYDEBUG] ReactViewGroup dispatchDraw with overflow=$_overflow")
       clipToPaddingBox(this, canvas)
     }
-    super.dispatchDraw(canvas)
+    
+    // Apply clip-path if present
+    val clipPath = getTag(R.id.clip_path)
+    if (clipPath != null) {
+      println("[MYDEBUG] ReactViewGroup dispatchDraw with clipPath")
+      val saveCount = canvas.save()
+      try {
+        BackgroundStyleApplicator.applyClipPath(this, canvas)
+        super.dispatchDraw(canvas)
+        println("[MYDEBUG] ReactViewGroup dispatchDraw after super")
+      } finally {
+        canvas.restoreToCount(saveCount)
+      }
+    } else {
+      super.dispatchDraw(canvas)
+    }
   }
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {

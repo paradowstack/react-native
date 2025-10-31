@@ -883,6 +883,8 @@ public class ReactScrollView extends ScrollView
     if (mOverflow != Overflow.VISIBLE) {
       BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
     }
+        
+    System.out.println("[MYDEBUG] onDraw called");
     super.onDraw(canvas);
   }
 

@@ -69,8 +69,8 @@ void EllipseShape::toString(std::stringstream& ss) const {
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic EllipseShape::toDynamic() const {
   folly::dynamic result = folly::dynamic::object();
-  result["rx"] = r.toDynamic();
-  result["ry"] = r.toDynamic();
+  result["rx"] = rx.toDynamic();
+  result["ry"] = ry.toDynamic();
   if (cx) {
     result["cx"] = cx->toDynamic();
   }
