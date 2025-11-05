@@ -18,31 +18,12 @@ namespace facebook::react {
 
 void parseProcessedClipPath(const PropsParserContext &context, const RawValue &value, std::optional<ClipPath> &result);
 
-void parseUnprocessedClipPathString(std::string &&value, std::optional<ClipPath> &result);
-
-std::optional<ClipPath> parseClipPathRawValue(const PropsParserContext &context, const RawValue &value);
-
-void parseUnprocessedClipPathList(
-    const PropsParserContext &context,
-    std::vector<RawValue> &&value,
-    std::optional<ClipPath> &result);
-
-inline void
-parseUnprocessedClipPath(const PropsParserContext &context, const RawValue &value, std::optional<ClipPath> &result)
-{
-  if (value.hasType<std::string>()) {
-    parseUnprocessedClipPathString((std::string)value, result);
-  } else if (value.hasType<std::vector<RawValue>>()) {
-    parseUnprocessedClipPathList(context, (std::vector<RawValue>)value, result);
-  } else {
-    result = {};
-  }
-}
+void parseUnprocessedClipPath(std::string &&value, std::optional<ClipPath> &result);
 
 inline void fromRawValue(const PropsParserContext &context, const RawValue &value, std::optional<ClipPath> &result)
 {
   if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
-    parseUnprocessedClipPath(context, value, result);
+    parseUnprocessedClipPath((std::string)value, result);
   } else {
     parseProcessedClipPath(context, value, result);
   }

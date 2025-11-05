@@ -10,6 +10,7 @@
 #include <react/debug/react_native_expect.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/CSSConversions.h>
+#include <react/renderer/components/view/conversions.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/css/CSSClipPath.h>
@@ -157,118 +158,229 @@ void parseProcessedClipPath(
     const PropsParserContext& context,
     const RawValue& value,
     std::optional<ClipPath>& result) {
-  // react_native_expect(value.hasType<std::vector<RawValue>>());
-  // if (!value.hasType<std::vector<RawValue>>()) {
-  //   result = {};
-  //   return;
-  // }
+  if (!value.hasType<std::unordered_map<std::string, RawValue>>()) {
+    result = {};
+    return;
+  }
 
-  // std::vector<ClipPath> ClipPaths{};
-  // auto rawClipPaths = static_cast<std::vector<RawValue>>(value);
-  // for (const auto& rawClipPath : rawClipPaths) {
-  //   bool isMap =
-  //       rawClipPath.hasType<std::unordered_map<std::string, RawValue>>();
-  //   react_native_expect(isMap);
-  //   if (!isMap) {
-  //     // If any box shadow is malformed then we should not apply any of them
-  //     // which is the web behavior.
-  //     result = {};
-  //     return;
-  //   }
+  auto rawClipPath =
+      static_cast<std::unordered_map<std::string, RawValue>>(value);
+  ClipPath clipPath;
 
-  //   auto rawClipPathMap =
-  //       static_cast<std::unordered_map<std::string, RawValue>>(rawClipPath);
-  //   ClipPath ClipPath{};
-  //   auto offsetX = rawClipPathMap.find("offsetX");
-  //   react_native_expect(offsetX != rawClipPathMap.end());
-  //   if (offsetX == rawClipPathMap.end()) {
-  //     result = {};
-  //     return;
-  //   }
-  //   react_native_expect(offsetX->second.hasType<Float>());
-  //   if (!offsetX->second.hasType<Float>()) {
-  //     result = {};
-  //     return;
-  //   }
-  //   ClipPath.offsetX = (Float)offsetX->second;
+  // Parse shape if present
+  auto shapeIt = rawClipPath.find("shape");
+  if (shapeIt != rawClipPath.end() &&
+      shapeIt->second.hasType<std::unordered_map<std::string, RawValue>>()) {
+    auto rawShape =
+        static_cast<std::unordered_map<std::string, RawValue>>(shapeIt->second);
 
-  //   auto offsetY = rawClipPathMap.find("offsetY");
-  //   react_native_expect(offsetY != rawClipPathMap.end());
-  //   if (offsetY == rawClipPathMap.end()) {
-  //     result = {};
-  //     return;
-  //   }
-  //   react_native_expect(offsetY->second.hasType<Float>());
-  //   if (!offsetY->second.hasType<Float>()) {
-  //     result = {};
-  //     return;
-  //   }
-  //   ClipPath.offsetY = (Float)offsetY->second;
+    auto typeIt = rawShape.find("type");
+    if (typeIt == rawShape.end() || !typeIt->second.hasType<std::string>()) {
+      result = {};
+      return;
+    }
 
-  //   auto blurRadius = rawClipPathMap.find("blurRadius");
-  //   if (blurRadius != rawClipPathMap.end()) {
-  //     react_native_expect(blurRadius->second.hasType<Float>());
-  //     if (!blurRadius->second.hasType<Float>()) {
-  //       result = {};
-  //       return;
-  //     }
-  //     ClipPath.blurRadius = (Float)blurRadius->second;
-  //   }
+    std::string type = (std::string)(typeIt->second);
 
-  //   auto spreadDistance = rawClipPathMap.find("spreadDistance");
-  //   if (spreadDistance != rawClipPathMap.end()) {
-  //     react_native_expect(spreadDistance->second.hasType<Float>());
-  //     if (!spreadDistance->second.hasType<Float>()) {
-  //       result = {};
-  //       return;
-  //     }
-  //     ClipPath.spreadDistance = (Float)spreadDistance->second;
-  //   }
+    if (type == "inset") {
+      InsetShape inset;
 
-  //   auto inset = rawClipPathMap.find("inset");
-  //   if (inset != rawClipPathMap.end()) {
-  //     react_native_expect(inset->second.hasType<bool>());
-  //     if (!inset->second.hasType<bool>()) {
-  //       result = {};
-  //       return;
-  //     }
-  //     ClipPath.inset = (bool)inset->second;
-  //   }
+      auto topIt = rawShape.find("top");
+      if (topIt != rawShape.end()) {
+        inset.top = toValueUnit(topIt->second);
+      }
 
-  //   auto color = rawClipPathMap.find("color");
-  //   if (color != rawClipPathMap.end()) {
-  //     fromRawValue(
-  //         context.contextContainer,
-  //         context.surfaceId,
-  //         color->second,
-  //         ClipPath.color);
-  //   }
+      auto rightIt = rawShape.find("right");
+      if (rightIt != rawShape.end()) {
+        inset.right = toValueUnit(rightIt->second);
+      }
 
-  //   ClipPaths.push_back(ClipPath);
-  // }
+      auto bottomIt = rawShape.find("bottom");
+      if (bottomIt != rawShape.end()) {
+        inset.bottom = toValueUnit(bottomIt->second);
+      }
+
+      auto leftIt = rawShape.find("left");
+      if (leftIt != rawShape.end()) {
+        inset.left = toValueUnit(leftIt->second);
+      }
+
+      auto borderRadiusIt = rawShape.find("borderRadius");
+      if (borderRadiusIt != rawShape.end()) {
+        inset.borderRadius = toValueUnit(borderRadiusIt->second);
+      }
+
+      clipPath.shape = inset;
+    } else if (type == "circle") {
+      CircleShape circle;
+
+      auto rIt = rawShape.find("r");
+      if (rIt != rawShape.end()) {
+        circle.r = toValueUnit(rIt->second);
+      }
+
+      auto cxIt = rawShape.find("cx");
+      if (cxIt != rawShape.end()) {
+        circle.cx = toValueUnit(cxIt->second);
+      }
+
+      auto cyIt = rawShape.find("cy");
+      if (cyIt != rawShape.end()) {
+        circle.cy = toValueUnit(cyIt->second);
+      }
+
+      clipPath.shape = circle;
+    } else if (type == "ellipse") {
+      EllipseShape ellipse;
+
+      auto rxIt = rawShape.find("rx");
+      if (rxIt != rawShape.end()) {
+        ellipse.rx = toValueUnit(rxIt->second);
+      }
+
+      auto ryIt = rawShape.find("ry");
+      if (ryIt != rawShape.end()) {
+        ellipse.ry = toValueUnit(ryIt->second);
+      }
+
+      auto cxIt = rawShape.find("cx");
+      if (cxIt != rawShape.end()) {
+        ellipse.cx = toValueUnit(cxIt->second);
+      }
+
+      auto cyIt = rawShape.find("cy");
+      if (cyIt != rawShape.end()) {
+        ellipse.cy = toValueUnit(cyIt->second);
+      }
+
+      clipPath.shape = ellipse;
+    } else if (type == "polygon") {
+      PolygonShape polygon;
+
+      auto pointsIt = rawShape.find("points");
+      if (pointsIt != rawShape.end() &&
+          pointsIt->second.hasType<std::vector<RawValue>>()) {
+        auto rawPoints = static_cast<std::vector<RawValue>>(pointsIt->second);
+        for (const auto& rawPoint : rawPoints) {
+          if (rawPoint.hasType<std::unordered_map<std::string, RawValue>>()) {
+            auto pointMap =
+                static_cast<std::unordered_map<std::string, RawValue>>(
+                    rawPoint);
+            auto xIt = pointMap.find("x");
+            auto yIt = pointMap.find("y");
+
+            if (xIt != pointMap.end() && yIt != pointMap.end()) {
+              polygon.points.push_back(
+                  {toValueUnit(xIt->second), toValueUnit(yIt->second)});
+            }
+          }
+        }
+      }
+
+      auto fillRuleIt = rawShape.find("fillRule");
+      if (fillRuleIt != rawShape.end() &&
+          fillRuleIt->second.hasType<std::string>()) {
+        std::string fillRule = (std::string)(fillRuleIt->second);
+        if (fillRule == "nonzero") {
+          polygon.fillRule = FillRule::NonZero;
+        } else if (fillRule == "evenodd") {
+          polygon.fillRule = FillRule::EvenOdd;
+        }
+      }
+
+      clipPath.shape = polygon;
+    } else if (type == "rect") {
+      RectShape rect;
+
+      auto topIt = rawShape.find("top");
+      if (topIt != rawShape.end()) {
+        rect.top = toValueUnit(topIt->second);
+      }
+
+      auto rightIt = rawShape.find("right");
+      if (rightIt != rawShape.end()) {
+        rect.right = toValueUnit(rightIt->second);
+      }
+
+      auto bottomIt = rawShape.find("bottom");
+      if (bottomIt != rawShape.end()) {
+        rect.bottom = toValueUnit(bottomIt->second);
+      }
+
+      auto leftIt = rawShape.find("left");
+      if (leftIt != rawShape.end()) {
+        rect.left = toValueUnit(leftIt->second);
+      }
+
+      auto borderRadiusIt = rawShape.find("borderRadius");
+      if (borderRadiusIt != rawShape.end()) {
+        rect.borderRadius = toValueUnit(borderRadiusIt->second);
+      }
+
+      clipPath.shape = rect;
+    } else if (type == "xywh") {
+      XywhShape xywh;
+
+      auto xIt = rawShape.find("x");
+      if (xIt != rawShape.end()) {
+        xywh.x = toValueUnit(xIt->second);
+      }
+
+      auto yIt = rawShape.find("y");
+      if (yIt != rawShape.end()) {
+        xywh.y = toValueUnit(yIt->second);
+      }
+
+      auto widthIt = rawShape.find("width");
+      if (widthIt != rawShape.end()) {
+        xywh.width = toValueUnit(widthIt->second);
+      }
+
+      auto heightIt = rawShape.find("height");
+      if (heightIt != rawShape.end()) {
+        xywh.height = toValueUnit(heightIt->second);
+      }
+
+      auto borderRadiusIt = rawShape.find("borderRadius");
+      if (borderRadiusIt != rawShape.end()) {
+        xywh.borderRadius = toValueUnit(borderRadiusIt->second);
+      }
+
+      clipPath.shape = xywh;
+    } else {
+      // Unknown shape type
+      result = {};
+      return;
+    }
+  }
+
+  // Parse geometry box if present
+  auto geometryBoxIt = rawClipPath.find("geometryBox");
+  if (geometryBoxIt != rawClipPath.end() &&
+      geometryBoxIt->second.hasType<std::string>()) {
+    std::string geometryBox = (std::string)(geometryBoxIt->second);
+
+    if (geometryBox == "border-box") {
+      clipPath.geometryBox = GeometryBox::BorderBox;
+    } else if (geometryBox == "padding-box") {
+      clipPath.geometryBox = GeometryBox::PaddingBox;
+    } else if (geometryBox == "content-box") {
+      clipPath.geometryBox = GeometryBox::ContentBox;
+    } else if (geometryBox == "margin-box") {
+      clipPath.geometryBox = GeometryBox::MarginBox;
+    } else if (geometryBox == "fill-box") {
+      clipPath.geometryBox = GeometryBox::FillBox;
+    } else if (geometryBox == "stroke-box") {
+      clipPath.geometryBox = GeometryBox::StrokeBox;
+    } else if (geometryBox == "view-box") {
+      clipPath.geometryBox = GeometryBox::ViewBox;
+    }
+  }
+
+  result = clipPath;
 }
 
-// std::optional<ClipPath> fromCSSShadow(const CSSShadow& cssShadow) {
-//   return {};
-//  // TODO: handle non-px values
-//  if (cssShadow.offsetX.unit != CSSLengthUnit::Px ||
-//      cssShadow.offsetY.unit != CSSLengthUnit::Px ||
-//      cssShadow.blurRadius.unit != CSSLengthUnit::Px ||
-//      cssShadow.spreadDistance.unit != CSSLengthUnit::Px) {
-//    return {};
-//  }
-
-// return ClipPath{
-//     .offsetX = cssShadow.offsetX.value,
-//     .offsetY = cssShadow.offsetY.value,
-//     .blurRadius = cssShadow.blurRadius.value,
-//     .spreadDistance = cssShadow.spreadDistance.value,
-//     .color = fromCSSColor(cssShadow.color),
-//     .inset = cssShadow.inset,
-// };
-//}
-
-void parseUnprocessedClipPathString(
+void parseUnprocessedClipPath(
     std::string&& value,
     std::optional<ClipPath>& result) {
   auto clipPath = parseCSSProperty<CSSClipPath>((std::string)value);
@@ -278,119 +390,6 @@ void parseUnprocessedClipPathString(
   }
 
   result = fromCSSClipPath(std::get<CSSClipPath>(clipPath));
-
-  // std::vector<ClipPath> results;
-  // auto filterList = parseCSSProperty<CSSClipPathList>((std::string)value);
-  // if (!std::holds_alternative<CSSClipPathList>(filterList)) {
-  //   results = {};
-  //   return;
-  // }
-
-  // for (const auto& cssFilter : std::get<CSSClipPathList>(filterList)) {
-  //   if (auto filter = fromCSSClipPath(cssFilter)) {
-  //     results.push_back(*filter);
-  // 		result = *filter;
-  // 		return;
-  //   } else {
-  //     results = {};
-  //     return;
-  //   }
-  // }
-}
-
-std::optional<ClipPath> parseClipPathRawValue(
-    const PropsParserContext& context,
-    const RawValue& value) {
-  return {};
-  // if (!value.hasType<std::unordered_map<std::string, RawValue>>()) {
-  //   return {};
-  // }
-
-  // auto ClipPath = std::unordered_map<std::string, RawValue>(value);
-  // auto rawOffsetX = ClipPath.find("offsetX");
-  // if (rawOffsetX == ClipPath.end()) {
-  //   return {};
-  // }
-  // auto offsetX = coerceLength(rawOffsetX->second);
-  // if (!offsetX.has_value()) {
-  //   return {};
-  // }
-
-  // auto rawOffsetY = ClipPath.find("offsetY");
-  // if (rawOffsetY == ClipPath.end()) {
-  //   return {};
-  // }
-  // auto offsetY = coerceLength(rawOffsetY->second);
-  // if (!offsetY.has_value()) {
-  //   return {};
-  // }
-
-  // Float blurRadius = 0;
-  // auto rawBlurRadius = ClipPath.find("blurRadius");
-  // if (rawBlurRadius != ClipPath.end()) {
-  //   if (auto blurRadiusValue = coerceLength(rawBlurRadius->second)) {
-  //     if (*blurRadiusValue < 0) {
-  //       return {};
-  //     }
-  //     blurRadius = *blurRadiusValue;
-  //   } else {
-  //     return {};
-  //   }
-  // }
-
-  // Float spreadDistance = 0;
-  // auto rawSpreadDistance = ClipPath.find("spreadDistance");
-  // if (rawSpreadDistance != ClipPath.end()) {
-  //   if (auto spreadDistanceValue = coerceLength(rawSpreadDistance->second)) {
-  //     spreadDistance = *spreadDistanceValue;
-  //   } else {
-  //     return {};
-  //   }
-  // }
-
-  // bool inset = false;
-  // auto rawInset = ClipPath.find("inset");
-  // if (rawInset != ClipPath.end()) {
-  //   if (rawInset->second.hasType<bool>()) {
-  //     inset = (bool)rawInset->second;
-  //   } else {
-  //     return {};
-  //   }
-  // }
-
-  // SharedColor color;
-  // auto rawColor = ClipPath.find("color");
-  // if (rawColor != ClipPath.end()) {
-  //   color = coerceColor(rawColor->second, context);
-  //   if (!color) {
-  //     return {};
-  //   }
-  // }
-
-  // return ClipPath{
-  //     .offsetX = *offsetX,
-  //     .offsetY = *offsetY,
-  //     .blurRadius = blurRadius,
-  //     .spreadDistance = spreadDistance,
-  //     .color = color,
-  //     .inset = inset};
-}
-
-void parseUnprocessedClipPathList(
-    const PropsParserContext& context,
-    std::vector<RawValue>&& value,
-    std::optional<ClipPath>& result) {
-  // for (const auto& rawValue : value) {
-  //   if (auto ClipPath = parseClipPathRawValue(context, rawValue)) {
-  //     result.push_back(*ClipPath);
-  //   } else {
-  //     result = {};
-  //     return;
-  //   }
-  // }
-
-  ClipPath path;
-  result = path;
 }
 
 } // namespace facebook::react
