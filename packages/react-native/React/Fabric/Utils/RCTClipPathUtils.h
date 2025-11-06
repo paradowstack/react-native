@@ -7,15 +7,33 @@
 
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
+#import <React/RCTBorderDrawing.h>
 #import <react/renderer/components/view/primitives.h>
 #import <react/renderer/core/LayoutMetrics.h>
 #import <react/renderer/graphics/ClipPath.h>
 #import <yoga/style/Style.h>
-#import <React/RCTBorderDrawing.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface RCTClipPathUtils : NSObject
+
+/**
+ * Adjusts corner radii based on the geometry box type.
+ * - MarginBox: extends radii by margin amount
+ * - BorderBox: uses radii as-is (reference box)
+ * - PaddingBox: reduces radii by border width
+ * - ContentBox: reduces radii by border width + padding
+ *
+ * @param geometryBox The geometry box type
+ * @param cornerRadii The original corner radii (based on border-box)
+ * @param layoutMetrics The layout metrics containing border and content insets
+ * @param yogaStyle The Yoga style containing margin values
+ * @return The adjusted corner radii appropriate for the geometry box
+ */
++ (RCTCornerRadii)adjustCornerRadiiForGeometryBox:(facebook::react::GeometryBox)geometryBox
+                                      cornerRadii:(RCTCornerRadii)cornerRadii
+                                    layoutMetrics:(const facebook::react::LayoutMetrics &)layoutMetrics
+                                        yogaStyle:(const facebook::yoga::Style &)yogaStyle;
 
 /**
  * Calculates the appropriate CGRect for a geometry box type.
