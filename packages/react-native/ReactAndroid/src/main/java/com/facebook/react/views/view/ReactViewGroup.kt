@@ -23,6 +23,7 @@ import android.os.Build
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewGroup.MarginLayoutParams
 import android.view.ViewStructure
 import android.view.accessibility.AccessibilityManager
 import com.facebook.common.logging.FLog
@@ -41,6 +42,7 @@ import com.facebook.react.touch.ReactInterceptingViewGroup
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
+import com.facebook.react.uimanager.BackgroundStyleApplicator.getComputedBorderInsets
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderStyle
@@ -66,9 +68,11 @@ import com.facebook.react.uimanager.common.UIManagerType
 import com.facebook.react.uimanager.common.ViewUtil.getUIManagerType
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
+import com.facebook.react.uimanager.style.ClipPath
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.view.CanvasUtil.enableZ
+import com.facebook.react.views.view.GeometryBoxUtil.getGeometryBoxBounds
 import java.util.ArrayList
 import kotlin.concurrent.Volatile
 import kotlin.math.max
@@ -916,43 +920,29 @@ public open class ReactViewGroup public constructor(context: Context?) :
           (height + -overflowInset.bottom).toFloat(),
           null,
       )
-      val clipPath = getTag(R.id.clip_path)
+      val clipPath = getTag(R.id.clip_path) as? ClipPath
+      val bounds = getGeometryBoxBounds(this, clipPath?.geometryBox, getComputedBorderInsets(this))
       if (clipPath != null) {
-        BackgroundStyleApplicator.applyClipPath(this, canvas)
+        BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
       }
       super.draw(canvas)
       canvas.restore()
     } else {
-      val clipPath = getTag(R.id.clip_path)
+      val clipPath = getTag(R.id.clip_path) as? ClipPath
+      val bounds = getGeometryBoxBounds(this, clipPath?.geometryBox, getComputedBorderInsets(this))
       if (clipPath != null) {
-        BackgroundStyleApplicator.applyClipPath(this, canvas)
+        BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
       }
       super.draw(canvas)
     }
   }
 
   override fun dispatchDraw(canvas: Canvas) {
-    // Apply overflow clipping or filter clipping
     if (_overflow != Overflow.VISIBLE || getTag(R.id.filter) != null) {
-      println("[MYDEBUG] ReactViewGroup dispatchDraw with overflow=$_overflow")
       clipToPaddingBox(this, canvas)
     }
     
-    // Apply clip-path if present
-    val clipPath = getTag(R.id.clip_path)
-    if (clipPath != null) {
-      println("[MYDEBUG] ReactViewGroup dispatchDraw with clipPath")
-      val saveCount = canvas.save()
-      try {
-        BackgroundStyleApplicator.applyClipPath(this, canvas)
-        super.dispatchDraw(canvas)
-        println("[MYDEBUG] ReactViewGroup dispatchDraw after super")
-      } finally {
-        canvas.restoreToCount(saveCount)
-      }
-    } else {
-      super.dispatchDraw(canvas)
-    }
+    super.dispatchDraw(canvas)
   }
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {

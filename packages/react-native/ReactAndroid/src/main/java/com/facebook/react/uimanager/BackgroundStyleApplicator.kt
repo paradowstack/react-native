@@ -52,6 +52,7 @@ import com.facebook.react.uimanager.style.ClipPathUtils
 import com.facebook.react.uimanager.style.GeometryBox
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.OutlineStyle
+import com.facebook.react.views.view.GeometryBoxUtil
 
 /**
  * Utility object responsible for applying backgrounds, borders, and related visual effects to
@@ -480,7 +481,6 @@ public object BackgroundStyleApplicator {
       return
     }
 
-    println("[MYDEBUG] setClipPath called with map: $clipPathMap")
     if (clipPathMap == null) {
       view.setTag(R.id.clip_path, null)
       view.invalidate()
@@ -488,67 +488,81 @@ public object BackgroundStyleApplicator {
     }
 
     val clipPath = ClipPath.parse(clipPathMap, view.context)
-    println("[MYDEBUG] Parsed clipPath: $clipPath")
     view.setTag(R.id.clip_path, clipPath)
-    println("[MYDEBUG] ClipPath set on view: ${view.id}")
     view.invalidate()
-    println("[MYDEBUG] View invalidated")
   }
 
   @JvmStatic
-  public fun applyClipPath(view: View, canvas: Canvas) {
-    println("[MYDEBUG] applyClipPath called")
+  public fun applyClipPath(view: View, canvas: Canvas, bounds: RectF) {
     val clipPath = view.getTag(R.id.clip_path) as? ClipPath ?: return
 
-    val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
+    val drawingRect = Rect()
+    view.getDrawingRect(drawingRect)
 
-    println("[MYDEBUG] ClipPath to apply: $clipPath")
-    // Calculate geometry box bounds
-    val geometryBoxBounds = when (clipPath.geometryBox) {
-      GeometryBox.ContentBox -> {
-        val composite = getCompositeBackgroundDrawable(view)
-        val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
-        RectF(
-          bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f) + view.paddingLeft,
-          bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f) + view.paddingTop,
-          bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f) - view.paddingRight,
-          bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f) - view.paddingBottom
-        )
-      }
-      GeometryBox.PaddingBox -> {
-        val composite = getCompositeBackgroundDrawable(view)
-        val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
-        RectF(
-          bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f),
-          bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f),
-          bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f),
-          bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f)
-        )
-      }
-      GeometryBox.MarginBox -> {
-        // Margin box extends beyond the view bounds
-        // Note: This is an approximation since we don't have direct access to margin values in the view
-        bounds
-      }
-      GeometryBox.BorderBox, null -> {
-        // Default is border-box which is the view bounds
-        bounds
-      }
-      else -> bounds // FillBox, StrokeBox, ViewBox - use border-box as fallback
+    val composite = getCompositeBackgroundDrawable(view)
+    if (composite == null) {
+      return
     }
+    val paddingBoxRect = RectF()
+    val computedBorderInsets =
+      composite.borderInsets?.resolve(composite.layoutDirection, view.context)
 
-    println("[MYDEBUG] Geometry box bounds: $geometryBoxBounds")
+    paddingBoxRect.left = composite.bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f)
+    paddingBoxRect.top = composite.bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f)
+    paddingBoxRect.right = composite.bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f)
+    paddingBoxRect.bottom = composite.bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f)
+
     // Create path from the shape
-    val path: Path? = clipPath.shape?.let { shape ->
-      ClipPathUtils.createPathFromBasicShape(shape, geometryBoxBounds)
+    val path: Path? = if (clipPath.shape != null) {
+      ClipPathUtils.createPathFromBasicShape(clipPath.shape, bounds)
+    } else if (clipPath.geometryBox != null) {
+      // For geometry box only (no shape), create a rounded rectangle using border radius
+      val composite = getCompositeBackgroundDrawable(view)
+      val borderRadius = composite?.borderRadius
+      val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
+
+      if (borderRadius != null) {
+        // Adjust border radius based on geometry box type
+        val adjustedBorderRadius = GeometryBoxUtil.adjustBorderRadiusForGeometryBox(
+            clipPath.geometryBox,
+            borderRadius.resolve(
+                composite.layoutDirection,
+                view.context,
+                PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
+                PixelUtil.toDIPFromPixel(drawingRect.height().toFloat())
+            ),
+            computedBorderInsets,
+            view
+        )
+
+        if (adjustedBorderRadius != null) {
+          ClipPathUtils.createRoundedRectPath(bounds, adjustedBorderRadius)
+        } else {
+          null
+        }
+      } else {
+        null
+      }
+    } else {
+      null
     }
 
     if (path != null) {
-      println("[MYDEBUG] Clipping canvas with path: $path")
       canvas.clipPath(path)
+    } else {
+      canvas.clipRect(bounds)
     }
   }
 
+  @JvmStatic
+  public fun getComputedBorderInsets(view: View): RectF? {
+    val composite = getCompositeBackgroundDrawable(view)
+    if (composite == null) {
+      return null
+    }
+    return composite.borderInsets?.resolve(composite.layoutDirection, view.context)
+  }
+  
   @JvmStatic
   public fun setFeedbackUnderlay(view: View, drawable: Drawable?) {
     view.background = ensureCompositeBackgroundDrawable(view).withNewFeedbackUnderlay(drawable)
@@ -808,12 +822,15 @@ public object BackgroundStyleApplicator {
       paddingBoxRect: RectF,
       computedBorderInsets: RectF?,
   ): Path {
+    val drawingRect = Rect()
+    view.getDrawingRect(drawingRect)
+
     val computedBorderRadius =
         composite.borderRadius?.resolve(
             composite.layoutDirection,
             view.context,
-            PixelUtil.toDIPFromPixel(composite.bounds.width().toFloat()),
-            PixelUtil.toDIPFromPixel(composite.bounds.height().toFloat()),
+            PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
+            PixelUtil.toDIPFromPixel(drawingRect.height().toFloat()),
         )
 
     val paddingBoxPath = Path()

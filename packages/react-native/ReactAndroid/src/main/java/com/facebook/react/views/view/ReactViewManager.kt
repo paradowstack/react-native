@@ -9,6 +9,9 @@ package com.facebook.react.views.view
 
 import android.graphics.Rect
 import android.view.View
+import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams
+import android.view.ViewGroup.MarginLayoutParams
 import com.facebook.common.logging.FLog
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
@@ -349,6 +352,54 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
       needsOffscreenAlphaCompositing: Boolean,
   ) {
     view.setNeedsOffscreenAlphaCompositing(needsOffscreenAlphaCompositing)
+  }
+
+@ReactPropGroup(
+      names =
+          [
+              ViewProps.MARGIN,
+              ViewProps.MARGIN_VERTICAL,
+              ViewProps.MARGIN_HORIZONTAL,
+              ViewProps.MARGIN_LEFT,
+              ViewProps.MARGIN_RIGHT,
+              ViewProps.MARGIN_TOP,
+              ViewProps.MARGIN_BOTTOM,
+              ViewProps.MARGIN_START,
+              ViewProps.MARGIN_END
+          ],
+      defaultFloat = Float.NaN,
+  )
+  public open fun setMargin(view: ReactViewGroup, index: Int, margin: Float) {
+    
+    val layoutParams = view.layoutParams as? MarginLayoutParams ?: MarginLayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+    val leftMargin = layoutParams.leftMargin;
+    val topMargin = layoutParams.topMargin;
+    val rightMargin = layoutParams.rightMargin;
+    val bottomMargin = layoutParams.bottomMargin;
+    if (index == 0) { 
+      layoutParams.setMargins(margin.toInt(), margin.toInt(), margin.toInt(), margin.toInt())
+    } else if (index == 1) {
+      layoutParams.setMargins(leftMargin, margin.toInt(), rightMargin, margin.toInt())
+    } else if (index == 2) {
+      layoutParams.setMargins(margin.toInt(), topMargin, margin.toInt(), bottomMargin)
+    } else if (index == 3) {
+      layoutParams.setMargins(margin.toInt(), topMargin, rightMargin, bottomMargin)
+    } else if (index == 4) {
+      layoutParams.setMargins(leftMargin, topMargin, margin.toInt(), bottomMargin)
+    } else if (index == 5) {
+      layoutParams.setMargins(leftMargin, margin.toInt(), rightMargin, bottomMargin)
+    } else if (index == 6) {
+      layoutParams.setMargins(leftMargin, topMargin, rightMargin, margin.toInt())
+    } else if (index == 7) {
+      layoutParams.setMargins(margin.toInt(), topMargin, rightMargin, bottomMargin)
+    } else if (index == 8) {
+      layoutParams.setMargins(leftMargin, topMargin, margin.toInt(), bottomMargin)
+    }
+    view.layoutParams = layoutParams
+  }
+
+  override fun setPadding(view: ReactViewGroup, left: Int, top: Int, right: Int, bottom: Int) {
+    view.setPadding(left, top, right, bottom)
   }
 
   @ReactPropGroup(

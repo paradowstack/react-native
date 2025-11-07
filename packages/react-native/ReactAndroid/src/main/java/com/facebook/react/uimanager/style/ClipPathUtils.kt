@@ -78,7 +78,6 @@ public object ClipPathUtils {
           bounds.centerY()
         }
 
-    println("[MYDEBUG] Circle center: ($cx, $cy), radius: $radius")
     path.addCircle(cx, cy, radius, Path.Direction.CW)
     return path
   }
@@ -202,7 +201,6 @@ public object ClipPathUtils {
     val left = bounds.left + resolveLengthPercentage(rect.left, bounds.width())
 
     val rectF = RectF(left, top, right, bottom)
-    println("[MYDEBUG] Rect edges: top=$top, right=$right, bottom=$bottom, left=$left")
 
     // Add border radius if specified
     if (rect.borderRadius != null) {
@@ -243,6 +241,34 @@ public object ClipPathUtils {
       path.addRect(rect, Path.Direction.CW)
     }
 
+    return path
+  }
+
+  /**
+   * Creates a rounded rectangle path using computed border radius
+   *
+   * @param bounds The bounding rectangle
+   * @param borderRadius The computed border radius with per-corner radii
+   * @return A Path representing the rounded rectangle
+   */
+  public fun createRoundedRectPath(bounds: RectF, borderRadius: ComputedBorderRadius): Path {
+    val path = Path()
+
+    val topLeftRadii = borderRadius.topLeft
+    val topRightRadii = borderRadius.topRight
+    val bottomRightRadii = borderRadius.bottomRight
+    val bottomLeftRadii = borderRadius.bottomLeft
+    
+    // Android expects radii as [x0, y0, x1, y1, x2, y2, x3, y3] for
+    // [topLeft, topRight, bottomRight, bottomLeft]
+    val radii = floatArrayOf(
+        topLeftRadii.horizontal, topLeftRadii.vertical,
+        topRightRadii.horizontal, topRightRadii.vertical,
+        bottomRightRadii.horizontal, bottomRightRadii.vertical,
+        bottomLeftRadii.horizontal, bottomLeftRadii.vertical
+    )
+    
+    path.addRoundRect(bounds, radii, Path.Direction.CW)
     return path
   }
 }
