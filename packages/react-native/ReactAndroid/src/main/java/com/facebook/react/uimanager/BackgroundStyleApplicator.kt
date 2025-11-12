@@ -499,19 +499,6 @@ public object BackgroundStyleApplicator {
     val drawingRect = Rect()
     view.getDrawingRect(drawingRect)
 
-    val composite = getCompositeBackgroundDrawable(view)
-    if (composite == null) {
-      return
-    }
-    val paddingBoxRect = RectF()
-    val computedBorderInsets =
-      composite.borderInsets?.resolve(composite.layoutDirection, view.context)
-
-    paddingBoxRect.left = composite.bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f)
-    paddingBoxRect.top = composite.bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f)
-    paddingBoxRect.right = composite.bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f)
-    paddingBoxRect.bottom = composite.bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f)
-
     // Create path from the shape
     val path: Path? = if (clipPath.shape != null) {
       ClipPathUtils.createPathFromBasicShape(clipPath.shape, bounds)

@@ -38,7 +38,7 @@ public object ClipPathUtils {
    * @param bounds The bounding rectangle for the shape
    * @return An Android Path representing the shape
    */
-  public fun createPathFromBasicShape(basicShape: BasicShape, bounds: RectF): Path {
+  public fun createPathFromBasicShape(basicShape: BasicShape, bounds: RectF): Path? {
     return when (basicShape) {
       is BasicShape.Circle -> createCirclePath(basicShape.shape, bounds)
       is BasicShape.Ellipse -> createEllipsePath(basicShape.shape, bounds)
@@ -60,7 +60,7 @@ public object ClipPathUtils {
     val path = Path()
 
     // Resolve radius (use smaller dimension as reference for percentages)
-    val referenceDimension = minOf(bounds.width(), bounds.height())
+    val referenceDimension = (bounds.width() + bounds.height()) / 2.0f
     val radius = resolveLengthPercentage(circle.r, referenceDimension)
 
     // Resolve center (default to center of bounds)
@@ -123,7 +123,7 @@ public object ClipPathUtils {
    * @param bounds The reference bounds
    * @return A Path representing the inset shape
    */
-  private fun createInsetPath(inset: InsetShape, bounds: RectF): Path {
+  private fun createInsetPath(inset: InsetShape, bounds: RectF): Path? {
     val path = Path()
 
     // Calculate inset rectangle
@@ -133,7 +133,9 @@ public object ClipPathUtils {
     val left = bounds.left + resolveLengthPercentage(inset.left, bounds.width())
 
     val rect = RectF(left, top, right, bottom)
-
+    if (rect.width() < 0f || rect.height() < 0f) {
+      return null
+    }
     // Add border radius if specified
     if (inset.borderRadius != null) {
       val referenceDimension = minOf(rect.width(), rect.height())
@@ -153,11 +155,11 @@ public object ClipPathUtils {
    * @param bounds The reference bounds
    * @return A Path representing the polygon
    */
-  private fun createPolygonPath(polygon: PolygonShape, bounds: RectF): Path {
+  private fun createPolygonPath(polygon: PolygonShape, bounds: RectF): Path? {
     val path = Path()
 
     if (polygon.points.isEmpty()) {
-      return path
+      return null
     }
 
     // Set fill rule
@@ -191,7 +193,7 @@ public object ClipPathUtils {
    * @param bounds The reference bounds
    * @return A Path representing the rect
    */
-  private fun createRectPath(rect: RectShape, bounds: RectF): Path {
+  private fun createRectPath(rect: RectShape, bounds: RectF): Path? {
     val path = Path()
 
     // CSS rect() uses distances from edges: rect(top, right, bottom, left)
@@ -201,6 +203,9 @@ public object ClipPathUtils {
     val left = bounds.left + resolveLengthPercentage(rect.left, bounds.width())
 
     val rectF = RectF(left, top, right, bottom)
+    if (rectF.width() < 0f || rectF.height() < 0f) {
+      return null
+    }
 
     // Add border radius if specified
     if (rect.borderRadius != null) {
@@ -221,7 +226,7 @@ public object ClipPathUtils {
    * @param bounds The reference bounds
    * @return A Path representing the xywh rectangle
    */
-  private fun createXywhPath(xywh: XywhShape, bounds: RectF): Path {
+  private fun createXywhPath(xywh: XywhShape, bounds: RectF): Path? {
     val path = Path()
 
     // Calculate rectangle from x, y, width, height
@@ -231,6 +236,9 @@ public object ClipPathUtils {
     val height = resolveLengthPercentage(xywh.height, bounds.height())
 
     val rect = RectF(x, y, x + width, y + height)
+    if (rect.width() < 0f || rect.height() < 0f) {
+      return null
+    }
 
     // Add border radius if specified
     if (xywh.borderRadius != null) {

@@ -902,6 +902,14 @@ public open class ReactViewGroup public constructor(context: Context?) :
     super.setBackground(drawable)
   }
 
+  private fun applyClipPathIfPresent(canvas: Canvas) {
+    val clipPath = getTag(R.id.clip_path) as? ClipPath
+    if (clipPath != null) {
+      val bounds = getGeometryBoxBounds(this, clipPath.geometryBox, getComputedBorderInsets(this))
+      BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
+    }
+  }
+
   override fun draw(canvas: Canvas) {
     if (
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
@@ -920,19 +928,11 @@ public open class ReactViewGroup public constructor(context: Context?) :
           (height + -overflowInset.bottom).toFloat(),
           null,
       )
-      val clipPath = getTag(R.id.clip_path) as? ClipPath
-      val bounds = getGeometryBoxBounds(this, clipPath?.geometryBox, getComputedBorderInsets(this))
-      if (clipPath != null) {
-        BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
-      }
+      applyClipPathIfPresent(canvas)
       super.draw(canvas)
       canvas.restore()
     } else {
-      val clipPath = getTag(R.id.clip_path) as? ClipPath
-      val bounds = getGeometryBoxBounds(this, clipPath?.geometryBox, getComputedBorderInsets(this))
-      if (clipPath != null) {
-        BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
-      }
+      applyClipPathIfPresent(canvas)
       super.draw(canvas)
     }
   }
@@ -941,7 +941,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (_overflow != Overflow.VISIBLE || getTag(R.id.filter) != null) {
       clipToPaddingBox(this, canvas)
     }
-    
+
+    applyClipPathIfPresent(canvas)
+
     super.dispatchDraw(canvas)
   }
 

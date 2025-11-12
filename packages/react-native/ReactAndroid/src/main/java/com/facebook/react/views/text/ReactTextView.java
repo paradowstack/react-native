@@ -10,6 +10,7 @@ package com.facebook.react.views.text;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.text.Layout;
@@ -33,6 +34,7 @@ import androidx.customview.widget.ExploreByTouchHelper;
 import com.facebook.common.logging.FLog;
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.infer.annotation.Nullsafe;
+import com.facebook.react.R;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableMap;
@@ -50,11 +52,13 @@ import com.facebook.react.uimanager.common.UIManagerType;
 import com.facebook.react.uimanager.common.ViewUtil;
 import com.facebook.react.uimanager.style.BorderRadiusProp;
 import com.facebook.react.uimanager.style.BorderStyle;
+import com.facebook.react.uimanager.style.ClipPath;
 import com.facebook.react.uimanager.style.LogicalEdge;
 import com.facebook.react.uimanager.style.Overflow;
 import com.facebook.react.views.text.internal.span.ReactTagSpan;
 import com.facebook.react.views.text.internal.span.TextInlineImageSpan;
 import com.facebook.react.views.text.internal.span.TextInlineViewPlaceholderSpan;
+import com.facebook.react.views.view.GeometryBoxUtil;
 import com.facebook.yoga.YogaMeasureMode;
 
 @Nullsafe(Nullsafe.Mode.LOCAL)
@@ -364,7 +368,20 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
         BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
       }
 
+      ClipPath clipPath = (ClipPath) getTag(R.id.clip_path);
+      RectF bounds =
+        GeometryBoxUtil.getGeometryBoxBounds(
+          this,
+          clipPath != null ? clipPath.getGeometryBox() : null,
+          BackgroundStyleApplicator.getComputedBorderInsets(this));
+      if (clipPath != null) {
+        canvas.save();
+        BackgroundStyleApplicator.applyClipPath(this, canvas, bounds);
+      }
       super.onDraw(canvas);
+      if (clipPath != null) {
+        canvas.restore();
+      }
     }
   }
 
