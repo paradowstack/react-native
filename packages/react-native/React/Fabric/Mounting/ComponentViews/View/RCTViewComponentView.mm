@@ -1239,6 +1239,12 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 																										cornerRadii:RCTCornerRadiiFromBorderRadii(borderMetrics.borderRadii)];
     if (maskLayer != nil) {
       self.currentContainerView.layer.mask = maskLayer;
+			
+			for (UIView *subview in self.currentContainerView.subviews) {
+				if ([subview isKindOfClass:[UIImageView class]]) {
+					subview.layer.mask = maskLayer;
+				}
+			}
     }
   } else if (self.currentContainerView.clipsToBounds) {
     // Handle regular clipsToBounds clipping when no clip-path is specified
