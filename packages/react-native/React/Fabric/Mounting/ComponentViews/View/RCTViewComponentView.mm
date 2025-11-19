@@ -543,6 +543,11 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
     needsInvalidateLayer = YES;
   }
 
+	// `clipPath`
+	if (oldViewProps.clipPath != newViewProps.clipPath) {
+		needsInvalidateLayer = YES;
+	}
+	
   _needsInvalidateLayer = _needsInvalidateLayer || needsInvalidateLayer;
 
   _props = std::static_pointer_cast<const ViewProps>(props);
