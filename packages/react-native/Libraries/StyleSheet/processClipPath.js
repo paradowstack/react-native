@@ -83,7 +83,7 @@ type BasicShapeValue =
   | RectShapeValue
   | XywhShapeValue;
 
-type ClipPathValue = {
+export type ClipPathValue = {
   shape?: BasicShapeValue | null,
   geometryBox?: GeometryBox | null,
   ...

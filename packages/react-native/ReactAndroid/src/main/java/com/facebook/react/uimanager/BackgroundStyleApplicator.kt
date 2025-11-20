@@ -49,7 +49,6 @@ import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.BoxShadow
 import com.facebook.react.uimanager.style.ClipPath
 import com.facebook.react.uimanager.style.ClipPathUtils
-import com.facebook.react.uimanager.style.GeometryBox
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.OutlineStyle
 import com.facebook.react.views.view.GeometryBoxUtil
@@ -481,7 +480,7 @@ public object BackgroundStyleApplicator {
       return
     }
 
-    val clipPath = ClipPath.parse(clipPathMap, view.context)
+    val clipPath = ClipPath.parse(clipPathMap)
     view.setTag(R.id.clip_path, clipPath)
     view.invalidate()
   }
@@ -495,38 +494,38 @@ public object BackgroundStyleApplicator {
 
     // Create path from the shape
     val path: Path? = if (clipPath.shape != null) {
-      ClipPathUtils.createPathFromBasicShape(clipPath.shape, bounds)
-    } else if (clipPath.geometryBox != null) {
-      // For geometry box only (no shape), create a rounded rectangle using border radius
-      val composite = getCompositeBackgroundDrawable(view)
-      val borderRadius = composite?.borderRadius
+          ClipPathUtils.createPathFromBasicShape(clipPath.shape, bounds)
+        } else if (clipPath.geometryBox != null) {
+          // For geometry box only (no shape), create a rounded rectangle using border radius
+          val composite = getCompositeBackgroundDrawable(view)
+          val borderRadius = composite?.borderRadius
       val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
 
-      if (borderRadius != null) {
-        // Adjust border radius based on geometry box type
+          if (borderRadius != null) {
+            // Adjust border radius based on geometry box type
         val adjustedBorderRadius = GeometryBoxUtil.adjustBorderRadiusForGeometryBox(
-            clipPath.geometryBox,
-            borderRadius.resolve(
-                composite.layoutDirection,
-                view.context,
-                PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
+                    clipPath.geometryBox,
+                    borderRadius.resolve(
+                        composite.layoutDirection,
+                        view.context,
+                        PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
                 PixelUtil.toDIPFromPixel(drawingRect.height().toFloat())
             ),
-            computedBorderInsets,
+                    computedBorderInsets,
             view
         )
 
-        if (adjustedBorderRadius != null) {
-          ClipPathUtils.createRoundedRectPath(bounds, adjustedBorderRadius)
+            if (adjustedBorderRadius != null) {
+              ClipPathUtils.createRoundedRectPath(bounds, adjustedBorderRadius)
+            } else {
+              null
+            }
+          } else {
+            null
+          }
         } else {
           null
         }
-      } else {
-        null
-      }
-    } else {
-      null
-    }
 
     if (path != null) {
       canvas.clipPath(path)
@@ -543,7 +542,7 @@ public object BackgroundStyleApplicator {
     }
     return composite.borderInsets?.resolve(composite.layoutDirection, view.context)
   }
-  
+
   @JvmStatic
   public fun setFeedbackUnderlay(view: View, drawable: Drawable?) {
     view.background = ensureCompositeBackgroundDrawable(view).withNewFeedbackUnderlay(drawable)
@@ -617,9 +616,9 @@ public object BackgroundStyleApplicator {
       // Android versions, use the standard clipPath.
       if (
           ReactNativeFeatureFlags.enableAndroidAntialiasedBorderRadiusClipping() &&
-              Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
-              view.width > 0 &&
-              view.height > 0 &&
+          Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+          view.width > 0 &&
+          view.height > 0 &&
               drawContent != null
       ) {
         clipWithAntiAliasing(

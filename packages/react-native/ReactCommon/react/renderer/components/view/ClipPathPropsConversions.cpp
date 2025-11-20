@@ -47,6 +47,17 @@ GeometryBox convertCSSGeometryBox(CSSGeometryBox cssBox) {
       return GeometryBox::ViewBox;
   }
 }
+
+// Helper function to extract optional ValueUnit from raw shape map
+std::optional<ValueUnit> getOptionalValueUnit(
+    const std::unordered_map<std::string, RawValue>& rawShape,
+    const std::string& key) {
+  auto it = rawShape.find(key);
+  if (it != rawShape.end()) {
+    return toValueUnit(it->second);
+  }
+  return std::nullopt;
+}
 } // namespace
 
 std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
@@ -185,72 +196,51 @@ void parseProcessedClipPath(
     if (type == "inset") {
       InsetShape inset;
 
-      auto topIt = rawShape.find("top");
-      if (topIt != rawShape.end()) {
-        inset.top = toValueUnit(topIt->second);
+      if (auto top = getOptionalValueUnit(rawShape, "top")) {
+        inset.top = *top;
       }
-
-      auto rightIt = rawShape.find("right");
-      if (rightIt != rawShape.end()) {
-        inset.right = toValueUnit(rightIt->second);
+      if (auto right = getOptionalValueUnit(rawShape, "right")) {
+        inset.right = *right;
       }
-
-      auto bottomIt = rawShape.find("bottom");
-      if (bottomIt != rawShape.end()) {
-        inset.bottom = toValueUnit(bottomIt->second);
+      if (auto bottom = getOptionalValueUnit(rawShape, "bottom")) {
+        inset.bottom = *bottom;
       }
-
-      auto leftIt = rawShape.find("left");
-      if (leftIt != rawShape.end()) {
-        inset.left = toValueUnit(leftIt->second);
+      if (auto left = getOptionalValueUnit(rawShape, "left")) {
+        inset.left = *left;
       }
-
-      auto borderRadiusIt = rawShape.find("borderRadius");
-      if (borderRadiusIt != rawShape.end()) {
-        inset.borderRadius = toValueUnit(borderRadiusIt->second);
+      if (auto borderRadius = getOptionalValueUnit(rawShape, "borderRadius")) {
+        inset.borderRadius = *borderRadius;
       }
 
       clipPath.shape = inset;
     } else if (type == "circle") {
       CircleShape circle;
 
-      auto rIt = rawShape.find("r");
-      if (rIt != rawShape.end()) {
-        circle.r = toValueUnit(rIt->second);
+      if (auto r = getOptionalValueUnit(rawShape, "r")) {
+        circle.r = *r;
       }
-
-      auto cxIt = rawShape.find("cx");
-      if (cxIt != rawShape.end()) {
-        circle.cx = toValueUnit(cxIt->second);
+      if (auto cx = getOptionalValueUnit(rawShape, "cx")) {
+        circle.cx = *cx;
       }
-
-      auto cyIt = rawShape.find("cy");
-      if (cyIt != rawShape.end()) {
-        circle.cy = toValueUnit(cyIt->second);
+      if (auto cy = getOptionalValueUnit(rawShape, "cy")) {
+        circle.cy = *cy;
       }
 
       clipPath.shape = circle;
     } else if (type == "ellipse") {
       EllipseShape ellipse;
 
-      auto rxIt = rawShape.find("rx");
-      if (rxIt != rawShape.end()) {
-        ellipse.rx = toValueUnit(rxIt->second);
+      if (auto rx = getOptionalValueUnit(rawShape, "rx")) {
+        ellipse.rx = *rx;
       }
-
-      auto ryIt = rawShape.find("ry");
-      if (ryIt != rawShape.end()) {
-        ellipse.ry = toValueUnit(ryIt->second);
+      if (auto ry = getOptionalValueUnit(rawShape, "ry")) {
+        ellipse.ry = *ry;
       }
-
-      auto cxIt = rawShape.find("cx");
-      if (cxIt != rawShape.end()) {
-        ellipse.cx = toValueUnit(cxIt->second);
+      if (auto cx = getOptionalValueUnit(rawShape, "cx")) {
+        ellipse.cx = *cx;
       }
-
-      auto cyIt = rawShape.find("cy");
-      if (cyIt != rawShape.end()) {
-        ellipse.cy = toValueUnit(cyIt->second);
+      if (auto cy = getOptionalValueUnit(rawShape, "cy")) {
+        ellipse.cy = *cy;
       }
 
       clipPath.shape = ellipse;
@@ -292,58 +282,40 @@ void parseProcessedClipPath(
     } else if (type == "rect") {
       RectShape rect;
 
-      auto topIt = rawShape.find("top");
-      if (topIt != rawShape.end()) {
-        rect.top = toValueUnit(topIt->second);
+      if (auto top = getOptionalValueUnit(rawShape, "top")) {
+        rect.top = *top;
       }
-
-      auto rightIt = rawShape.find("right");
-      if (rightIt != rawShape.end()) {
-        rect.right = toValueUnit(rightIt->second);
+      if (auto right = getOptionalValueUnit(rawShape, "right")) {
+        rect.right = *right;
       }
-
-      auto bottomIt = rawShape.find("bottom");
-      if (bottomIt != rawShape.end()) {
-        rect.bottom = toValueUnit(bottomIt->second);
+      if (auto bottom = getOptionalValueUnit(rawShape, "bottom")) {
+        rect.bottom = *bottom;
       }
-
-      auto leftIt = rawShape.find("left");
-      if (leftIt != rawShape.end()) {
-        rect.left = toValueUnit(leftIt->second);
+      if (auto left = getOptionalValueUnit(rawShape, "left")) {
+        rect.left = *left;
       }
-
-      auto borderRadiusIt = rawShape.find("borderRadius");
-      if (borderRadiusIt != rawShape.end()) {
-        rect.borderRadius = toValueUnit(borderRadiusIt->second);
+      if (auto borderRadius = getOptionalValueUnit(rawShape, "borderRadius")) {
+        rect.borderRadius = *borderRadius;
       }
 
       clipPath.shape = rect;
     } else if (type == "xywh") {
       XywhShape xywh;
 
-      auto xIt = rawShape.find("x");
-      if (xIt != rawShape.end()) {
-        xywh.x = toValueUnit(xIt->second);
+      if (auto x = getOptionalValueUnit(rawShape, "x")) {
+        xywh.x = *x;
       }
-
-      auto yIt = rawShape.find("y");
-      if (yIt != rawShape.end()) {
-        xywh.y = toValueUnit(yIt->second);
+      if (auto y = getOptionalValueUnit(rawShape, "y")) {
+        xywh.y = *y;
       }
-
-      auto widthIt = rawShape.find("width");
-      if (widthIt != rawShape.end()) {
-        xywh.width = toValueUnit(widthIt->second);
+      if (auto width = getOptionalValueUnit(rawShape, "width")) {
+        xywh.width = *width;
       }
-
-      auto heightIt = rawShape.find("height");
-      if (heightIt != rawShape.end()) {
-        xywh.height = toValueUnit(heightIt->second);
+      if (auto height = getOptionalValueUnit(rawShape, "height")) {
+        xywh.height = *height;
       }
-
-      auto borderRadiusIt = rawShape.find("borderRadius");
-      if (borderRadiusIt != rawShape.end()) {
-        xywh.borderRadius = toValueUnit(borderRadiusIt->second);
+      if (auto borderRadius = getOptionalValueUnit(rawShape, "borderRadius")) {
+        xywh.borderRadius = *borderRadius;
       }
 
       clipPath.shape = xywh;

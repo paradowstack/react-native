@@ -7,10 +7,24 @@
 
 package com.facebook.react.uimanager.style
 
-import android.content.Context
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.uimanager.LengthPercentage
+
+/**
+ * Helper function to parse an optional LengthPercentage from a ReadableMap.
+ *
+ * @param map The ReadableMap to read from
+ * @param key The key to look up
+ * @return The parsed LengthPercentage, or null if the key doesn't exist or parsing fails
+ */
+private fun getOptionalLengthPercentage(map: ReadableMap, key: String): LengthPercentage? {
+  return if (map.hasKey(key)) {
+    LengthPercentage.setFromDynamic(map.getDynamic(key))
+  } else {
+    null
+  }
+}
 
 /** Circle shape: circle(radius at cx cy) */
 public data class CircleShape(
@@ -20,10 +34,9 @@ public data class CircleShape(
 ) {
   public companion object {
     public fun parse(map: ReadableMap): CircleShape? {
-      val r = if (map.hasKey("r")) LengthPercentage.setFromDynamic(map.getDynamic("r")) else null
-      if (r == null) return null
-      val cx = if (map.hasKey("cx")) LengthPercentage.setFromDynamic(map.getDynamic("cx")) else null
-      val cy = if (map.hasKey("cy")) LengthPercentage.setFromDynamic(map.getDynamic("cy")) else null
+      val r = getOptionalLengthPercentage(map, "r") ?: return null
+      val cx = getOptionalLengthPercentage(map, "cx")
+      val cy = getOptionalLengthPercentage(map, "cy")
       return CircleShape(r, cx, cy)
     }
   }
@@ -38,11 +51,10 @@ public data class EllipseShape(
 ) {
   public companion object {
     public fun parse(map: ReadableMap): EllipseShape? {
-      val rx = if (map.hasKey("rx")) LengthPercentage.setFromDynamic(map.getDynamic("rx")) else null
-      val ry = if (map.hasKey("ry")) LengthPercentage.setFromDynamic(map.getDynamic("ry")) else null
-      if (rx == null || ry == null) return null
-      val cx = if (map.hasKey("cx")) LengthPercentage.setFromDynamic(map.getDynamic("cx")) else null
-      val cy = if (map.hasKey("cy")) LengthPercentage.setFromDynamic(map.getDynamic("cy")) else null
+      val rx = getOptionalLengthPercentage(map, "rx") ?: return null
+      val ry = getOptionalLengthPercentage(map, "ry") ?: return null
+      val cx = getOptionalLengthPercentage(map, "cx")
+      val cy = getOptionalLengthPercentage(map, "cy")
       return EllipseShape(rx, ry, cx, cy)
     }
   }
@@ -58,12 +70,11 @@ public data class InsetShape(
 ) {
   public companion object {
     public fun parse(map: ReadableMap): InsetShape? {
-      val top = if (map.hasKey("top")) LengthPercentage.setFromDynamic(map.getDynamic("top")) else null
-      val right = if (map.hasKey("right")) LengthPercentage.setFromDynamic(map.getDynamic("right")) else null
-      val bottom = if (map.hasKey("bottom")) LengthPercentage.setFromDynamic(map.getDynamic("bottom")) else null
-      val left = if (map.hasKey("left")) LengthPercentage.setFromDynamic(map.getDynamic("left")) else null
-      if (top == null || right == null || bottom == null || left == null) return null
-      val borderRadius = if (map.hasKey("borderRadius")) LengthPercentage.setFromDynamic(map.getDynamic("borderRadius")) else null
+      val top = getOptionalLengthPercentage(map, "top") ?: return null
+      val right = getOptionalLengthPercentage(map, "right") ?: return null
+      val bottom = getOptionalLengthPercentage(map, "bottom") ?: return null
+      val left = getOptionalLengthPercentage(map, "left") ?: return null
+      val borderRadius = getOptionalLengthPercentage(map, "borderRadius")
       return InsetShape(top, right, bottom, left, borderRadius)
     }
   }
@@ -98,9 +109,8 @@ public data class PolygonShape(
 
       for (i in 0 until pointsArray.size()) {
         val pointMap = pointsArray.getMap(i) ?: continue
-        val x = if (pointMap.hasKey("x")) LengthPercentage.setFromDynamic(pointMap.getDynamic("x")) else null
-        val y = if (pointMap.hasKey("y")) LengthPercentage.setFromDynamic(pointMap.getDynamic("y")) else null
-        if (x == null || y == null) continue
+        val x = getOptionalLengthPercentage(pointMap, "x") ?: continue
+        val y = getOptionalLengthPercentage(pointMap, "y") ?: continue
         points.add(Pair(x, y))
       }
 
@@ -126,12 +136,11 @@ public data class RectShape(
 ) {
   public companion object {
     public fun parse(map: ReadableMap): RectShape? {
-      val top = if (map.hasKey("top")) LengthPercentage.setFromDynamic(map.getDynamic("top")) else null
-      val right = if (map.hasKey("right")) LengthPercentage.setFromDynamic(map.getDynamic("right")) else null
-      val bottom = if (map.hasKey("bottom")) LengthPercentage.setFromDynamic(map.getDynamic("bottom")) else null
-      val left = if (map.hasKey("left")) LengthPercentage.setFromDynamic(map.getDynamic("left")) else null
-      if (top == null || right == null || bottom == null || left == null) return null
-      val borderRadius = if (map.hasKey("borderRadius")) LengthPercentage.setFromDynamic(map.getDynamic("borderRadius")) else null
+      val top = getOptionalLengthPercentage(map, "top") ?: return null
+      val right = getOptionalLengthPercentage(map, "right") ?: return null
+      val bottom = getOptionalLengthPercentage(map, "bottom") ?: return null
+      val left = getOptionalLengthPercentage(map, "left") ?: return null
+      val borderRadius = getOptionalLengthPercentage(map, "borderRadius")
       return RectShape(top, right, bottom, left, borderRadius)
     }
   }
@@ -147,12 +156,11 @@ public data class XywhShape(
 ) {
   public companion object {
     public fun parse(map: ReadableMap): XywhShape? {
-      val x = if (map.hasKey("x")) LengthPercentage.setFromDynamic(map.getDynamic("x")) else null
-      val y = if (map.hasKey("y")) LengthPercentage.setFromDynamic(map.getDynamic("y")) else null
-      val width = if (map.hasKey("width")) LengthPercentage.setFromDynamic(map.getDynamic("width")) else null
-      val height = if (map.hasKey("height")) LengthPercentage.setFromDynamic(map.getDynamic("height")) else null
-      if (x == null || y == null || width == null || height == null) return null
-      val borderRadius = if (map.hasKey("borderRadius")) LengthPercentage.setFromDynamic(map.getDynamic("borderRadius")) else null
+      val x = getOptionalLengthPercentage(map, "x") ?: return null
+      val y = getOptionalLengthPercentage(map, "y") ?: return null
+      val width = getOptionalLengthPercentage(map, "width") ?: return null
+      val height = getOptionalLengthPercentage(map, "height") ?: return null
+      val borderRadius = getOptionalLengthPercentage(map, "borderRadius")
       return XywhShape(x, y, width, height, borderRadius)
     }
   }
@@ -240,7 +248,7 @@ public data class ClipPath(
     val geometryBox: GeometryBox? = null,
 ) {
   public companion object {
-    public fun parse(map: ReadableMap?, context: Context): ClipPath? {
+    public fun parse(map: ReadableMap?): ClipPath? {
       if (map == null) return null
 
       val shape =

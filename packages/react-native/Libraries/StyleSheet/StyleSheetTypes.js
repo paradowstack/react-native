@@ -20,6 +20,7 @@ import type {
   ____ViewStyle_InternalOverrides,
 } from './private/_StyleSheetTypesOverrides';
 import type {____TransformStyle_Internal} from './private/_TransformStyle';
+import type {ClipPathValue} from './processClipPath';
 import type {ColorValue} from './StyleSheet';
 
 export type {____TransformStyle_Internal};
@@ -898,7 +899,7 @@ export type ____ViewStyle_InternalBase = $ReadOnly<{
     | $ReadOnlyArray<BackgroundRepeatValue>
     | string,
   isolation?: 'auto' | 'isolate',
-  clipPath?: string,
+  clipPath?: string | ClipPathValue,
 }>;
 
 export type ____ViewStyle_InternalCore = $ReadOnly<{

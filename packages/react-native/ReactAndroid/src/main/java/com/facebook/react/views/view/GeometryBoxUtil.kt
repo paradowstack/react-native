@@ -7,16 +7,15 @@
 
 package com.facebook.react.views.view
 
-import android.graphics.Rect
 import android.graphics.RectF
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import com.facebook.react.uimanager.PixelUtil
-import com.facebook.react.uimanager.style.GeometryBox
+import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.style.ComputedBorderRadius
 import com.facebook.react.uimanager.style.CornerRadii
-import com.facebook.react.uimanager.PixelUtil.dpToPx
+import com.facebook.react.uimanager.style.GeometryBox
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -45,8 +44,6 @@ internal object GeometryBoxUtil {
     if (borderRadius == null) {
       return null
     }
-
-
 
     val params = view.layoutParams as? MarginLayoutParams
 
@@ -81,10 +78,10 @@ internal object GeometryBoxUtil {
       GeometryBox.BorderBox, null -> {
         // border-box: use border-radius as-is (this is the reference)
         ComputedBorderRadius(
-          topLeft = borderRadius.topLeft.toPixelFromDIP(),
-          topRight = borderRadius.topRight.toPixelFromDIP(),
-          bottomLeft = borderRadius.bottomLeft.toPixelFromDIP(),
-          bottomRight = borderRadius.bottomRight.toPixelFromDIP()
+            topLeft = borderRadius.topLeft.toPixelFromDIP(),
+            topRight = borderRadius.topRight.toPixelFromDIP(),
+            bottomLeft = borderRadius.bottomLeft.toPixelFromDIP(),
+            bottomRight = borderRadius.bottomRight.toPixelFromDIP()
         )
       }
 
@@ -126,15 +123,15 @@ internal object GeometryBoxUtil {
 
         ComputedBorderRadius(
             topLeft = CornerRadii(
-                horizontal = max(0f, borderRadius.topLeft.horizontal - paddingLeft).dpToPx(),
+                    horizontal = max(0f, borderRadius.topLeft.horizontal - paddingLeft).dpToPx(),
                 vertical = max(0f, borderRadius.topLeft.vertical - paddingTop).dpToPx()
             ),
             topRight = CornerRadii(
-                horizontal = max(0f, borderRadius.topRight.horizontal - paddingRight).dpToPx(),
+                    horizontal = max(0f, borderRadius.topRight.horizontal - paddingRight).dpToPx(),
                 vertical = max(0f, borderRadius.topRight.vertical - paddingTop).dpToPx()
             ),
             bottomLeft = CornerRadii(
-                horizontal = max(0f, borderRadius.bottomLeft.horizontal - paddingLeft).dpToPx(),
+                    horizontal = max(0f, borderRadius.bottomLeft.horizontal - paddingLeft).dpToPx(),
                 vertical = max(0f, borderRadius.bottomLeft.vertical - paddingBottom).dpToPx()
             ),
             bottomRight = CornerRadii(
@@ -151,60 +148,45 @@ internal object GeometryBoxUtil {
   @JvmStatic
   fun getGeometryBoxBounds(view: View, geometryBox: GeometryBox?, computedBorderInsets: RectF?): RectF {
     val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
-
     val params = view.layoutParams as? ViewGroup.MarginLayoutParams
-    if (params is ViewGroup.MarginLayoutParams) {
-      println(
-        "[MYDEBUG] MarginLayoutParams: " +
-          "leftMargin=${params.leftMargin}, " +
-          "topMargin=${params.topMargin}, " +
-          "rightMargin=${params.rightMargin}, " +
-          "bottomMargin=${params.bottomMargin}"
-      ) // MYDEBUG
-    }
-
     // Calculate geometry box bounds
     val box = when (geometryBox) {
-      GeometryBox.ContentBox -> {
-        // val composite = getCompositeBackgroundDrawable(view)
-        // val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
-        RectF(
-          bounds.left + view.paddingLeft,
-          bounds.top + view.paddingTop,
-          bounds.right - view.paddingRight,
-          bounds.bottom - view.paddingBottom
+          GeometryBox.ContentBox -> {
+            RectF(
+                bounds.left + view.paddingLeft,
+                bounds.top + view.paddingTop,
+                bounds.right - view.paddingRight,
+                bounds.bottom - view.paddingBottom
         )
-      }
+          }
 
-      GeometryBox.PaddingBox -> {
-        // val composite = getCompositeBackgroundDrawable(view)
-        // val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
-        RectF(
-          bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f),
-          bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f),
-          bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f),
-          bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f)
+          GeometryBox.PaddingBox -> {
+            RectF(
+                bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f),
+                bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f),
+                bounds.right - (computedBorderInsets?.right?.dpToPx() ?: 0f),
+                bounds.bottom - (computedBorderInsets?.bottom?.dpToPx() ?: 0f)
         )
-      }
+          }
 
-      GeometryBox.MarginBox -> {
-        // Margin box extends beyond the view bounds
-        // Note: This is an approximation since we don't have direct access to margin values in the view
-        RectF(
-          bounds.left - (params?.leftMargin?.dpToPx() ?: 0f),
-          bounds.top - (params?.topMargin?.dpToPx() ?: 0f),
-          bounds.right + (params?.rightMargin?.dpToPx() ?: 0f),
-          bounds.bottom + (params?.bottomMargin?.dpToPx() ?: 0f)
+          GeometryBox.MarginBox -> {
+            // Margin box extends beyond the view bounds
+            // Note: This is an approximation since we don't have direct access to margin values in the view
+            RectF(
+                bounds.left - (params?.leftMargin?.dpToPx() ?: 0f),
+                bounds.top - (params?.topMargin?.dpToPx() ?: 0f),
+                bounds.right + (params?.rightMargin?.dpToPx() ?: 0f),
+                bounds.bottom + (params?.bottomMargin?.dpToPx() ?: 0f)
         )
-      }
+          }
 
       GeometryBox.BorderBox, null -> {
-        // Default is border-box which is the view bounds
-        bounds
-      }
+            // Default is border-box which is the view bounds
+            bounds
+          }
 
-      else -> bounds // StrokeBox, ViewBox - use border-box as fallback
-    }
+          else -> bounds // StrokeBox, ViewBox - use border-box as fallback
+        }
     return box
   }
 }

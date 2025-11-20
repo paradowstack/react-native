@@ -8,8 +8,8 @@
 package com.facebook.react.uimanager.style
 
 import android.graphics.Path
-import android.graphics.RectF
 import android.graphics.Path.FillType
+import android.graphics.RectF
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil
@@ -28,6 +28,29 @@ public object ClipPathUtils {
     return when (lengthPercentage.type) {
       LengthPercentageType.POINT -> PixelUtil.toPixelFromDIP(lengthPercentage.resolve(1f))
       LengthPercentageType.PERCENT -> lengthPercentage.resolve(referenceDimension)
+    }
+  }
+
+  /**
+   * Adds a rounded rectangle or regular rectangle to a path based on whether borderRadius is
+   * specified. Uses the minimum of width and height as the reference dimension for borderRadius
+   * (CSS spec compliant).
+   *
+   * @param path The path to add the rectangle to
+   * @param rect The rectangle bounds
+   * @param borderRadius Optional border radius to apply
+   */
+  private fun addRectWithOptionalBorderRadius(
+      path: Path,
+      rect: RectF,
+      borderRadius: LengthPercentage?,
+  ) {
+    if (borderRadius != null) {
+      val referenceDimension = minOf(rect.width(), rect.height())
+      val radius = resolveLengthPercentage(borderRadius, referenceDimension)
+      path.addRoundRect(rect, radius, radius, Path.Direction.CW)
+    } else {
+      path.addRect(rect, Path.Direction.CW)
     }
   }
 
@@ -136,15 +159,8 @@ public object ClipPathUtils {
     if (rect.width() < 0f || rect.height() < 0f) {
       return null
     }
-    // Add border radius if specified
-    if (inset.borderRadius != null) {
-      val referenceDimension = minOf(rect.width(), rect.height())
-      val radius = resolveLengthPercentage(inset.borderRadius, referenceDimension)
-      path.addRoundRect(rect, radius, radius, Path.Direction.CW)
-    } else {
-      path.addRect(rect, Path.Direction.CW)
-    }
 
+    addRectWithOptionalBorderRadius(path, rect, inset.borderRadius)
     return path
   }
 
@@ -207,15 +223,7 @@ public object ClipPathUtils {
       return null
     }
 
-    // Add border radius if specified
-    if (rect.borderRadius != null) {
-      val referenceDimension = minOf(rectF.width(), rectF.height())
-      val radius = resolveLengthPercentage(rect.borderRadius, referenceDimension)
-      path.addRoundRect(rectF, radius, radius, Path.Direction.CW)
-    } else {
-      path.addRect(rectF, Path.Direction.CW)
-    }
-
+    addRectWithOptionalBorderRadius(path, rectF, rect.borderRadius)
     return path
   }
 
@@ -240,15 +248,7 @@ public object ClipPathUtils {
       return null
     }
 
-    // Add border radius if specified
-    if (xywh.borderRadius != null) {
-      val referenceDimension = minOf(rect.width(), rect.height())
-      val radius = resolveLengthPercentage(xywh.borderRadius, referenceDimension)
-      path.addRoundRect(rect, radius, radius, Path.Direction.CW)
-    } else {
-      path.addRect(rect, Path.Direction.CW)
-    }
-
+    addRectWithOptionalBorderRadius(path, rect, xywh.borderRadius)
     return path
   }
 
@@ -266,7 +266,7 @@ public object ClipPathUtils {
     val topRightRadii = borderRadius.topRight
     val bottomRightRadii = borderRadius.bottomRight
     val bottomLeftRadii = borderRadius.bottomLeft
-    
+
     // Android expects radii as [x0, y0, x1, y1, x2, y2, x3, y3] for
     // [topLeft, topRight, bottomRight, bottomLeft]
     val radii = floatArrayOf(
@@ -275,7 +275,7 @@ public object ClipPathUtils {
         bottomRightRadii.horizontal, bottomRightRadii.vertical,
         bottomLeftRadii.horizontal, bottomLeftRadii.vertical
     )
-    
+
     path.addRoundRect(bounds, radii, Path.Direction.CW)
     return path
   }
