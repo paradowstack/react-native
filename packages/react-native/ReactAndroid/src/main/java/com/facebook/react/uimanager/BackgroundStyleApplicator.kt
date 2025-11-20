@@ -481,12 +481,6 @@ public object BackgroundStyleApplicator {
       return
     }
 
-    if (clipPathMap == null) {
-      view.setTag(R.id.clip_path, null)
-      view.invalidate()
-      return
-    }
-
     val clipPath = ClipPath.parse(clipPathMap, view.context)
     view.setTag(R.id.clip_path, clipPath)
     view.invalidate()
