@@ -219,6 +219,7 @@ void parseProcessedClipPath(
       if (auto r = getOptionalValueUnit(rawShape, "r")) {
         circle.r = *r;
       }
+      // r is optional - defaults to 50% closest-side handled in rendering
       if (auto cx = getOptionalValueUnit(rawShape, "cx")) {
         circle.cx = *cx;
       }
@@ -233,9 +234,11 @@ void parseProcessedClipPath(
       if (auto rx = getOptionalValueUnit(rawShape, "rx")) {
         ellipse.rx = *rx;
       }
+      // rx is optional - defaults to 50% handled in rendering
       if (auto ry = getOptionalValueUnit(rawShape, "ry")) {
         ellipse.ry = *ry;
       }
+      // ry is optional - defaults to 50% handled in rendering
       if (auto cx = getOptionalValueUnit(rawShape, "cx")) {
         ellipse.cx = *cx;
       }

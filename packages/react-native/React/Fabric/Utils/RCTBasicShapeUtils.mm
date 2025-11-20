@@ -32,7 +32,10 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
 + (UIBezierPath *)createCirclePath:(const CircleShape &)circle bounds:(CGRect)bounds
 {
-  CGFloat radius = RCTResolveValueUnit(circle.r, (bounds.size.width + bounds.size.height) / 2.0f);
+  // Resolve radius (use smaller dimension as reference for percentages, matching CSS closest-side)
+  // Default to 50% of closest-side if radius is not specified
+  CGFloat referenceDimension = MIN(bounds.size.width, bounds.size.height);
+  CGFloat radius = circle.r.has_value() ? RCTResolveValueUnit(circle.r.value(), referenceDimension) : referenceDimension / 2.0f;
   CGFloat cx = bounds.origin.x + (circle.cx.has_value() ? RCTResolveValueUnit(circle.cx.value(), bounds.size.width) : bounds.size.width / 2.0f);
   CGFloat cy = bounds.origin.y + (circle.cy.has_value() ? RCTResolveValueUnit(circle.cy.value(), bounds.size.height) : bounds.size.height / 2.0f);
 
@@ -44,8 +47,9 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
 + (UIBezierPath *)createEllipsePath:(const EllipseShape &)ellipse bounds:(CGRect)bounds
 {
-  CGFloat rx = RCTResolveValueUnit(ellipse.rx, bounds.size.width);
-  CGFloat ry = RCTResolveValueUnit(ellipse.ry, bounds.size.height);
+  // Resolve radii (default to 50% if not specified)
+  CGFloat rx = ellipse.rx.has_value() ? RCTResolveValueUnit(ellipse.rx.value(), bounds.size.width) : bounds.size.width / 2.0f;
+  CGFloat ry = ellipse.ry.has_value() ? RCTResolveValueUnit(ellipse.ry.value(), bounds.size.height) : bounds.size.height / 2.0f;
   CGFloat cx = bounds.origin.x + (ellipse.cx.has_value() ? RCTResolveValueUnit(ellipse.cx.value(), bounds.size.width) : bounds.size.width / 2.0f);
   CGFloat cy = bounds.origin.y + (ellipse.cy.has_value() ? RCTResolveValueUnit(ellipse.cy.value(), bounds.size.height) : bounds.size.height / 2.0f);
 
@@ -104,9 +108,11 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
 + (UIBezierPath *)createRectPath:(const RectShape &)rect bounds:(CGRect)bounds
 {
+  // CSS rect() uses distances from edges: rect(top, right, bottom, left)
+  // top: distance from top edge, right: distance from right edge, etc.
   CGFloat top = bounds.origin.y + RCTResolveValueUnit(rect.top, bounds.size.height);
-  CGFloat right = bounds.origin.x + RCTResolveValueUnit(rect.right, bounds.size.width);
-  CGFloat bottom = bounds.origin.y + RCTResolveValueUnit(rect.bottom, bounds.size.height);
+  CGFloat right = bounds.origin.x + bounds.size.width - RCTResolveValueUnit(rect.right, bounds.size.width);
+  CGFloat bottom = bounds.origin.y + bounds.size.height - RCTResolveValueUnit(rect.bottom, bounds.size.height);
   CGFloat left = bounds.origin.x + RCTResolveValueUnit(rect.left, bounds.size.width);
 
   // CSS rect() interprets values as distances from edges, creating a clipping rectangle

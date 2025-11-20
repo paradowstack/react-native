@@ -161,6 +161,7 @@ internal object GeometryBoxUtil {
           }
 
           GeometryBox.PaddingBox -> {
+            // PaddingBox = BorderBox - border
             RectF(
                 bounds.left + (computedBorderInsets?.left?.dpToPx() ?: 0f),
                 bounds.top + (computedBorderInsets?.top?.dpToPx() ?: 0f),

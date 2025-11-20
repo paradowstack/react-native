@@ -20,7 +20,7 @@
 namespace facebook::react {
 
 struct CircleShape {
-  ValueUnit r{};
+  std::optional<ValueUnit> r{};
   std::optional<ValueUnit> cx{};
   std::optional<ValueUnit> cy{};
 
@@ -36,8 +36,8 @@ struct CircleShape {
 };
 
 struct EllipseShape {
-  ValueUnit rx{};
-  ValueUnit ry{};
+  std::optional<ValueUnit> rx{};
+  std::optional<ValueUnit> ry{};
   std::optional<ValueUnit> cx{};
   std::optional<ValueUnit> cy{};
 

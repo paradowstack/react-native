@@ -82,9 +82,15 @@ public object ClipPathUtils {
   private fun createCirclePath(circle: CircleShape, bounds: RectF): Path {
     val path = Path()
 
-    // Resolve radius (use smaller dimension as reference for percentages)
-    val referenceDimension = (bounds.width() + bounds.height()) / 2.0f
-    val radius = resolveLengthPercentage(circle.r, referenceDimension)
+    // Resolve radius (use smaller dimension as reference for percentages, matching CSS closest-side)
+    // Default to 50% of closest-side if radius is not specified
+    val referenceDimension = minOf(bounds.width(), bounds.height())
+    val radius = if (circle.r != null) {
+      resolveLengthPercentage(circle.r, referenceDimension)
+    } else {
+      // Default to 50% of closest-side (min(width, height) / 2)
+      referenceDimension / 2.0f
+    }
 
     // Resolve center (default to center of bounds)
     val cx =
@@ -115,9 +121,17 @@ public object ClipPathUtils {
   private fun createEllipsePath(ellipse: EllipseShape, bounds: RectF): Path {
     val path = Path()
 
-    // Resolve radii
-    val rx = resolveLengthPercentage(ellipse.rx, bounds.width())
-    val ry = resolveLengthPercentage(ellipse.ry, bounds.height())
+    // Resolve radii (default to 50% if not specified)
+    val rx = if (ellipse.rx != null) {
+      resolveLengthPercentage(ellipse.rx, bounds.width())
+    } else {
+      bounds.width() / 2.0f
+    }
+    val ry = if (ellipse.ry != null) {
+      resolveLengthPercentage(ellipse.ry, bounds.height())
+    } else {
+      bounds.height() / 2.0f
+    }
 
     // Resolve center (default to center of bounds)
     val cx =
@@ -213,9 +227,10 @@ public object ClipPathUtils {
     val path = Path()
 
     // CSS rect() uses distances from edges: rect(top, right, bottom, left)
+    // top: distance from top edge, right: distance from right edge, etc.
     val top = bounds.top + resolveLengthPercentage(rect.top, bounds.height())
-    val right = bounds.left + resolveLengthPercentage(rect.right, bounds.width())
-    val bottom = bounds.top + resolveLengthPercentage(rect.bottom, bounds.height())
+    val right = bounds.right - resolveLengthPercentage(rect.right, bounds.width())
+    val bottom = bounds.bottom - resolveLengthPercentage(rect.bottom, bounds.height())
     val left = bounds.left + resolveLengthPercentage(rect.left, bounds.width())
 
     val rectF = RectF(left, top, right, bottom)

@@ -28,13 +28,13 @@ private fun getOptionalLengthPercentage(map: ReadableMap, key: String): LengthPe
 
 /** Circle shape: circle(radius at cx cy) */
 public data class CircleShape(
-    val r: LengthPercentage,
+    val r: LengthPercentage? = null,
     val cx: LengthPercentage? = null,
     val cy: LengthPercentage? = null,
 ) {
   public companion object {
     public fun parse(map: ReadableMap): CircleShape? {
-      val r = getOptionalLengthPercentage(map, "r") ?: return null
+      val r = getOptionalLengthPercentage(map, "r")
       val cx = getOptionalLengthPercentage(map, "cx")
       val cy = getOptionalLengthPercentage(map, "cy")
       return CircleShape(r, cx, cy)
@@ -44,15 +44,15 @@ public data class CircleShape(
 
 /** Ellipse shape: ellipse(rx ry at cx cy) */
 public data class EllipseShape(
-    val rx: LengthPercentage,
-    val ry: LengthPercentage,
+    val rx: LengthPercentage? = null,
+    val ry: LengthPercentage? = null,
     val cx: LengthPercentage? = null,
     val cy: LengthPercentage? = null,
 ) {
   public companion object {
     public fun parse(map: ReadableMap): EllipseShape? {
-      val rx = getOptionalLengthPercentage(map, "rx") ?: return null
-      val ry = getOptionalLengthPercentage(map, "ry") ?: return null
+      val rx = getOptionalLengthPercentage(map, "rx")
+      val ry = getOptionalLengthPercentage(map, "ry")
       val cx = getOptionalLengthPercentage(map, "cx")
       val cy = getOptionalLengthPercentage(map, "cy")
       return EllipseShape(rx, ry, cx, cy)

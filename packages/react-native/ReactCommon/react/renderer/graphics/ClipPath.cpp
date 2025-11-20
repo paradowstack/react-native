@@ -20,7 +20,10 @@ bool CircleShape::operator==(const CircleShape& other) const {
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 void CircleShape::toString(std::stringstream& ss) const {
-  ss << "circle(" << r << "px";
+  ss << "circle(";
+  if (r) {
+    ss << r->toString();
+  }
   if (cx || cy) {
     ss << " at ";
     if (cx) {
@@ -30,13 +33,16 @@ void CircleShape::toString(std::stringstream& ss) const {
       ss << " " << cy->toString();
     }
   }
+  ss << ")";
 }
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic CircleShape::toDynamic() const {
   folly::dynamic result = folly::dynamic::object();
-  result["r"] = r.toDynamic();
+  if (r) {
+    result["r"] = r->toDynamic();
+  }
   if (cx) {
     result["cx"] = cx->toDynamic();
   }
@@ -53,7 +59,13 @@ bool EllipseShape::operator==(const EllipseShape& other) const {
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 void EllipseShape::toString(std::stringstream& ss) const {
-  ss << "ellipse(" << rx << "px " << ry << "px";
+  ss << "ellipse(";
+  if (rx) {
+    ss << rx->toString();
+  }
+  if (ry) {
+    ss << " " << ry->toString();
+  }
   if (cx || cy) {
     ss << " at ";
     if (cx) {
@@ -63,14 +75,19 @@ void EllipseShape::toString(std::stringstream& ss) const {
       ss << " " << cy->toString();
     }
   }
+  ss << ")";
 }
 #endif
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic EllipseShape::toDynamic() const {
   folly::dynamic result = folly::dynamic::object();
-  result["rx"] = rx.toDynamic();
-  result["ry"] = ry.toDynamic();
+  if (rx) {
+    result["rx"] = rx->toDynamic();
+  }
+  if (ry) {
+    result["ry"] = ry->toDynamic();
+  }
   if (cx) {
     result["cx"] = cx->toDynamic();
   }
