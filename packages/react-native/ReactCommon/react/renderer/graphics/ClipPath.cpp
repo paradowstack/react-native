@@ -104,12 +104,15 @@ folly::dynamic InsetShape::toDynamic() const {
   result["right"] = right.toDynamic();
   result["bottom"] = bottom.toDynamic();
   result["left"] = left.toDynamic();
+  if (borderRadius) {
+    result["borderRadius"] = borderRadius->toDynamic();
+  }
   return result;
 }
 #endif
 
 bool PolygonShape::operator==(const PolygonShape& other) const {
-  return points == other.points;
+  return points == other.points && fillRule == other.fillRule;
 }
 
 #if RN_DEBUG_STRING_CONVERTIBLE
@@ -127,12 +130,17 @@ void PolygonShape::toString(std::stringstream& ss) const {
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic PolygonShape::toDynamic() const {
-  folly::dynamic result = folly::dynamic::array();
+  folly::dynamic result = folly::dynamic::object();
+  folly::dynamic pointsArray = folly::dynamic::array();
   for (const auto& point : points) {
     folly::dynamic pointObj = folly::dynamic::object();
     pointObj["x"] = point.first.toDynamic();
     pointObj["y"] = point.second.toDynamic();
-    result.push_back(pointObj);
+    pointsArray.push_back(pointObj);
+  }
+  result["points"] = pointsArray;
+  if (fillRule) {
+    result["fillRule"] = fillRule == FillRule::EvenOdd ? "evenodd" : "nonzero";
   }
   return result;
 }
@@ -157,9 +165,15 @@ void RectShape::toString(std::stringstream& ss) const {
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic RectShape::toDynamic() const {
-  return folly::dynamic::object()("top", top.toDynamic())(
-      "right", right.toDynamic())("bottom", bottom.toDynamic())(
-      "left", left.toDynamic());
+  folly::dynamic result = folly::dynamic::object();
+  result["top"] = top.toDynamic();
+  result["right"] = right.toDynamic();
+  result["bottom"] = bottom.toDynamic();
+  result["left"] = left.toDynamic();
+  if (borderRadius) {
+    result["borderRadius"] = borderRadius->toDynamic();
+  }
+  return result;
 }
 #endif
 
@@ -182,8 +196,15 @@ void XywhShape::toString(std::stringstream& ss) const {
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic XywhShape::toDynamic() const {
-  return folly::dynamic::object()("x", x.toDynamic())("y", y.toDynamic())(
-      "width", width.toDynamic())("height", height.toDynamic());
+  folly::dynamic result = folly::dynamic::object();
+  result["x"] = x.toDynamic();
+  result["y"] = y.toDynamic();
+  result["width"] = width.toDynamic();
+  result["height"] = height.toDynamic();
+  if (borderRadius) {
+    result["borderRadius"] = borderRadius->toDynamic();
+  }
+  return result;
 }
 #endif
 

@@ -543,11 +543,11 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
     needsInvalidateLayer = YES;
   }
 
-	// `clipPath`
-	if (oldViewProps.clipPath != newViewProps.clipPath) {
-		needsInvalidateLayer = YES;
-	}
-	
+  // `clipPath`
+  if (oldViewProps.clipPath != newViewProps.clipPath) {
+    needsInvalidateLayer = YES;
+  }
+
   _needsInvalidateLayer = _needsInvalidateLayer || needsInvalidateLayer;
 
   _props = std::static_pointer_cast<const ViewProps>(props);
@@ -1236,15 +1236,15 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
                                                   layoutMetrics:_layoutMetrics
                                                       yogaStyle:_props->yogaStyle
                                                          bounds:layer.bounds
-																										cornerRadii:RCTCornerRadiiFromBorderRadii(borderMetrics.borderRadii)];
+                                                    cornerRadii:RCTCornerRadiiFromBorderRadii(borderMetrics.borderRadii)];
     if (maskLayer != nil) {
       self.currentContainerView.layer.mask = maskLayer;
-			
-			for (UIView *subview in self.currentContainerView.subviews) {
-				if ([subview isKindOfClass:[UIImageView class]]) {
-					subview.layer.mask = maskLayer;
-				}
-			}
+
+      for (UIView *subview in self.currentContainerView.subviews) {
+        if ([subview isKindOfClass:[UIImageView class]]) {
+          subview.layer.mask = maskLayer;
+        }
+      }
     }
   } else if (self.currentContainerView.clipsToBounds) {
     // Handle regular clipsToBounds clipping when no clip-path is specified
