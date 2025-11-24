@@ -10,84 +10,28 @@
 
 'use strict';
 
-type GeometryBox =
-  | 'border-box'
-  | 'padding-box'
-  | 'content-box'
-  | 'margin-box'
-  | 'fill-box'
-  | 'stroke-box'
-  | 'view-box';
+import type {
+  ClipPathValue,
+  ClipPathGeometryBox,
+  ClipPathFillRule,
+  ClipPathInsetShape,
+  ClipPathCircleShape,
+  ClipPathEllipseShape,
+  ClipPathPolygonShape,
+  ClipPathRectShape,
+  ClipPathXywhShape,
+  ClipPathBasicShape,
+} from './StyleSheetTypes';
 
-type FillRule = 'nonzero' | 'evenodd';
-
-type InsetShapeValue = {
-  type: 'inset',
-  top?: number | string | null,
-  bottom?: number | string | null,
-  left?: number | string | null,
-  right?: number | string | null,
-  borderRadius?: number | string | null,
-  ...
-};
-
-type CircleShapeValue = {
-  type: 'circle',
-  r?: number | string | null,
-  cx?: number | string | null,
-  cy?: number | string | null,
-  ...
-};
-
-type EllipseShapeValue = {
-  type: 'ellipse',
-  rx?: number | string | null,
-  ry?: number | string | null,
-  cx?: number | string | null,
-  cy?: number | string | null,
-  ...
-};
-
-type PolygonShapeValue = {
-  type: 'polygon',
-  points: $ReadOnlyArray<{x: number | string, y: number | string, ...}>,
-  fillRule?: FillRule | null,
-  ...
-};
-
-type RectShapeValue = {
-  type: 'rect',
-  top: number | string | 'auto',
-  right: number | string | 'auto',
-  bottom: number | string | 'auto',
-  left: number | string | 'auto',
-  borderRadius?: number | string | null,
-  ...
-};
-
-type XywhShapeValue = {
-  type: 'xywh',
-  x: number | string,
-  y: number | string,
-  width: number | string,
-  height: number | string,
-  borderRadius?: number | string | null,
-  ...
-};
-
-type BasicShapeValue =
-  | InsetShapeValue
-  | CircleShapeValue
-  | EllipseShapeValue
-  | PolygonShapeValue
-  | RectShapeValue
-  | XywhShapeValue;
-
-export type ClipPathValue = {
-  shape?: BasicShapeValue | null,
-  geometryBox?: GeometryBox | null,
-  ...
-};
+type GeometryBox = ClipPathGeometryBox;
+type FillRule = ClipPathFillRule;
+type InsetShapeValue = ClipPathInsetShape;
+type CircleShapeValue = ClipPathCircleShape;
+type EllipseShapeValue = ClipPathEllipseShape;
+type PolygonShapeValue = ClipPathPolygonShape;
+type RectShapeValue = ClipPathRectShape;
+type XywhShapeValue = ClipPathXywhShape;
+type BasicShapeValue = ClipPathBasicShape;
 
 export type ParsedInsetShape = {
   type: 'inset',
@@ -153,7 +97,7 @@ export type ParsedBasicShape =
 
 export type ParsedClipPath = {
   shape?: ParsedBasicShape | null,
-  geometryBox?: GeometryBox | null,
+  geometryBox?: ClipPathGeometryBox | null,
   ...
 };
 
@@ -429,7 +373,7 @@ function parseClipPathString(clipPath: string): ?ParsedClipPath {
     result.shape = shape;
 
     if (geometryBox && GEOMETRY_BOX_VALUES.has(geometryBox)) {
-      result.geometryBox = (geometryBox: any);
+      result.geometryBox = (geometryBox: ClipPathGeometryBox);
     }
 
     return result;
@@ -444,7 +388,7 @@ function parseClipPathString(clipPath: string): ?ParsedClipPath {
     const [, geometryBox, functionName, args] = geometryBoxMatch;
 
     if (GEOMETRY_BOX_VALUES.has(geometryBox)) {
-      result.geometryBox = (geometryBox: any);
+      result.geometryBox = (geometryBox: ClipPathGeometryBox);
     }
 
     const shape = parseBasicShapeFunction(functionName, args.trim());
@@ -458,7 +402,7 @@ function parseClipPathString(clipPath: string): ?ParsedClipPath {
 
   // Try to match just geometry box
   if (GEOMETRY_BOX_VALUES.has(clipPath)) {
-    result.geometryBox = (clipPath: any);
+    result.geometryBox = (clipPath: ClipPathGeometryBox);
     return result;
   }
 
@@ -656,7 +600,7 @@ function parsePolygonFunction(args: string): ?ParsedPolygonShape {
   const fillRuleMatch = args.match(/^(nonzero|evenodd)\s*,\s*(.+)$/);
 
   if (fillRuleMatch) {
-    result.fillRule = (fillRuleMatch[1]: any);
+    result.fillRule = (fillRuleMatch[1]: ClipPathFillRule);
     pointsStr = fillRuleMatch[2];
   }
 

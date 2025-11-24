@@ -20,7 +20,6 @@ import type {
   ____ViewStyle_InternalOverrides,
 } from './private/_StyleSheetTypesOverrides';
 import type {____TransformStyle_Internal} from './private/_TransformStyle';
-import type {ClipPathValue} from './processClipPath';
 import type {ColorValue} from './StyleSheet';
 
 export type {____TransformStyle_Internal};
@@ -826,6 +825,85 @@ export type BoxShadowValue = {
   inset?: boolean,
 };
 
+export type ClipPathGeometryBox =
+  | 'border-box'
+  | 'padding-box'
+  | 'content-box'
+  | 'margin-box'
+  | 'fill-box'
+  | 'stroke-box'
+  | 'view-box';
+
+export type ClipPathFillRule = 'nonzero' | 'evenodd';
+
+export type ClipPathInsetShape = {
+  type: 'inset',
+  top?: number | string | null,
+  bottom?: number | string | null,
+  left?: number | string | null,
+  right?: number | string | null,
+  borderRadius?: number | string | null,
+  ...
+};
+
+export type ClipPathCircleShape = {
+  type: 'circle',
+  r?: number | string | null,
+  cx?: number | string | null,
+  cy?: number | string | null,
+  ...
+};
+
+export type ClipPathEllipseShape = {
+  type: 'ellipse',
+  rx?: number | string | null,
+  ry?: number | string | null,
+  cx?: number | string | null,
+  cy?: number | string | null,
+  ...
+};
+
+export type ClipPathPolygonShape = {
+  type: 'polygon',
+  points: $ReadOnlyArray<{x: number | string, y: number | string, ...}>,
+  fillRule?: ClipPathFillRule | null,
+  ...
+};
+
+export type ClipPathRectShape = {
+  type: 'rect',
+  top: number | string | 'auto',
+  right: number | string | 'auto',
+  bottom: number | string | 'auto',
+  left: number | string | 'auto',
+  borderRadius?: number | string | null,
+  ...
+};
+
+export type ClipPathXywhShape = {
+  type: 'xywh',
+  x: number | string,
+  y: number | string,
+  width: number | string,
+  height: number | string,
+  borderRadius?: number | string | null,
+  ...
+};
+
+export type ClipPathBasicShape =
+  | ClipPathInsetShape
+  | ClipPathCircleShape
+  | ClipPathEllipseShape
+  | ClipPathPolygonShape
+  | ClipPathRectShape
+  | ClipPathXywhShape;
+
+export type ClipPathValue = {
+  shape?: ClipPathBasicShape | null,
+  geometryBox?: ClipPathGeometryBox | null,
+  ...
+};
+
 type ____BlendMode_Internal =
   | 'normal'
   | 'multiply'
@@ -899,7 +977,7 @@ export type ____ViewStyle_InternalBase = $ReadOnly<{
     | $ReadOnlyArray<BackgroundRepeatValue>
     | string,
   isolation?: 'auto' | 'isolate',
-  clipPath?: string | ClipPathValue,
+  clipPath?: ClipPathValue | string,
 }>;
 
 export type ____ViewStyle_InternalCore = $ReadOnly<{
