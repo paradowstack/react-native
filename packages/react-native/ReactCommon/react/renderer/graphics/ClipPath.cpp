@@ -163,7 +163,6 @@ folly::dynamic PolygonShape::toDynamic() const {
 }
 #endif
 
-// RectShape implementations
 bool RectShape::operator==(const RectShape& other) const {
   return top == other.top && right == other.right && bottom == other.bottom &&
       left == other.left && borderRadius == other.borderRadius;
@@ -194,7 +193,6 @@ folly::dynamic RectShape::toDynamic() const {
 }
 #endif
 
-// XywhShape implementations
 bool XywhShape::operator==(const XywhShape& other) const {
   return x == other.x && y == other.y && width == other.width &&
       height == other.height && borderRadius == other.borderRadius;

@@ -468,12 +468,6 @@ public object BackgroundStyleApplicator {
     BackgroundStyleApplicator.setBoxShadow(view, shadowStyles)
   }
 
-  /**
-   * Sets a feedback underlay drawable for the view.
-   *
-   * @param view The view to apply the feedback underlay to
-   * @param drawable The drawable to use as feedback underlay, or null to remove
-   */
   @JvmStatic
   public fun setClipPath(view: View, clipPathMap: ReadableMap?) {
     if (ViewUtil.getUIManagerType(view) != UIManagerType.FABRIC) {
@@ -534,6 +528,12 @@ public object BackgroundStyleApplicator {
     }
   }
 
+  /**
+   * Sets a feedback underlay drawable for the view.
+   *
+   * @param view The view to apply the feedback underlay to
+   * @param drawable The drawable to use as feedback underlay, or null to remove
+   */
   @JvmStatic
   public fun getComputedBorderInsets(view: View): RectF? {
     val composite = getCompositeBackgroundDrawable(view)

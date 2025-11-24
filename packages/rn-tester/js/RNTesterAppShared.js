@@ -69,15 +69,6 @@ const RNTesterApp = ({
   const [state, dispatch] = useReducer(
     RNTesterNavigationReducer,
     initialNavigationState,
-    state =>
-      RNTesterNavigationReducer(state, {
-        type: RNTesterNavigationActionsType.NAVBAR_OPEN_MODULE_PRESS,
-        data: {
-          key: 'PlaygroundExample',
-          title: PlaygroundTitle,
-          screen: Screens.PLAYGROUNDS,
-        },
-      }),
   );
   const colorScheme = useColorScheme();
 

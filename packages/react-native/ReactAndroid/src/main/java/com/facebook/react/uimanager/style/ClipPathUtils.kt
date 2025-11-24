@@ -14,16 +14,8 @@ import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil
 
-/** Utility class for converting ClipPath data structures to Android Path objects */
 public object ClipPathUtils {
 
-  /**
-   * Resolves a LengthPercentage to a pixel value based on the reference dimension
-   *
-   * @param lengthPercentage The value and unit to resolve
-   * @param referenceDimension The reference size (width or height) for percentage calculations
-   * @return The resolved pixel value
-   */
   private fun resolveLengthPercentage(lengthPercentage: LengthPercentage, referenceDimension: Float): Float {
     return when (lengthPercentage.type) {
       LengthPercentageType.POINT -> PixelUtil.toPixelFromDIP(lengthPercentage.resolve(1f))
@@ -31,15 +23,6 @@ public object ClipPathUtils {
     }
   }
 
-  /**
-   * Adds a rounded rectangle or regular rectangle to a path based on whether borderRadius is
-   * specified. Uses the minimum of width and height as the reference dimension for borderRadius
-   * (CSS spec compliant).
-   *
-   * @param path The path to add the rectangle to
-   * @param rect The rectangle bounds
-   * @param borderRadius Optional border radius to apply
-   */
   private fun addRectWithOptionalBorderRadius(
       path: Path,
       rect: RectF,
@@ -54,13 +37,6 @@ public object ClipPathUtils {
     }
   }
 
-  /**
-   * Creates an Android Path from a BasicShape
-   *
-   * @param basicShape The basic shape to convert
-   * @param bounds The bounding rectangle for the shape
-   * @return An Android Path representing the shape
-   */
   public fun createPathFromBasicShape(basicShape: BasicShape, bounds: RectF): Path? {
     return when (basicShape) {
       is BasicShape.Circle -> createCirclePath(basicShape.shape, bounds)
@@ -72,13 +48,6 @@ public object ClipPathUtils {
     }
   }
 
-  /**
-   * Creates a circular path
-   *
-   * @param circle The circle shape definition
-   * @param bounds The reference bounds
-   * @return A Path representing the circle
-   */
   private fun createCirclePath(circle: CircleShape, bounds: RectF): Path {
     val path = Path()
 
@@ -111,13 +80,6 @@ public object ClipPathUtils {
     return path
   }
 
-  /**
-   * Creates an ellipse path
-   *
-   * @param ellipse The ellipse shape definition
-   * @param bounds The reference bounds
-   * @return A Path representing the ellipse
-   */
   private fun createEllipsePath(ellipse: EllipseShape, bounds: RectF): Path {
     val path = Path()
 
@@ -153,17 +115,9 @@ public object ClipPathUtils {
     return path
   }
 
-  /**
-   * Creates an inset path (rectangle with insets and optional border radius)
-   *
-   * @param inset The inset shape definition
-   * @param bounds The reference bounds
-   * @return A Path representing the inset shape
-   */
   private fun createInsetPath(inset: InsetShape, bounds: RectF): Path? {
     val path = Path()
 
-    // Calculate inset rectangle
     val top = bounds.top + resolveLengthPercentage(inset.top, bounds.height())
     val right = bounds.right - resolveLengthPercentage(inset.right, bounds.width())
     val bottom = bounds.bottom - resolveLengthPercentage(inset.bottom, bounds.height())
@@ -178,13 +132,6 @@ public object ClipPathUtils {
     return path
   }
 
-  /**
-   * Creates a polygon path
-   *
-   * @param polygon The polygon shape definition
-   * @param bounds The reference bounds
-   * @return A Path representing the polygon
-   */
   private fun createPolygonPath(polygon: PolygonShape, bounds: RectF): Path? {
     val path = Path()
 
@@ -192,14 +139,12 @@ public object ClipPathUtils {
       return null
     }
 
-    // Set fill rule
     when (polygon.fillRule) {
       FillRule.EvenOdd -> path.fillType = FillType.EVEN_ODD
       FillRule.NonZero,
       null -> path.fillType = FillType.WINDING
     }
 
-    // Add points
     val firstPoint = polygon.points[0]
     val firstX = bounds.left + resolveLengthPercentage(firstPoint.first, bounds.width())
     val firstY = bounds.top + resolveLengthPercentage(firstPoint.second, bounds.height())
@@ -216,18 +161,9 @@ public object ClipPathUtils {
     return path
   }
 
-  /**
-   * Creates a rect path (using edge distances)
-   *
-   * @param rect The rect shape definition
-   * @param bounds The reference bounds
-   * @return A Path representing the rect
-   */
   private fun createRectPath(rect: RectShape, bounds: RectF): Path? {
     val path = Path()
 
-    // CSS rect() uses distances from edges: rect(top, right, bottom, left)
-    // top: distance from top edge, right: distance from right edge, etc.
     val top = bounds.top + resolveLengthPercentage(rect.top, bounds.height())
     val right = bounds.right - resolveLengthPercentage(rect.right, bounds.width())
     val bottom = bounds.bottom - resolveLengthPercentage(rect.bottom, bounds.height())
@@ -242,17 +178,9 @@ public object ClipPathUtils {
     return path
   }
 
-  /**
-   * Creates an xywh path (rectangle with x, y, width, height)
-   *
-   * @param xywh The xywh shape definition
-   * @param bounds The reference bounds
-   * @return A Path representing the xywh rectangle
-   */
   private fun createXywhPath(xywh: XywhShape, bounds: RectF): Path? {
     val path = Path()
 
-    // Calculate rectangle from x, y, width, height
     val x = bounds.left + resolveLengthPercentage(xywh.x, bounds.width())
     val y = bounds.top + resolveLengthPercentage(xywh.y, bounds.height())
     val width = resolveLengthPercentage(xywh.width, bounds.width())
@@ -267,13 +195,6 @@ public object ClipPathUtils {
     return path
   }
 
-  /**
-   * Creates a rounded rectangle path using computed border radius
-   *
-   * @param bounds The bounding rectangle
-   * @param borderRadius The computed border radius with per-corner radii
-   * @return A Path representing the rounded rectangle
-   */
   public fun createRoundedRectPath(bounds: RectF, borderRadius: ComputedBorderRadius): Path {
     val path = Path()
 
@@ -282,8 +203,6 @@ public object ClipPathUtils {
     val bottomRightRadii = borderRadius.bottomRight
     val bottomLeftRadii = borderRadius.bottomLeft
 
-    // Android expects radii as [x0, y0, x1, y1, x2, y2, x3, y3] for
-    // [topLeft, topRight, bottomRight, bottomLeft]
     val radii = floatArrayOf(
         topLeftRadii.horizontal, topLeftRadii.vertical,
         topRightRadii.horizontal, topRightRadii.vertical,

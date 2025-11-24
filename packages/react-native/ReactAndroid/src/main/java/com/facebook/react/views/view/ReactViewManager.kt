@@ -49,6 +49,22 @@ import com.facebook.react.uimanager.style.LogicalEdge
 @ReactModule(name = ReactViewManager.REACT_CLASS)
 public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() {
 
+  private enum class MarginIndex {
+    ALL,
+    VERTICAL,
+    HORIZONTAL,
+    LEFT,
+    RIGHT,
+    TOP,
+    BOTTOM,
+    START,
+    END;
+
+    companion object {
+      fun fromIndex(index: Int): MarginIndex? = values().getOrNull(index)
+    }
+  }
+
   public companion object {
     public const val REACT_CLASS: String = ViewProps.VIEW_CLASS_NAME
 
@@ -376,24 +392,37 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
     val topMargin = layoutParams.topMargin;
     val rightMargin = layoutParams.rightMargin;
     val bottomMargin = layoutParams.bottomMargin;
-    if (index == 0) { 
-      layoutParams.setMargins(margin.toInt(), margin.toInt(), margin.toInt(), margin.toInt())
-    } else if (index == 1) {
-      layoutParams.setMargins(leftMargin, margin.toInt(), rightMargin, margin.toInt())
-    } else if (index == 2) {
-      layoutParams.setMargins(margin.toInt(), topMargin, margin.toInt(), bottomMargin)
-    } else if (index == 3) {
-      layoutParams.setMargins(margin.toInt(), topMargin, rightMargin, bottomMargin)
-    } else if (index == 4) {
-      layoutParams.setMargins(leftMargin, topMargin, margin.toInt(), bottomMargin)
-    } else if (index == 5) {
-      layoutParams.setMargins(leftMargin, margin.toInt(), rightMargin, bottomMargin)
-    } else if (index == 6) {
-      layoutParams.setMargins(leftMargin, topMargin, rightMargin, margin.toInt())
-    } else if (index == 7) {
-      layoutParams.setMargins(margin.toInt(), topMargin, rightMargin, bottomMargin)
-    } else if (index == 8) {
-      layoutParams.setMargins(leftMargin, topMargin, margin.toInt(), bottomMargin)
+    when (MarginIndex.fromIndex(index)) {
+      MarginIndex.ALL -> {
+        layoutParams.setMargins(margin.toInt(), margin.toInt(), margin.toInt(), margin.toInt())
+      }
+      MarginIndex.VERTICAL -> {
+        layoutParams.setMargins(leftMargin, margin.toInt(), rightMargin, margin.toInt())
+      }
+      MarginIndex.HORIZONTAL -> {
+        layoutParams.setMargins(margin.toInt(), topMargin, margin.toInt(), bottomMargin)
+      }
+      MarginIndex.LEFT -> {
+        layoutParams.setMargins(margin.toInt(), topMargin, rightMargin, bottomMargin)
+      }
+      MarginIndex.RIGHT -> {
+        layoutParams.setMargins(leftMargin, topMargin, margin.toInt(), bottomMargin)
+      }
+      MarginIndex.TOP -> {
+        layoutParams.setMargins(leftMargin, margin.toInt(), rightMargin, bottomMargin)
+      }
+      MarginIndex.BOTTOM -> {
+        layoutParams.setMargins(leftMargin, topMargin, rightMargin, margin.toInt())
+      }
+      MarginIndex.START -> {
+        layoutParams.setMargins(margin.toInt(), topMargin, rightMargin, bottomMargin)
+      }
+      MarginIndex.END -> {
+        layoutParams.setMargins(leftMargin, topMargin, margin.toInt(), bottomMargin)
+      }
+      null -> {
+        // Unknown index, do nothing
+      }
     }
     view.layoutParams = layoutParams
   }

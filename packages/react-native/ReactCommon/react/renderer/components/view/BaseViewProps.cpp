@@ -433,7 +433,6 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsable);
     RAW_SET_PROP_SWITCH_CASE_BASIC(collapsableChildren);
     RAW_SET_PROP_SWITCH_CASE_BASIC(removeClippedSubviews);
-    RAW_SET_PROP_SWITCH_CASE_BASIC(clipPath);
     RAW_SET_PROP_SWITCH_CASE_BASIC(cursor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineColor);
     RAW_SET_PROP_SWITCH_CASE_BASIC(outlineOffset);
@@ -442,6 +441,7 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(filter);
     RAW_SET_PROP_SWITCH_CASE_BASIC(boxShadow);
     RAW_SET_PROP_SWITCH_CASE_BASIC(mixBlendMode);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(clipPath);
     // events field
     VIEW_EVENT_CASE(PointerEnter);
     VIEW_EVENT_CASE(PointerEnterCapture);

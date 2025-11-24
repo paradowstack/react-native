@@ -46,7 +46,6 @@ struct CSSDataTypeParser<CSSInsetShape> {
 
     CSSInsetShape shape;
 
-    // Parse 1 to 4 length-percentage values
     std::vector<std::variant<CSSLength, CSSPercentage>> lengths;
     for (int i = 0; i < 4; ++i) {
       auto length = parseNextCSSValue<CSSLengthPercentage>(parser);
@@ -65,7 +64,6 @@ struct CSSDataTypeParser<CSSInsetShape> {
       return {};
     }
 
-    // Assign based on number of values
     if (lengths.size() == 1) {
       shape.top = shape.right = shape.bottom = shape.left = lengths[0];
     } else if (lengths.size() == 2) {

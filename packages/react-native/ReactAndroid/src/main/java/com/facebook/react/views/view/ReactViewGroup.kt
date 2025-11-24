@@ -943,7 +943,6 @@ public open class ReactViewGroup public constructor(context: Context?) :
     }
 
     applyClipPathIfPresent(canvas)
-
     super.dispatchDraw(canvas)
   }
 

@@ -20,10 +20,6 @@
 
 namespace facebook::react {
 
-/**
- * Representation of CSS xywh() function
- * xywh(x, y, width, height)
- */
 struct CSSXywhShape {
   std::variant<CSSLength, CSSPercentage> x;
   std::variant<CSSLength, CSSPercentage> y;
@@ -46,7 +42,6 @@ struct CSSDataTypeParser<CSSXywhShape> {
       return {};
     }
 
-    // Parse: x y width height (space-separated)
     auto x = parseNextCSSValue<CSSLengthPercentage>(parser);
     if (std::holds_alternative<std::monostate>(x)) {
       return std::nullopt;
@@ -73,7 +68,6 @@ struct CSSDataTypeParser<CSSXywhShape> {
       return std::nullopt;
     }
 
-    // Convert to variant<CSSLength, CSSPercentage>
     std::variant<CSSLength, CSSPercentage> xValue;
     std::variant<CSSLength, CSSPercentage> yValue;
     std::variant<CSSLength, CSSPercentage> widthValue;

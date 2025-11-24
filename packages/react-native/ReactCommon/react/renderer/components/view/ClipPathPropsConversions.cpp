@@ -48,7 +48,6 @@ GeometryBox convertCSSGeometryBox(CSSGeometryBox cssBox) {
   }
 }
 
-// Helper function to extract optional ValueUnit from raw shape map
 std::optional<ValueUnit> getOptionalValueUnit(
     const std::unordered_map<std::string, RawValue>& rawShape,
     const std::string& key) {
@@ -63,7 +62,6 @@ std::optional<ValueUnit> getOptionalValueUnit(
 std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
   ClipPath result;
 
-  // Convert shape if present
   if (cssClipPath.shape) {
     const auto& cssShape = *cssClipPath.shape;
 
@@ -157,7 +155,6 @@ std::optional<ClipPath> fromCSSClipPath(const CSSClipPath& cssClipPath) {
     }
   }
 
-  // Convert geometry box if present
   if (cssClipPath.geometryBox) {
     result.geometryBox = convertCSSGeometryBox(*cssClipPath.geometryBox);
   }
@@ -178,7 +175,6 @@ void parseProcessedClipPath(
       static_cast<std::unordered_map<std::string, RawValue>>(value);
   ClipPath clipPath;
 
-  // Parse shape if present
   auto shapeIt = rawClipPath.find("shape");
   if (shapeIt != rawClipPath.end() &&
       shapeIt->second.hasType<std::unordered_map<std::string, RawValue>>()) {
@@ -216,10 +212,10 @@ void parseProcessedClipPath(
     } else if (type == "circle") {
       CircleShape circle;
 
+      // r is optional - defaults to 50% handled in rendering
       if (auto r = getOptionalValueUnit(rawShape, "r")) {
         circle.r = *r;
       }
-      // r is optional - defaults to 50% closest-side handled in rendering
       if (auto cx = getOptionalValueUnit(rawShape, "cx")) {
         circle.cx = *cx;
       }
@@ -323,13 +319,11 @@ void parseProcessedClipPath(
 
       clipPath.shape = xywh;
     } else {
-      // Unknown shape type
       result = {};
       return;
     }
   }
 
-  // Parse geometry box if present
   auto geometryBoxIt = rawClipPath.find("geometryBox");
   if (geometryBoxIt != rawClipPath.end() &&
       geometryBoxIt->second.hasType<std::string>()) {

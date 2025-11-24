@@ -18,11 +18,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderWidth: 2,
-    borderColor: 'red',
   },
   shadow1: {
-    // shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
     shadowOffset: {width: 2, height: 2},
   },
   shadow2: {
@@ -42,10 +41,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   shadowChildBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    margin: 28,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    margin: 8,
     backgroundColor: 'red',
   },
 
@@ -117,23 +116,8 @@ exports.examples = [
       'For views without an opaque background color, shadow will be derived from the subviews.',
     render(): React.Node {
       return (
-        <View
-          style={[
-            styles.box,
-            styles.shadow1,
-            {
-              backgroundColor: 'blue',
-              opacity: 0.57,
-              clipPath: 'circle()a',
-            },
-          ]}>
-          <View
-            style={[
-              styles.box,
-              styles.shadowChildBox,
-              {backgroundColor: 'red'},
-            ]}
-          />
+        <View style={[styles.box, styles.shadow1, styles.shadowChild]}>
+          <View style={[styles.box, styles.shadowChildBox]} />
         </View>
       );
     },

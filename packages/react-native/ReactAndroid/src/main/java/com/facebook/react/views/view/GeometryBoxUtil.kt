@@ -21,19 +21,6 @@ import kotlin.math.roundToInt
 
 internal object GeometryBoxUtil {
 
-  /**
-   * Adjusts corner radii based on the geometry box type.
-   * - MarginBox: extends radii by margin amount
-   * - BorderBox: uses radii as-is (reference box)
-   * - PaddingBox: reduces radii by border width
-   * - ContentBox: reduces radii by border width + padding
-   *
-   * @param geometryBox The geometry box type
-   * @param borderRadius The original corner radii (based on border-box)
-   * @param computedBorderInsets The computed border insets (in DIPs)
-   * @param view The view to get padding and margin information from
-   * @return The adjusted corner radii appropriate for the geometry box
-   */
   @JvmStatic
   fun adjustBorderRadiusForGeometryBox(
       geometryBox: GeometryBox?,
@@ -87,7 +74,6 @@ internal object GeometryBoxUtil {
 
       GeometryBox.PaddingBox -> {
         // padding-box: reduce border-radius by border width
-        // Formula: max(0, border-radius - border-width)
         val borderLeft = computedBorderInsets?.left ?: 0f
         val borderTop = computedBorderInsets?.top ?: 0f
         val borderRight = computedBorderInsets?.right ?: 0f
@@ -149,9 +135,9 @@ internal object GeometryBoxUtil {
   fun getGeometryBoxBounds(view: View, geometryBox: GeometryBox?, computedBorderInsets: RectF?): RectF {
     val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
     val params = view.layoutParams as? ViewGroup.MarginLayoutParams
-    // Calculate geometry box bounds
     val box = when (geometryBox) {
           GeometryBox.ContentBox -> {
+            // ContentBox = BorderBox + padding
             RectF(
                 bounds.left + view.paddingLeft,
                 bounds.top + view.paddingTop,
@@ -171,8 +157,7 @@ internal object GeometryBoxUtil {
           }
 
           GeometryBox.MarginBox -> {
-            // Margin box extends beyond the view bounds
-            // Note: This is an approximation since we don't have direct access to margin values in the view
+            // MarginBox = BorderBox + margin
             RectF(
                 bounds.left - (params?.leftMargin?.dpToPx() ?: 0f),
                 bounds.top - (params?.topMargin?.dpToPx() ?: 0f),
@@ -182,7 +167,7 @@ internal object GeometryBoxUtil {
           }
 
       GeometryBox.BorderBox, null -> {
-            // Default is border-box which is the view bounds
+            // BorderBox = view bounds
             bounds
           }
 

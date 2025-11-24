@@ -115,7 +115,6 @@ using namespace facebook::react;
                           bounds:(CGRect)bounds
                      cornerRadii:(RCTCornerRadii)cornerRadii
 {
-  // Calculate the geometry box rect if specified
   CGRect box = bounds;
   if (clipPath.geometryBox.has_value()) {
     box = [self getGeometryBoxRect:clipPath.geometryBox.value()
@@ -140,7 +139,6 @@ using namespace facebook::react;
     CGPathRelease(cgPath);
   }
 
-  // If path creation failed or resulted in an invalid path, return nil
   if (path == nil) {
     return nil;
   }

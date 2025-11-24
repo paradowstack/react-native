@@ -110,7 +110,6 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   bool removeClippedSubviews{false};
 
-  // Clip Path
   std::optional<ClipPath> clipPath{};
 
 #pragma mark - Convenience Methods

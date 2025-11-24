@@ -11,13 +11,6 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.uimanager.LengthPercentage
 
-/**
- * Helper function to parse an optional LengthPercentage from a ReadableMap.
- *
- * @param map The ReadableMap to read from
- * @param key The key to look up
- * @return The parsed LengthPercentage, or null if the key doesn't exist or parsing fails
- */
 private fun getOptionalLengthPercentage(map: ReadableMap, key: String): LengthPercentage? {
   return if (map.hasKey(key)) {
     LengthPercentage.setFromDynamic(map.getDynamic(key))
@@ -26,7 +19,6 @@ private fun getOptionalLengthPercentage(map: ReadableMap, key: String): LengthPe
   }
 }
 
-/** Circle shape: circle(radius at cx cy) */
 public data class CircleShape(
     val r: LengthPercentage? = null,
     val cx: LengthPercentage? = null,
@@ -42,7 +34,6 @@ public data class CircleShape(
   }
 }
 
-/** Ellipse shape: ellipse(rx ry at cx cy) */
 public data class EllipseShape(
     val rx: LengthPercentage? = null,
     val ry: LengthPercentage? = null,
@@ -60,7 +51,6 @@ public data class EllipseShape(
   }
 }
 
-/** Inset shape: inset(top right bottom left round radius) */
 public data class InsetShape(
     val top: LengthPercentage,
     val right: LengthPercentage,
@@ -80,7 +70,6 @@ public data class InsetShape(
   }
 }
 
-/** Fill rule for polygon */
 public enum class FillRule {
   NonZero,
   EvenOdd;
@@ -96,7 +85,6 @@ public enum class FillRule {
   }
 }
 
-/** Polygon shape: polygon(fillRule, x1 y1, x2 y2, ...) */
 public data class PolygonShape(
     val points: List<Pair<LengthPercentage, LengthPercentage>>,
     val fillRule: FillRule? = null,
@@ -126,7 +114,6 @@ public data class PolygonShape(
   }
 }
 
-/** Rect shape: rect(top right bottom left round radius) */
 public data class RectShape(
     val top: LengthPercentage,
     val right: LengthPercentage,
@@ -146,7 +133,6 @@ public data class RectShape(
   }
 }
 
-/** Xywh shape: xywh(x y width height round radius) */
 public data class XywhShape(
     val x: LengthPercentage,
     val y: LengthPercentage,
@@ -166,7 +152,6 @@ public data class XywhShape(
   }
 }
 
-/** Basic shape variant */
 public sealed class BasicShape {
   public data class Circle(val shape: CircleShape) : BasicShape()
 
@@ -216,7 +201,6 @@ public sealed class BasicShape {
   }
 }
 
-/** Geometry box types */
 public enum class GeometryBox {
   MarginBox,
   BorderBox,
@@ -242,7 +226,6 @@ public enum class GeometryBox {
   }
 }
 
-/** ClipPath property value */
 public data class ClipPath(
     val shape: BasicShape? = null,
     val geometryBox: GeometryBox? = null,

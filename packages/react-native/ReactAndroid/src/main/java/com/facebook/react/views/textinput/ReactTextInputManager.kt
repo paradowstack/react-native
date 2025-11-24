@@ -837,13 +837,13 @@ public open class ReactTextInputManager public constructor() :
         } else {
           LengthPercentage(borderRadius, LengthPercentageType.POINT)
         }
-    // setBorderRadius(view, BorderRadiusProp.entries[index], radius)
+    setBorderRadius(view, BorderRadiusProp.entries[index], radius)
   }
 
   @ReactProp(name = "borderStyle")
   public fun setBorderStyle(view: ReactEditText, borderStyle: String?) {
     val parsedBorderStyle = borderStyle?.let { fromString(it) }
-    // setBorderStyle(view, parsedBorderStyle)
+    setBorderStyle(view, parsedBorderStyle)
   }
 
   @ReactProp(name = "showSoftInputOnFocus", defaultBoolean = true)

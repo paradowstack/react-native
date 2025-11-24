@@ -66,16 +66,16 @@ struct CSSDataTypeParser<CSSGeometryBox> {
 static_assert(CSSDataType<CSSGeometryBox>);
 
 /**
- * Variant type for basic shapes in clip-path
- */
-using CSSBasicShape =
-    std::variant<CSSInsetShape, CSSCircleShape, CSSEllipseShape, CSSPolygonShape, CSSRectShape, CSSXywhShape>;
-
-/**
  * Compound type for parsing basic shapes
  */
 using CSSBasicShapeTypes =
     CSSCompoundDataType<CSSInsetShape, CSSCircleShape, CSSEllipseShape, CSSPolygonShape, CSSRectShape, CSSXywhShape>;
+
+/**
+ * Variant type for basic shapes in clip-path
+ */
+using CSSBasicShape = CSSVariantWithTypes<CSSBasicShapeTypes>;
+
 
 /**
  * Representation of <clip-path>
@@ -101,11 +101,9 @@ template <>
 struct CSSDataTypeParser<CSSClipPath> {
   static auto consume(CSSSyntaxParser &parser) -> std::optional<CSSClipPath>
   {
-    // Try to parse: <basic-shape> <geometry-box>?
     auto shape = parseNextCSSValue<CSSBasicShapeTypes>(parser);
 
     if (!std::holds_alternative<std::monostate>(shape)) {
-      // We have a shape, now try to parse optional geometry box
       auto geometryBox = parseNextCSSValue<CSSGeometryBox>(parser, CSSDelimiter::Whitespace);
 
       CSSClipPath result;
@@ -130,11 +128,9 @@ struct CSSDataTypeParser<CSSClipPath> {
       return result;
     }
 
-    // Try to parse: <geometry-box> <basic-shape>?
     auto geometryBox = parseNextCSSValue<CSSGeometryBox>(parser);
 
     if (!std::holds_alternative<std::monostate>(geometryBox)) {
-      // We have a geometry box, now try to parse optional shape
       auto shapeAfter = parseNextCSSValue<CSSBasicShapeTypes>(parser, CSSDelimiter::Whitespace);
 
       CSSClipPath result;
@@ -162,10 +158,5 @@ struct CSSDataTypeParser<CSSClipPath> {
 };
 
 static_assert(CSSDataType<CSSClipPath>);
-
-/**
- * Variant of possible CSS clip-path types
- */
-using CSSClipPathVariant = std::variant<std::monostate, CSSClipPath>;
 
 } // namespace facebook::react

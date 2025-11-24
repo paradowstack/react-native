@@ -19,10 +19,6 @@
 
 namespace facebook::react {
 
-/**
- * Representation of CSS rect() function
- * rect(top, right, bottom, left)
- */
 struct CSSRectShape {
   std::variant<CSSLength, CSSPercentage> top;
   std::variant<CSSLength, CSSPercentage> right;
@@ -41,7 +37,6 @@ struct CSSDataTypeParser<CSSRectShape> {
       return {};
     }
 
-    // Parse: top, right, bottom, left (comma-separated)
     auto top = parseNextCSSValue<CSSKeyword, CSSLengthPercentage>(parser);
     if (std::holds_alternative<std::monostate>(top)) {
       return std::nullopt;
@@ -68,7 +63,6 @@ struct CSSDataTypeParser<CSSRectShape> {
       return std::nullopt;
     }
 
-    // Convert to variant<CSSLength, CSSPercentage>
     std::variant<CSSLength, CSSPercentage> topValue;
     std::variant<CSSLength, CSSPercentage> rightValue;
     std::variant<CSSLength, CSSPercentage> bottomValue;
@@ -79,7 +73,6 @@ struct CSSDataTypeParser<CSSRectShape> {
     } else if (std::holds_alternative<CSSPercentage>(top)) {
       topValue = std::get<CSSPercentage>(top);
     } else if (std::holds_alternative<CSSKeyword>(top)) {
-      // TODOME: improve handling of auto
       topValue = CSSPercentage{0.0f};
     }
 

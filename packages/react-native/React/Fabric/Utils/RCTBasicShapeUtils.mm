@@ -11,15 +11,6 @@
 
 using namespace facebook::react;
 
-/**
- * Resolves a ValueUnit to a CGFloat value based on a reference dimension.
- * For percentage units, calculates the value relative to the reference dimension.
- * For absolute units (pixels), returns the value directly.
- *
- * @param unit The ValueUnit to resolve
- * @param referenceDimension The dimension to use for percentage calculations
- * @return The resolved CGFloat value
- */
 static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimension)
 {
   if (unit.unit == UnitType::Percent) {
@@ -70,12 +61,10 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
   CGRect insetRect = CGRectMake(
       left, top, bounds.size.width - left - right, bounds.size.height - top - bottom);
 
-  // Return nil if the inset results in an invalid rect
   if (insetRect.size.width < 0 || insetRect.size.height < 0) {
     return nil;
   }
 
-  // Use minimum of width/height for borderRadius reference (consistent with CSS spec)
   CGFloat borderRadius = inset.borderRadius.has_value() ? RCTResolveValueUnit(inset.borderRadius.value(), MIN(insetRect.size.width, insetRect.size.height)) : 0.0f;
 
   return [UIBezierPath bezierPathWithRoundedRect:insetRect cornerRadius:borderRadius];
@@ -108,24 +97,18 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
 + (UIBezierPath *)createRectPath:(const RectShape &)rect bounds:(CGRect)bounds
 {
-  // CSS rect() uses distances from edges: rect(top, right, bottom, left)
-  // top: distance from top edge, right: distance from right edge, etc.
   CGFloat top = bounds.origin.y + RCTResolveValueUnit(rect.top, bounds.size.height);
   CGFloat right = bounds.origin.x + bounds.size.width - RCTResolveValueUnit(rect.right, bounds.size.width);
   CGFloat bottom = bounds.origin.y + bounds.size.height - RCTResolveValueUnit(rect.bottom, bounds.size.height);
   CGFloat left = bounds.origin.x + RCTResolveValueUnit(rect.left, bounds.size.width);
 
-  // CSS rect() interprets values as distances from edges, creating a clipping rectangle
   CGRect clipRect = CGRectMake(left, top, right - left, bottom - top);
 
-  // Return nil if the rect is invalid
   if (clipRect.size.width < 0 || clipRect.size.height < 0) {
     return nil;
   }
 
-  // Use minimum of width/height for borderRadius reference (consistent with CSS spec)
   CGFloat borderRadius = rect.borderRadius.has_value() ? RCTResolveValueUnit(rect.borderRadius.value(), MIN(clipRect.size.width, clipRect.size.height)) : 0.0f;
-
   return [UIBezierPath bezierPathWithRoundedRect:clipRect cornerRadius:borderRadius];
 }
 
@@ -138,14 +121,11 @@ static CGFloat RCTResolveValueUnit(const ValueUnit &unit, CGFloat referenceDimen
 
   CGRect xywhRect = CGRectMake(x, y, width, height);
 
-  // Return nil if the rect is invalid
   if (xywhRect.size.width < 0 || xywhRect.size.height < 0) {
     return nil;
   }
 
-  // Use minimum of width/height for borderRadius reference (consistent with CSS spec)
   CGFloat borderRadius = xywh.borderRadius.has_value() ? RCTResolveValueUnit(xywh.borderRadius.value(), MIN(xywhRect.size.width, xywhRect.size.height)) : 0.0f;
-
   return [UIBezierPath bezierPathWithRoundedRect:xywhRect cornerRadius:borderRadius];
 }
 
