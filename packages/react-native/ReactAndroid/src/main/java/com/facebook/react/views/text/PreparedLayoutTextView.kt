@@ -22,16 +22,13 @@ import android.view.ViewGroup
 import androidx.annotation.ColorInt
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.withSave
 import androidx.core.view.ViewCompat
 import com.facebook.proguard.annotations.DoNotStrip
-import com.facebook.react.R
 import com.facebook.react.uimanager.BackgroundStyleApplicator
-import com.facebook.react.uimanager.BackgroundStyleApplicator.getComputedBorderInsets
 import com.facebook.react.uimanager.ReactCompoundView
-import com.facebook.react.uimanager.style.ClipPath
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.text.internal.span.ReactFragmentIndexSpan
-import com.facebook.react.views.view.GeometryBoxUtil.getGeometryBoxBounds
 import kotlin.collections.ArrayList
 import kotlin.math.roundToInt
 
@@ -109,16 +106,9 @@ internal class PreparedLayoutTextView(context: Context) : ViewGroup(context), Re
     if (overflow != Overflow.VISIBLE) {
       BackgroundStyleApplicator.clipToPaddingBox(this, canvas)
     }
-    val clipPath = getTag(R.id.clip_path) as? ClipPath
-    if (clipPath != null) {
-      val bounds = getGeometryBoxBounds(this, clipPath.geometryBox, getComputedBorderInsets(this))
-      canvas.save()
-      BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
-    }
-    
-    super.onDraw(canvas)
-    if (clipPath != null) {
-      canvas.restore()
+    canvas.withSave {
+      BackgroundStyleApplicator.applyClipPathIfPresent(this@PreparedLayoutTextView, this)
+      super.onDraw(canvas)
     }
     canvas.translate(
         paddingLeft.toFloat(),

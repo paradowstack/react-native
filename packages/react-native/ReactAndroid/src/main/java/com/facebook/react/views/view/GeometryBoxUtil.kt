@@ -134,7 +134,7 @@ internal object GeometryBoxUtil {
   @JvmStatic
   fun getGeometryBoxBounds(view: View, geometryBox: GeometryBox?, computedBorderInsets: RectF?): RectF {
     val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
-    val params = view.layoutParams as? ViewGroup.MarginLayoutParams
+    val params = view.layoutParams as? MarginLayoutParams
     val box = when (geometryBox) {
           GeometryBox.ContentBox -> {
             // ContentBox = BorderBox + padding

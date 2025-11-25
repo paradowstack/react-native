@@ -469,7 +469,7 @@ export default ({
                       styles.textExample,
                       {clipPath: 'ellipse(50% 30% at 50% 50%)'},
                     ]}>
-                    CLIP_PATH
+                    TEXT
                   </RNTesterText>
                 </View>
                 <RNTesterText style={styles.demoLabel}>Ellipse</RNTesterText>
@@ -479,7 +479,7 @@ export default ({
                   <RNTesterText
                     style={[
                       styles.textExample,
-                      {clipPath: 'circle(50% at 50% 50%)'},
+                      {clipPath: 'circle(30px at 0px 0px)'},
                     ]}>
                     TEXT
                   </RNTesterText>

@@ -44,7 +44,6 @@ import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.util.Predicate
 import androidx.core.view.ViewCompat
 import com.facebook.common.logging.FLog
-import com.facebook.react.R
 import com.facebook.react.bridge.ReactSoftExceptionLogger.logSoftException
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.common.build.ReactBuildConfig
@@ -54,7 +53,6 @@ import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
 import com.facebook.react.uimanager.BackgroundStyleApplicator.getBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.getBorderColor
-import com.facebook.react.uimanager.BackgroundStyleApplicator.getComputedBorderInsets
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
@@ -71,7 +69,6 @@ import com.facebook.react.uimanager.common.ViewUtil.getUIManagerType
 import com.facebook.react.uimanager.events.EventDispatcher
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
-import com.facebook.react.uimanager.style.ClipPath
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.text.ReactTextUpdate
@@ -91,10 +88,10 @@ import com.facebook.react.views.text.internal.span.ReactStrikethroughSpan
 import com.facebook.react.views.text.internal.span.ReactTextPaintHolderSpan
 import com.facebook.react.views.text.internal.span.ReactUnderlineSpan
 import com.facebook.react.views.text.internal.span.TextInlineImageSpan
-import com.facebook.react.views.view.GeometryBoxUtil.getGeometryBoxBounds
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.max
 import kotlin.math.min
+import androidx.core.graphics.withSave
 
 /**
  * A wrapper around the EditText that lets us better control what happens when an EditText gets
@@ -1209,15 +1206,9 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
   }
 
   public override fun draw(canvas: Canvas) {
-    val clipPath = getTag(R.id.clip_path) as? ClipPath
-    if (clipPath != null) {
-      val bounds = getGeometryBoxBounds(this, clipPath.geometryBox, getComputedBorderInsets(this))
-      canvas.save()
-      BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
-      super.draw(canvas)
-      canvas.restore()
-    } else {
-      super.draw(canvas)
+    canvas.withSave {
+      BackgroundStyleApplicator.applyClipPathIfPresent(this@ReactEditText, this)
+      super.draw(this)
     }
   }
 

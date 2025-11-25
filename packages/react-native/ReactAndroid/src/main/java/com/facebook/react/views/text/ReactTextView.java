@@ -10,7 +10,6 @@ package com.facebook.react.views.text;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.text.Layout;
@@ -58,7 +57,6 @@ import com.facebook.react.uimanager.style.Overflow;
 import com.facebook.react.views.text.internal.span.ReactTagSpan;
 import com.facebook.react.views.text.internal.span.TextInlineImageSpan;
 import com.facebook.react.views.text.internal.span.TextInlineViewPlaceholderSpan;
-import com.facebook.react.views.view.GeometryBoxUtil;
 import com.facebook.yoga.YogaMeasureMode;
 
 @Nullsafe(Nullsafe.Mode.LOCAL)
@@ -369,14 +367,9 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
       }
 
       ClipPath clipPath = (ClipPath) getTag(R.id.clip_path);
-      RectF bounds =
-        GeometryBoxUtil.getGeometryBoxBounds(
-          this,
-          clipPath != null ? clipPath.getGeometryBox() : null,
-          BackgroundStyleApplicator.getComputedBorderInsets(this));
       if (clipPath != null) {
         canvas.save();
-        BackgroundStyleApplicator.applyClipPath(this, canvas, bounds);
+        BackgroundStyleApplicator.applyClipPathIfPresent(this, canvas);
       }
       super.onDraw(canvas);
       if (clipPath != null) {

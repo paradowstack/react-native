@@ -783,11 +783,5 @@ function parseLengthPercentage(value: number | string): ?(number | string) {
     return 0;
   }
 
-  // Try to parse as number (for backward compatibility)
-  const num = parseFloat(trimmed);
-  if (!Number.isNaN(num) && trimmed === String(num)) {
-    return num;
-  }
-
   return null;
 }

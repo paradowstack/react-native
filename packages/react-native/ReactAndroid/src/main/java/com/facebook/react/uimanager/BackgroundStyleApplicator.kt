@@ -52,6 +52,7 @@ import com.facebook.react.uimanager.style.ClipPathUtils
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.OutlineStyle
 import com.facebook.react.views.view.GeometryBoxUtil
+import com.facebook.react.views.view.GeometryBoxUtil.getGeometryBoxBounds
 
 /**
  * Utility object responsible for applying backgrounds, borders, and related visual effects to
@@ -480,46 +481,44 @@ public object BackgroundStyleApplicator {
   }
 
   @JvmStatic
-  public fun applyClipPath(view: View, canvas: Canvas, bounds: RectF) {
+  public fun applyClipPathIfPresent(view: View, canvas: Canvas) {
     val clipPath = view.getTag(R.id.clip_path) as? ClipPath ?: return
-
+    val bounds = getGeometryBoxBounds(view, clipPath.geometryBox, getComputedBorderInsets(view))
     val drawingRect = Rect()
     view.getDrawingRect(drawingRect)
 
-    // Create path from the shape
     val path: Path? = if (clipPath.shape != null) {
-          ClipPathUtils.createPathFromBasicShape(clipPath.shape, bounds)
-        } else if (clipPath.geometryBox != null) {
-          // For geometry box only (no shape), create a rounded rectangle using border radius
-          val composite = getCompositeBackgroundDrawable(view)
-          val borderRadius = composite?.borderRadius
-      val computedBorderInsets = composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
+      ClipPathUtils.createPathFromBasicShape(clipPath.shape, bounds)
+    } else if (clipPath.geometryBox != null) {
+      val composite = getCompositeBackgroundDrawable(view)
+      val borderRadius = composite?.borderRadius
+      val computedBorderInsets =
+        composite?.borderInsets?.resolve(composite.layoutDirection, view.context)
 
-          if (borderRadius != null) {
-            // Adjust border radius based on geometry box type
+      if (borderRadius != null) {
         val adjustedBorderRadius = GeometryBoxUtil.adjustBorderRadiusForGeometryBox(
-                    clipPath.geometryBox,
-                    borderRadius.resolve(
-                        composite.layoutDirection,
-                        view.context,
-                        PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
-                PixelUtil.toDIPFromPixel(drawingRect.height().toFloat())
-            ),
-                    computedBorderInsets,
-            view
+          clipPath.geometryBox,
+          borderRadius.resolve(
+            composite.layoutDirection,
+            view.context,
+            PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
+            PixelUtil.toDIPFromPixel(drawingRect.height().toFloat())
+          ), 
+          computedBorderInsets, 
+          view
         )
 
-            if (adjustedBorderRadius != null) {
-              ClipPathUtils.createRoundedRectPath(bounds, adjustedBorderRadius)
-            } else {
-              null
-            }
-          } else {
-            null
-          }
+        if (adjustedBorderRadius != null) {
+          ClipPathUtils.createRoundedRectPath(bounds, adjustedBorderRadius)
         } else {
           null
         }
+      } else {
+        null
+      }
+    } else {
+      null
+    }
 
     if (path != null) {
       canvas.clipPath(path)
@@ -528,12 +527,6 @@ public object BackgroundStyleApplicator {
     }
   }
 
-  /**
-   * Sets a feedback underlay drawable for the view.
-   *
-   * @param view The view to apply the feedback underlay to
-   * @param drawable The drawable to use as feedback underlay, or null to remove
-   */
   @JvmStatic
   public fun getComputedBorderInsets(view: View): RectF? {
     val composite = getCompositeBackgroundDrawable(view)
@@ -543,6 +536,12 @@ public object BackgroundStyleApplicator {
     return composite.borderInsets?.resolve(composite.layoutDirection, view.context)
   }
 
+  /**
+   * Sets a feedback underlay drawable for the view.
+   *
+   * @param view The view to apply the feedback underlay to
+   * @param drawable The drawable to use as feedback underlay, or null to remove
+   */
   @JvmStatic
   public fun setFeedbackUnderlay(view: View, drawable: Drawable?) {
     view.background = ensureCompositeBackgroundDrawable(view).withNewFeedbackUnderlay(drawable)
@@ -616,9 +615,9 @@ public object BackgroundStyleApplicator {
       // Android versions, use the standard clipPath.
       if (
           ReactNativeFeatureFlags.enableAndroidAntialiasedBorderRadiusClipping() &&
-          Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
-          view.width > 0 &&
-          view.height > 0 &&
+              Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+              view.width > 0 &&
+              view.height > 0 &&
               drawContent != null
       ) {
         clipWithAntiAliasing(
@@ -802,15 +801,12 @@ public object BackgroundStyleApplicator {
       paddingBoxRect: RectF,
       computedBorderInsets: RectF?,
   ): Path {
-    val drawingRect = Rect()
-    view.getDrawingRect(drawingRect)
-
     val computedBorderRadius =
         composite.borderRadius?.resolve(
             composite.layoutDirection,
             view.context,
-            PixelUtil.toDIPFromPixel(drawingRect.width().toFloat()),
-            PixelUtil.toDIPFromPixel(drawingRect.height().toFloat()),
+            PixelUtil.toDIPFromPixel(composite.bounds.width().toFloat()),
+            PixelUtil.toDIPFromPixel(composite.bounds.height().toFloat()),
         )
 
     val paddingBoxPath = Path()

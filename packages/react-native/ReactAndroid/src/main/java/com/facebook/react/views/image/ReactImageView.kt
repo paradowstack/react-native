@@ -22,6 +22,7 @@ import android.graphics.Shader.TileMode
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import androidx.core.graphics.withSave
 import com.facebook.common.references.CloseableReference
 import com.facebook.common.util.UriUtil
 import com.facebook.drawee.backends.pipeline.Fresco
@@ -44,7 +45,6 @@ import com.facebook.imagepipeline.request.ImageRequest
 import com.facebook.imagepipeline.request.ImageRequest.RequestLevel
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.facebook.imagepipeline.request.Postprocessor
-import com.facebook.react.R
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
@@ -55,14 +55,12 @@ import com.facebook.react.internal.featureflags.ReactNativeNewArchitectureFeatur
 import com.facebook.react.modules.fresco.ImageCacheControl
 import com.facebook.react.modules.fresco.ReactNetworkImageRequest
 import com.facebook.react.uimanager.BackgroundStyleApplicator
-import com.facebook.react.uimanager.BackgroundStyleApplicator.getComputedBorderInsets
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.style.BorderRadiusProp
-import com.facebook.react.uimanager.style.ClipPath
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.util.RNLog
 import com.facebook.react.views.image.ImageLoadEvent.Companion.createErrorEvent
@@ -77,7 +75,6 @@ import com.facebook.react.views.imagehelper.ImageSource
 import com.facebook.react.views.imagehelper.ImageSource.Companion.getTransparentBitmapImageSource
 import com.facebook.react.views.imagehelper.MultiSourceHelper.getBestSourceForSize
 import com.facebook.react.views.imagehelper.ResourceDrawableIdHelper
-import com.facebook.react.views.view.GeometryBoxUtil.getGeometryBoxBounds
 import kotlin.math.abs
 
 /**
@@ -376,15 +373,9 @@ public class ReactImageView(
   public override fun hasOverlappingRendering(): Boolean = false
 
   public override fun draw(canvas: Canvas) {
-    val clipPath = getTag(R.id.clip_path) as? ClipPath
-    if (clipPath != null) {
-      val bounds = getGeometryBoxBounds(this, clipPath.geometryBox, getComputedBorderInsets(this))
-      canvas.save()
-      BackgroundStyleApplicator.applyClipPath(this, canvas, bounds)
-      super.draw(canvas)
-      canvas.restore()
-    } else {
-      super.draw(canvas)
+    canvas.withSave {
+      BackgroundStyleApplicator.applyClipPathIfPresent(this@ReactImageView, this)
+      super.draw(this)
     }
   }
 
