@@ -119,7 +119,9 @@ export default function processClipPath(
   }
 
   if (typeof clipPath === 'string') {
-    return parseClipPathString(clipPath.replace(/\n/g, ' ').trim());
+    return parseClipPathString(
+      clipPath.replace(/\n/g, ' ').toLowerCase().trim(),
+    );
   }
 
   // Process object input
@@ -274,6 +276,10 @@ function processEllipseShape(shape: EllipseShapeValue): ?ParsedEllipseShape {
 }
 
 function processPolygonShape(shape: PolygonShapeValue): ?ParsedPolygonShape {
+  if (shape.points.length < 3) {
+    return null;
+  }
+
   const result: ParsedPolygonShape = {
     type: 'polygon',
     points: [],
@@ -624,7 +630,7 @@ function parsePolygonFunction(args: string): ?ParsedPolygonShape {
     points.push({x, y});
   }
 
-  if (points.length === 0) {
+  if (points.length < 3) {
     return null;
   }
 

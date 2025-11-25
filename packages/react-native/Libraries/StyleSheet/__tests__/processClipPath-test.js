@@ -29,6 +29,30 @@ describe('processClipPath', () => {
         geometryBox: 'content-box',
       });
     });
+
+    it('should parse margin-box', () => {
+      expect(processClipPath('margin-box')).toEqual({
+        geometryBox: 'margin-box',
+      });
+    });
+
+    it('should parse fill-box', () => {
+      expect(processClipPath('fill-box')).toEqual({
+        geometryBox: 'fill-box',
+      });
+    });
+
+    it('should parse stroke-box', () => {
+      expect(processClipPath('stroke-box')).toEqual({
+        geometryBox: 'stroke-box',
+      });
+    });
+
+    it('should parse view-box', () => {
+      expect(processClipPath('view-box')).toEqual({
+        geometryBox: 'view-box',
+      });
+    });
   });
 
   describe('inset() function', () => {
@@ -52,6 +76,18 @@ describe('processClipPath', () => {
           bottom: 10,
           right: 20,
           left: 20,
+        },
+      });
+    });
+
+    it('should parse inset with three values', () => {
+      expect(processClipPath('inset(10px 20px 30px)')).toEqual({
+        shape: {
+          type: 'inset',
+          top: 10,
+          right: 20,
+          left: 20,
+          bottom: 30,
         },
       });
     });
@@ -128,6 +164,17 @@ describe('processClipPath', () => {
       });
     });
 
+    it('should parse circle with percentage position', () => {
+      expect(processClipPath('circle(50px at 25% 75%)')).toEqual({
+        shape: {
+          type: 'circle',
+          r: 50,
+          cx: '25%',
+          cy: '75%',
+        },
+      });
+    });
+
     it('should parse circle with percentage radius', () => {
       expect(processClipPath('circle(50%)')).toEqual({
         shape: {
@@ -175,6 +222,18 @@ describe('processClipPath', () => {
           ry: 25,
           cx: 100,
           cy: 100,
+        },
+      });
+    });
+
+    it('should parse ellipse with percentage position', () => {
+      expect(processClipPath('ellipse(50px 25px at 10% 20%)')).toEqual({
+        shape: {
+          type: 'ellipse',
+          rx: 50,
+          ry: 25,
+          cx: '10%',
+          cy: '20%',
         },
       });
     });
@@ -461,6 +520,61 @@ describe('processClipPath', () => {
     });
   });
 
+  describe('case-insensitive parsing', () => {
+    it('should parse case-insensitive inset', () => {
+      expect(processClipPath('InSeT(10Px)')).toEqual({
+        shape: {
+          type: 'inset',
+          top: 10,
+          right: 10,
+          bottom: 10,
+          left: 10,
+        },
+      });
+    });
+
+    it('should parse case-insensitive circle', () => {
+      expect(processClipPath('CiRcLe(50Px)')).toEqual({
+        shape: {
+          type: 'circle',
+          r: 50,
+        },
+      });
+    });
+
+    it('should parse case-insensitive geometry box', () => {
+      expect(processClipPath('BoRdEr-BoX')).toEqual({
+        geometryBox: 'border-box',
+      });
+    });
+  });
+
+  describe('whitespace handling', () => {
+    it('should handle extra whitespace in inset', () => {
+      expect(processClipPath('  inset(  10px   20px   )  ')).toEqual({
+        shape: {
+          type: 'inset',
+          top: 10,
+          bottom: 10,
+          right: 20,
+          left: 20,
+        },
+      });
+    });
+
+    it('should handle newlines in input', () => {
+      expect(processClipPath('inset(10px\n20px)')).toEqual({
+        shape: {
+          type: 'inset',
+          top: 10,
+          bottom: 10,
+          right: 20,
+          left: 20,
+        },
+      });
+    });
+  });
+
   describe('invalid values', () => {
     it('should return null for null', () => {
       expect(processClipPath(null)).toBeNull();
@@ -468,6 +582,10 @@ describe('processClipPath', () => {
 
     it('should return null for undefined', () => {
       expect(processClipPath(undefined)).toBeNull();
+    });
+
+    it('should return null for empty string', () => {
+      expect(processClipPath('')).toBeNull();
     });
 
     it('should return null for invalid string', () => {
@@ -482,12 +600,40 @@ describe('processClipPath', () => {
       expect(processClipPath('inset(invalid)')).toBeNull();
     });
 
+    it('should return null for inset with too many values', () => {
+      expect(processClipPath('inset(10px 20px 30px 40px 50px)')).toBeNull();
+    });
+
     it('should return null for circle with invalid radius', () => {
       expect(processClipPath('circle(invalid)')).toBeNull();
     });
 
+    it('should return null for ellipse with invalid radii', () => {
+      expect(processClipPath('ellipse(invalid)')).toBeNull();
+    });
+
     it('should return null for polygon with invalid points', () => {
       expect(processClipPath('polygon(0)')).toBeNull();
+    });
+
+    it('should return null for polygon with too few points', () => {
+      expect(processClipPath('polygon(0px 0px)')).toBeNull();
+    });
+
+    it('should return null for rect with invalid values', () => {
+      expect(processClipPath('rect(invalid)')).toBeNull();
+    });
+
+    it('should return null for rect with wrong number of values', () => {
+      expect(processClipPath('rect(10px 20px)')).toBeNull();
+    });
+
+    it('should return null for xywh with invalid values', () => {
+      expect(processClipPath('xywh(invalid)')).toBeNull();
+    });
+
+    it('should return null for xywh with wrong number of values', () => {
+      expect(processClipPath('xywh(10px 20px)')).toBeNull();
     });
   });
 });
