@@ -972,6 +972,7 @@ declare type ____ViewStyle_InternalBase = {
   readonly borderTopWidth?: number
   readonly borderWidth?: number
   readonly boxShadow?: ReadonlyArray<BoxShadowValue> | string
+  readonly clipPath?: ClipPathValue | string
   readonly cursor?: CursorValue
   readonly elevation?: number
   readonly filter?: ReadonlyArray<FilterFunction> | string
@@ -1830,6 +1831,71 @@ declare class CellRenderMask {
   numCells(): number
 }
 declare type Clipboard = typeof Clipboard
+declare type ClipPathBasicShape =
+  | ClipPathCircleShape
+  | ClipPathEllipseShape
+  | ClipPathInsetShape
+  | ClipPathPolygonShape
+  | ClipPathRectShape
+  | ClipPathXywhShape
+declare type ClipPathCircleShape = {
+  cx?: null | number | string
+  cy?: null | number | string
+  r?: null | number | string
+  type: "circle"
+}
+declare type ClipPathEllipseShape = {
+  cx?: null | number | string
+  cy?: null | number | string
+  rx?: null | number | string
+  ry?: null | number | string
+  type: "ellipse"
+}
+declare type ClipPathFillRule = "evenodd" | "nonzero"
+declare type ClipPathGeometryBox =
+  | "border-box"
+  | "content-box"
+  | "fill-box"
+  | "margin-box"
+  | "padding-box"
+  | "stroke-box"
+  | "view-box"
+declare type ClipPathInsetShape = {
+  borderRadius?: null | number | string
+  bottom?: null | number | string
+  left?: null | number | string
+  right?: null | number | string
+  top?: null | number | string
+  type: "inset"
+}
+declare type ClipPathPolygonShape = {
+  fillRule?: ClipPathFillRule | null
+  points: ReadonlyArray<{
+    x: number | string
+    y: number | string
+  }>
+  type: "polygon"
+}
+declare type ClipPathRectShape = {
+  borderRadius?: null | number | string
+  bottom: "auto" | number | string
+  left: "auto" | number | string
+  right: "auto" | number | string
+  top: "auto" | number | string
+  type: "rect"
+}
+declare type ClipPathValue = {
+  geometryBox?: ClipPathGeometryBox | null
+  shape?: ClipPathBasicShape | null
+}
+declare type ClipPathXywhShape = {
+  borderRadius?: null | number | string
+  height: number | string
+  type: "xywh"
+  width: number | string
+  x: number | string
+  y: number | string
+}
 declare type CodeFrame = {
   readonly collapse?: boolean
   readonly content: string
@@ -6033,16 +6099,16 @@ export {
   ImageErrorEvent, // b7b2ae63
   ImageLoadEvent, // 5baae813
   ImageProgressEventIOS, // adb35052
-  ImageProps, // 089f290a
+  ImageProps, // 73f73c2a
   ImagePropsAndroid, // 9fd9bcbb
-  ImagePropsBase, // cab66428
+  ImagePropsBase, // a1627274
   ImagePropsIOS, // 318adce2
   ImageRequireSource, // 681d683b
   ImageResolvedAssetSource, // f3060931
   ImageSize, // 1c47cf88
   ImageSource, // 48c7f316
   ImageSourcePropType, // bfb5e5c6
-  ImageStyle, // 8b22ac76
+  ImageStyle, // d33c302c
   ImageURISource, // 016eb083
   InputAccessoryView, // ddb7f881
   InputAccessoryViewProps, // 4b6f5450
@@ -6081,7 +6147,7 @@ export {
   MeasureOnSuccessCallback, // 82824e59
   Modal, // 9f28d6fe
   ModalBaseProps, // 0c81c9b1
-  ModalProps, // a69426b0
+  ModalProps, // d3ce1a6e
   ModalPropsAndroid, // 515fb173
   ModalPropsIOS, // 4fbcedf6
   ModeChangeEvent, // 16790307
@@ -6121,7 +6187,7 @@ export {
   PressabilityEventHandlers, // ade29c37
   Pressable, // a4242e8c
   PressableAndroidRippleConfig, // 42bc9727
-  PressableProps, // 42ae2cc7
+  PressableProps, // e634112d
   PressableStateCallbackType, // 9af36561
   ProcessedColorValue, // 33f74304
   ProgressBarAndroid, // f6740378
@@ -6134,8 +6200,8 @@ export {
   PushNotificationPermissions, // c2e7ae4f
   Rationale, // 5df1b1c1
   ReactNativeVersion, // abd76827
-  RefreshControl, // 2adf2586
-  RefreshControlProps, // f0d99302
+  RefreshControl, // 298f97f2
+  RefreshControlProps, // 4a593931
   RefreshControlPropsAndroid, // 99f64c97
   RefreshControlPropsIOS, // 72a36381
   Registry, // e1ed403e
@@ -6182,7 +6248,7 @@ export {
   SubmitBehavior, // c4ddf490
   Switch, // cd54192c
   SwitchChangeEvent, // 2e5bd2de
-  SwitchProps, // 5b2f78be
+  SwitchProps, // 5c6592fa
   Systrace, // b5aa21fc
   TVViewPropsIOS, // 330ce7b5
   TargetedEvent, // 16e98910
@@ -6197,7 +6263,7 @@ export {
   TextInputFocusEvent, // c36e977c
   TextInputIOSProps, // 0d05a855
   TextInputKeyPressEvent, // 967178c2
-  TextInputProps, // a817a7f7
+  TextInputProps, // eb8c7c47
   TextInputSelectionChangeEvent, // a1a7622f
   TextInputSubmitEditingEvent, // 48d903af
   TextLayoutEvent, // 45b0a8d7
