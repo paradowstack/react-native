@@ -253,6 +253,42 @@ BaseViewProps::BaseViewProps(
                     "experimental_backgroundRepeat",
                     sourceProps.backgroundRepeat,
                     {})),
+      maskImage(
+          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+              ? sourceProps.maskImage
+              : convertRawProp(
+                    context,
+                    rawProps,
+                    "maskImage",
+                    sourceProps.maskImage,
+                    {})),
+      maskSize(
+          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+              ? sourceProps.maskSize
+              : convertRawProp(
+                    context,
+                    rawProps,
+                    "maskSize",
+                    sourceProps.maskSize,
+                    {})),
+      maskPosition(
+          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+              ? sourceProps.maskPosition
+              : convertRawProp(
+                    context,
+                    rawProps,
+                    "maskPosition",
+                    sourceProps.maskPosition,
+                    {})),
+      maskRepeat(
+          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+              ? sourceProps.maskRepeat
+              : convertRawProp(
+                    context,
+                    rawProps,
+                    "maskRepeat",
+                    sourceProps.maskRepeat,
+                    {})),
       mixBlendMode(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.mixBlendMode
@@ -431,6 +467,11 @@ void BaseViewProps::setProp(
     RAW_SET_PROP_SWITCH_CASE_BASIC(filter);
     RAW_SET_PROP_SWITCH_CASE_BASIC(boxShadow);
     RAW_SET_PROP_SWITCH_CASE_BASIC(mixBlendMode);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(maskImage);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(maskSize);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(maskPosition);
+    RAW_SET_PROP_SWITCH_CASE_BASIC(maskRepeat);
+
     // events field
     VIEW_EVENT_CASE(PointerEnter);
     VIEW_EVENT_CASE(PointerEnterCapture);
@@ -647,6 +688,8 @@ SharedDebugStringConvertibleList BaseViewProps::getDebugProps() const {
               "backgroundImage",
               backgroundImage,
               defaultBaseViewProps.backgroundImage),
+          debugStringConvertibleItem(
+              "maskImage", maskImage, defaultBaseViewProps.maskImage),
       };
 }
 #endif

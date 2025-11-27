@@ -537,6 +537,14 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
     needsInvalidateLayer = YES;
   }
 
+  // `mask`
+  if (oldViewProps.maskImage != newViewProps.maskImage ||
+      oldViewProps.maskPosition != newViewProps.maskPosition ||
+      oldViewProps.maskRepeat != newViewProps.maskRepeat ||
+      oldViewProps.maskSize != newViewProps.maskSize) {
+    needsInvalidateLayer = YES;
+  }
+
   // `boxShadow`
   if (oldViewProps.boxShadow != newViewProps.boxShadow) {
     needsInvalidateLayer = YES;
@@ -1259,6 +1267,65 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       self.currentContainerView.layer.cornerRadius = borderMetrics.borderRadii.topLeft.horizontal;
     }
   }
+	// mask
+	if (!_props->maskImage.empty()) {
+		const auto borderMetricsBI = _props->resolveBorderMetrics(_layoutMetrics);
+
+		// mask-origin: padding-box
+		CGRect maskPositioningArea = RCTCGRectFromRect(_layoutMetrics.getPaddingFrame());
+		// mask-clip: border-box
+		CGRect maskPaintingArea = self.layer.bounds;
+
+		size_t imageIndex = _props->maskImage.size() - 1;
+		// iterate in reverse to match CSS specification
+		for (const auto &maskImage : std::ranges::reverse_view(_props->maskImage)) {
+			BackgroundSize maskSize = BackgroundSizeLengthPercentage{};
+			if (!_props->maskSize.empty()) {
+				maskSize = _props->maskSize[imageIndex % _props->maskSize.size()];
+			}
+
+			BackgroundPosition maskPosition;
+			if (!_props->maskPosition.empty()) {
+				maskPosition = _props->maskPosition[imageIndex % _props->maskPosition.size()];
+			}
+
+			BackgroundRepeat maskRepeat;
+			if (!_props->maskRepeat.empty()) {
+				maskRepeat = _props->maskRepeat[imageIndex % _props->maskRepeat.size()];
+			}
+
+			CGSize maskImageSize = [RCTBackgroundImageUtils calculateBackgroundImageSize:maskPositioningArea
+																																 itemIntrinsicSize:maskPositioningArea.size
+																																		backgroundSize:maskSize
+																																	backgroundRepeat:maskRepeat];
+
+			CALayer *gradientLayer;
+
+			if (std::holds_alternative<LinearGradient>(maskImage)) {
+				const auto &linearGradient = std::get<LinearGradient>(maskImage);
+				gradientLayer = [RCTLinearGradient gradientLayerWithSize:maskImageSize gradient:linearGradient];
+			} else if (std::holds_alternative<RadialGradient>(maskImage)) {
+				const auto &radialGradient = std::get<RadialGradient>(maskImage);
+				gradientLayer = [RCTRadialGradient gradientLayerWithSize:maskImageSize gradient:radialGradient];
+			}
+
+			if (gradientLayer != nil) {
+				CALayer *maskImageLayer =
+						[RCTBackgroundImageUtils createBackgroundImageLayerWithSize:maskPositioningArea
+																													 paintingArea:maskPaintingArea
+																															 itemSize:maskImageSize
+																										 backgroundPosition:maskPosition
+																											 backgroundRepeat:maskRepeat
+																															itemLayer:gradientLayer];
+				[self shapeLayerToMatchView:maskImageLayer borderMetrics:borderMetricsBI];
+				maskImageLayer.masksToBounds = YES;
+				maskImageLayer.zPosition = BACKGROUND_COLOR_ZPOSITION;
+				self.currentContainerView.layer.mask = maskImageLayer;
+			}
+
+			imageIndex--;
+		}
+	}
 }
 
 // Shapes the given layer to match the shape of this View's layer. This is
