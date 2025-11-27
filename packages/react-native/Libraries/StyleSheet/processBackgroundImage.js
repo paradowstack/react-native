@@ -63,6 +63,11 @@ type RadialGradientBackgroundImage = {
   }>,
 };
 
+type ImageBackgroundImage = {
+  type: 'image',
+  url: string,
+};
+
 // null color indicate that the transition hint syntax is used. e.g. red, 20%, blue
 type ColorStopColor = ProcessedColorValue | null;
 // percentage or pixel value
@@ -70,7 +75,8 @@ type ColorStopPosition = number | string | null;
 
 type ParsedBackgroundImageValue =
   | LinearGradientBackgroundImage
-  | RadialGradientBackgroundImage;
+  | RadialGradientBackgroundImage
+  | ImageBackgroundImage;
 
 export default function processBackgroundImage(
   backgroundImage: ?($ReadOnlyArray<BackgroundImageValue> | string),
@@ -84,6 +90,23 @@ export default function processBackgroundImage(
     result = parseBackgroundImageCSSString(backgroundImage.replace(/\n/g, ' '));
   } else if (Array.isArray(backgroundImage)) {
     for (const bgImage of backgroundImage) {
+      if (bgImage.type === 'image') {
+        if (
+          bgImage.url == null ||
+          typeof bgImage.url !== 'string' ||
+          bgImage.url.trim() === ''
+        ) {
+          // If URL is invalid, return an empty array and do not apply any image. Same as web.
+          return [];
+        }
+        result = result.concat({
+          type: 'image',
+          url: bgImage.url,
+        });
+        console.log(`bgImage.url: ${bgImage.url}`);
+        continue;
+      }
+
       const processedColorStops = processColorStops(bgImage);
       if (processedColorStops == null) {
         // If a color stop is invalid, return an empty array and do not apply any gradient. Same as web.
@@ -250,14 +273,30 @@ function processColorStops(bgImage: BackgroundImageValue): $ReadOnlyArray<{
 function parseBackgroundImageCSSString(
   cssString: string,
 ): $ReadOnlyArray<ParsedBackgroundImageValue> {
-  const gradients = [];
-  const bgImageStrings = splitGradients(cssString);
+  const backgroundImages = [];
+  const bgImageStrings = splitBackgroundImages(cssString);
 
   for (const bgImageString of bgImageStrings) {
-    const bgImage = bgImageString.toLowerCase();
+    const bgImage = bgImageString.trim();
+    const bgImageLower = bgImage.toLowerCase();
+
+    // Check for url() function
+    const urlRegex = /^url\(['"]?([^'"\)]+)['"]?\)$/;
+    const urlMatch = urlRegex.exec(bgImage);
+    if (urlMatch) {
+      const [, url] = urlMatch;
+      if (url && url.trim() !== '') {
+        backgroundImages.push({
+          type: 'image',
+          url: url.trim(),
+        });
+      }
+      continue;
+    }
+
     const gradientRegex = /^(linear|radial)-gradient\(((?:\([^)]*\)|[^()])*)\)/;
 
-    const match = gradientRegex.exec(bgImage);
+    const match = gradientRegex.exec(bgImageLower);
     if (match) {
       const [, type, gradientContent] = match;
       const isRadial = type.toLowerCase() === 'radial';
@@ -266,11 +305,11 @@ function parseBackgroundImageCSSString(
         : parseLinearGradientCSSString(gradientContent);
 
       if (gradient != null) {
-        gradients.push(gradient);
+        backgroundImages.push(gradient);
       }
     }
   }
-  return gradients;
+  return backgroundImages;
 }
 
 function parseRadialGradientCSSString(
@@ -790,7 +829,7 @@ function getPositionFromCSSValue(position: string) {
   }
 }
 
-function splitGradients(input: string) {
+function splitBackgroundImages(input: string) {
   const result = [];
   let current = '';
   let depth = 0;

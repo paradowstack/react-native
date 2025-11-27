@@ -777,7 +777,15 @@ type RadialGradientValue = {
   }>,
 };
 
-export type BackgroundImageValue = LinearGradientValue | RadialGradientValue;
+type ImageValue = {
+  type: 'image',
+  url: string,
+};
+
+export type BackgroundImageValue =
+  | LinearGradientValue
+  | RadialGradientValue
+  | ImageValue;
 
 export type BackgroundSizeValue =
   | {
