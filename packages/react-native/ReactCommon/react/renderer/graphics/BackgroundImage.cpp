@@ -15,6 +15,8 @@ folly::dynamic toDynamic(const BackgroundImage& backgroundImage) {
     return std::get<LinearGradient>(backgroundImage).toDynamic();
   } else if (std::holds_alternative<RadialGradient>(backgroundImage)) {
     return std::get<RadialGradient>(backgroundImage).toDynamic();
+  } else if (std::holds_alternative<ImageBackground>(backgroundImage)) {
+    return std::get<ImageBackground>(backgroundImage).toDynamic();
   }
   return folly::dynamic(nullptr);
 }

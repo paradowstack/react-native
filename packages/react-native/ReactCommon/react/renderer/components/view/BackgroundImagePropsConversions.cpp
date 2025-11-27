@@ -16,6 +16,7 @@
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSValueParser.h>
 #include <react/renderer/graphics/ColorStop.h>
+#include <react/renderer/graphics/ImageBackground.h>
 #include <react/renderer/graphics/LinearGradient.h>
 #include <react/renderer/graphics/RadialGradient.h>
 #include <react/renderer/graphics/ValueUnit.h>
@@ -210,6 +211,14 @@ void parseProcessedBackgroundImage(
       }
 
       backgroundImage.emplace_back(std::move(radialGradient));
+    } else if (type == "image") {
+      ImageBackground imageBackground;
+      auto urlIt = rawBackgroundImageMap.find("url");
+      if (urlIt != rawBackgroundImageMap.end() &&
+          urlIt->second.hasType<std::string>()) {
+        imageBackground.url = (std::string)(urlIt->second);
+        backgroundImage.emplace_back(std::move(imageBackground));
+      }
     }
   }
 
@@ -415,6 +424,14 @@ void parseUnprocessedBackgroundImageList(
       }
 
       backgroundImage.emplace_back(std::move(radialGradient));
+    } else if (type == "image") {
+      ImageBackground imageBackground;
+      auto urlIt = rawBackgroundImageMap.find("url");
+      if (urlIt != rawBackgroundImageMap.end() &&
+          urlIt->second.hasType<std::string>()) {
+        imageBackground.url = (std::string)(urlIt->second);
+        backgroundImage.emplace_back(std::move(imageBackground));
+      }
     }
   }
 
@@ -587,6 +604,11 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
     }
 
     return BackgroundImage{radialGradient};
+  } else if (std::holds_alternative<CSSImageFunction>(cssBackgroundImage)) {
+    const auto& imageFunc = std::get<CSSImageFunction>(cssBackgroundImage);
+    ImageBackground imageBackground;
+    imageBackground.url = imageFunc.url;
+    return BackgroundImage{imageBackground};
   }
 
   return std::nullopt;
@@ -614,6 +636,23 @@ void parseUnprocessedBackgroundImageString(
   }
 
   result = backgroundImages;
+}
+void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    std::vector<BackgroundImage>& result) {
+  if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
+    if (value.hasType<std::string>()) {
+      parseUnprocessedBackgroundImageString((std::string)value, result);
+    } else if (value.hasType<std::vector<RawValue>>()) {
+      parseUnprocessedBackgroundImageList(
+          context, (std::vector<RawValue>)value, result);
+    } else {
+      result = {};
+    }
+  } else {
+    parseProcessedBackgroundImage(context, value, result);
+  }
 }
 
 } // namespace facebook::react
