@@ -26,19 +26,6 @@ void parseUnprocessedBackgroundImageList(
 
 void parseUnprocessedBackgroundImageString(const std::string &value, std::vector<BackgroundImage> &result);
 
-inline void fromRawValue(const PropsParserContext &context, const RawValue &value, std::vector<BackgroundImage> &result)
-{
-  if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
-    if (value.hasType<std::string>()) {
-      parseUnprocessedBackgroundImageString((std::string)value, result);
-    } else if (value.hasType<std::vector<RawValue>>()) {
-      parseUnprocessedBackgroundImageList(context, (std::vector<RawValue>)value, result);
-    } else {
-      result = {};
-    }
-  } else {
-    parseProcessedBackgroundImage(context, value, result);
-  }
-}
+void fromRawValue(const PropsParserContext &context, const RawValue &value, std::vector<BackgroundImage> &result);
 
 } // namespace facebook::react
