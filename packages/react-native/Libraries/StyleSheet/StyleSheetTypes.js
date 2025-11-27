@@ -897,6 +897,10 @@ export type ____ViewStyle_InternalBase = $ReadOnly<{
   experimental_backgroundRepeat?:
     | $ReadOnlyArray<BackgroundRepeatValue>
     | string,
+  maskImage?: $ReadOnlyArra<BackgroundImageValue> | string,
+  maskSize?: $ReadOnlyArra<BackgroundSizeValue> | string,
+  maskPosition?: $ReadOnlyArra<BackgroundPositionValue> | string,
+  maskRepeat?: $ReadOnlyArra<BackgroundRepeatValue> | string,
   isolation?: 'auto' | 'isolate',
 }>;
 
