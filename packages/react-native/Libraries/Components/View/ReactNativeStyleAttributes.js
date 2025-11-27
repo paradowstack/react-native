@@ -20,6 +20,12 @@ import processBoxShadow from '../../StyleSheet/processBoxShadow';
 import processColor from '../../StyleSheet/processColor';
 import processFilter from '../../StyleSheet/processFilter';
 import processFontVariant from '../../StyleSheet/processFontVariant';
+import {
+  processMaskImage,
+  processMaskPosition,
+  processMaskRepeat,
+  processMaskSize,
+} from '../../StyleSheet/processMask';
 import processTransform from '../../StyleSheet/processTransform';
 import processTransformOrigin from '../../StyleSheet/processTransformOrigin';
 import sizesDiffer from '../../Utilities/differ/sizesDiffer';
@@ -165,6 +171,14 @@ const ReactNativeStyleAttributes: {[string]: AnyAttributeType, ...} = {
    * BackgroundRepeat
    */
   experimental_backgroundRepeat: {process: processBackgroundRepeat},
+
+  /**
+   * Mask
+   */
+  maskImage: {process: processMaskImage},
+  maskSize: {process: processMaskSize},
+  maskPosition: {process: processMaskPosition},
+  maskRepeat: {process: processMaskRepeat},
 
   /**
    * View
