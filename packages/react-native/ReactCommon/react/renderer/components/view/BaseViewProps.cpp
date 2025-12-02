@@ -262,33 +262,33 @@ BaseViewProps::BaseViewProps(
                     "maskImage",
                     sourceProps.maskImage,
                     {})),
-      maskSize(
-          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
-              ? sourceProps.maskSize
-              : convertRawProp(
-                    context,
-                    rawProps,
-                    "maskSize",
-                    sourceProps.maskSize,
-                    {})),
-      maskPosition(
-          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
-              ? sourceProps.maskPosition
-              : convertRawProp(
-                    context,
-                    rawProps,
-                    "maskPosition",
-                    sourceProps.maskPosition,
-                    {})),
-      maskRepeat(
-          ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
-              ? sourceProps.maskRepeat
-              : convertRawProp(
-                    context,
-                    rawProps,
-                    "maskRepeat",
-                    sourceProps.maskRepeat,
-                    {})),
+      //   maskSize(
+      //       ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+      //           ? sourceProps.maskSize
+      //           : convertRawProp(
+      //                 context,
+      //                 rawProps,
+      //                 "maskSize",
+      //                 sourceProps.maskSize,
+      //                 {})),
+      //   maskPosition(
+      //       ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+      //           ? sourceProps.maskPosition
+      //           : convertRawProp(
+      //                 context,
+      //                 rawProps,
+      //                 "maskPosition",
+      //                 sourceProps.maskPosition,
+      //                 {})),
+      //   maskRepeat(
+      //       ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+      //           ? sourceProps.maskRepeat
+      //           : convertRawProp(
+      //                 context,
+      //                 rawProps,
+      //                 "maskRepeat",
+      //                 sourceProps.maskRepeat,
+      //                 {})),
       mixBlendMode(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.mixBlendMode

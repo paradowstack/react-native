@@ -216,7 +216,8 @@ void parseProcessedBackgroundImage(
       auto urlIt = rawBackgroundImageMap.find("url");
       if (urlIt != rawBackgroundImageMap.end() &&
           urlIt->second.hasType<std::string>()) {
-        imageBackground.url = (std::string)(urlIt->second);
+        std::string url = (std::string)(urlIt->second);
+        imageBackground.url = url;
         backgroundImage.emplace_back(std::move(imageBackground));
       }
     }
@@ -429,7 +430,8 @@ void parseUnprocessedBackgroundImageList(
       auto urlIt = rawBackgroundImageMap.find("url");
       if (urlIt != rawBackgroundImageMap.end() &&
           urlIt->second.hasType<std::string>()) {
-        imageBackground.url = (std::string)(urlIt->second);
+        std::string url = (std::string)(urlIt->second);
+        imageBackground.url = url;
         backgroundImage.emplace_back(std::move(imageBackground));
       }
     }

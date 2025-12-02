@@ -212,6 +212,15 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
     }
   }
 
+  @ReactProp(name = ViewProps.MASK_IMAGE, customType = "BackgroundImage")
+  public open fun setMaskImage(view: ReactViewGroup, backgroundImage: ReadableArray?) {
+    if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
+      if (backgroundImage != null && backgroundImage.size() > 0) {
+        val x = 3;
+      } else {
+      }
+    }
+  }
   @ReactProp(name = "nextFocusDown", defaultInt = View.NO_ID)
   public open fun nextFocusDown(view: ReactViewGroup, viewId: Int) {
     view.nextFocusDownId = viewId
