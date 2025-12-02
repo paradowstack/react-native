@@ -18,6 +18,7 @@
 #import <React/RCTBorderDrawing.h>
 #import <React/RCTBoxShadow.h>
 #import <React/RCTConversions.h>
+#import <React/RCTImageResponseObserverProxy.h>
 #import <React/RCTLinearGradient.h>
 #import <React/RCTLocalizedString.h>
 #import <React/RCTRadialGradient.h>
@@ -27,6 +28,9 @@
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
 #import <react/renderer/graphics/BlendMode.h>
+#import <react/renderer/imagemanager/ImageManager.h>
+#import <react/renderer/imagemanager/ImageRequest.h>
+#import <react/renderer/imagemanager/RCTImagePrimitivesConversions.h>
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
 #import <React/RCTComponentViewFactory.h>
@@ -35,6 +39,21 @@
 using namespace facebook::react;
 
 const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
+
+// Global context container reference (set by RCTMountingManager)
+static std::weak_ptr<const ContextContainer> sSharedContextContainer;
+
+// Context structure to store image loading metadata
+struct ImageLoadingContext {
+  size_t imageIndex;
+  CGRect positioningArea;
+  CGRect paintingArea;
+  BackgroundSize backgroundSize;
+  BackgroundPosition backgroundPosition;
+  BackgroundRepeat backgroundRepeat;
+  BorderMetrics borderMetrics;
+  BOOL isMask; // true for mask-image, false for background-image
+};
 
 @implementation RCTViewComponentView {
   UIColor *_backgroundColor;
@@ -53,6 +72,12 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   BOOL _useCustomContainerView;
   NSMutableSet<NSString *> *_accessibilityOrderNativeIDs;
   RCTSwiftUIContainerViewWrapper *_swiftUIWrapper;
+  NSMutableArray<NSValue *> *_backgroundImageRequests; // NSValue wrapping ImageRequest*
+  NSMutableArray<NSValue *> *_backgroundImageObservers; // NSValue wrapping shared_ptr<RCTImageResponseObserverProxy>*
+  NSMutableArray<NSValue *> *_imageLoadingContexts; // NSValue wrapping ImageLoadingContext
+  NSMutableDictionary<NSNumber *, NSNumber *> *_imageIndexToArrayIndex; // Maps imageIndex to array index
+  std::shared_ptr<facebook::react::ImageManager> _imageManager;
+  std::shared_ptr<const facebook::react::ContextContainer> _contextContainer;
 }
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -70,6 +95,10 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
     self.multipleTouchEnabled = YES;
     _useCustomContainerView = NO;
     _removeClippedSubviews = NO;
+    _backgroundImageRequests = [NSMutableArray new];
+    _backgroundImageObservers = [NSMutableArray new];
+    _imageLoadingContexts = [NSMutableArray new];
+    _imageIndexToArrayIndex = [NSMutableDictionary new];
   }
   return self;
 }
@@ -130,6 +159,27 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
       @"`+[RCTComponentViewProtocol componentDescriptorProvider]` must be implemented for all subclasses (and `%@` particularly).",
       NSStringFromClass([self class]));
   return concreteComponentDescriptorProvider<ViewComponentDescriptor>();
+}
+
+- (std::shared_ptr<facebook::react::ImageManager>)getImageManager
+{
+  if (!_imageManager) {
+    if (!_contextContainer) {
+      // Try to get from global reference
+      _contextContainer = sSharedContextContainer.lock();
+      if (!_contextContainer) {
+        NSLog(@"Warning: ContextContainer not available for image loading");
+        return nullptr;
+      }
+    }
+    _imageManager = std::make_shared<facebook::react::ImageManager>(_contextContainer);
+  }
+  return _imageManager;
+}
+
++ (void)setSharedContextContainer:(std::shared_ptr<const facebook::react::ContextContainer>)contextContainer
+{
+  sSharedContextContainer = contextContainer;
 }
 
 - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index
@@ -651,6 +701,20 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   _filterLayer = nil;
   [self clearExistingBackgroundImageLayers];
 
+  // Clean up background image requests and observers
+  for (NSValue *value in _backgroundImageRequests) {
+    auto imageRequest = (ImageRequest *)[value pointerValue];
+    delete imageRequest;
+  }
+  for (NSValue *value in _backgroundImageObservers) {
+    auto observerProxy = (std::shared_ptr<RCTImageResponseObserverProxy> *)[value pointerValue];
+    delete observerProxy;
+  }
+  [_backgroundImageRequests removeAllObjects];
+  [_backgroundImageObservers removeAllObjects];
+  [_imageLoadingContexts removeAllObjects];
+  [_imageIndexToArrayIndex removeAllObjects];
+
   _propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN = nil;
   _eventEmitter.reset();
   _isJSResponder = NO;
@@ -917,6 +981,22 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     }
   }
   return effectiveContentView;
+}
+
+- (ImageSource)createImageSourceFromURL:(NSString *)urlString
+{
+  ImageSource imageSource;
+  imageSource.uri = RCTStringFromNSString(urlString);
+  
+  if ([urlString hasPrefix:@"http://"] || [urlString hasPrefix:@"https://"]) {
+    imageSource.type = ImageSource::Type::Remote;
+  } else {
+    imageSource.type = ImageSource::Type::Local;
+  }
+  
+	//imageSource.size = {self.layer.bounds.size.width, self.layer.bounds.size.height};
+	imageSource.scale = _layoutMetrics.pointScaleFactor;
+  return imageSource;
 }
 
 - (void)invalidateLayer
@@ -1187,6 +1267,46 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       } else if (std::holds_alternative<RadialGradient>(backgroundImage)) {
         const auto &radialGradient = std::get<RadialGradient>(backgroundImage);
         gradientLayer = [RCTRadialGradient gradientLayerWithSize:backgroundImageSize gradient:radialGradient];
+      } else if (std::holds_alternative<ImageBackground>(backgroundImage)) {
+        const auto &imageBackground = std::get<ImageBackground>(backgroundImage);
+        
+        // Create ImageSource from URL
+        NSString *urlString = [NSString stringWithUTF8String:imageBackground.url.c_str()];
+        ImageSource imageSource = [self createImageSourceFromURL:urlString];
+        
+        // Get ImageManager
+        auto imageManager = [self getImageManager];
+        if (imageManager) {
+          // Create ImageRequest - use tag as surfaceId
+          auto imageRequest = new ImageRequest(imageManager->requestImage(imageSource, self.tag, {}, 0));
+          
+          // Create observer
+          auto observerProxy = new std::shared_ptr<RCTImageResponseObserverProxy>(std::make_shared<RCTImageResponseObserverProxy>(self));
+          imageRequest->getObserverCoordinator().addObserver(**observerProxy);
+          
+          // Store request, observer, and context
+          NSUInteger arrayIndex = [_backgroundImageRequests count];
+          [_backgroundImageRequests addObject:[NSValue valueWithPointer:imageRequest]];
+          [_backgroundImageObservers addObject:[NSValue valueWithPointer:observerProxy]];
+          
+          ImageLoadingContext context = {
+            .imageIndex = imageIndex,
+            .positioningArea = backgroundPositioningArea,
+            .paintingArea = backgroundPaintingArea,
+            .backgroundSize = backgroundSize,
+            .backgroundPosition = backgroundPosition,
+            .backgroundRepeat = backgroundRepeat,
+            .borderMetrics = borderMetricsBI,
+            .isMask = NO
+          };
+          [_imageLoadingContexts addObject:[NSValue valueWithBytes:&context objCType:@encode(ImageLoadingContext)]];
+          
+          // Map imageIndex to array index for lookup
+          _imageIndexToArrayIndex[@(imageIndex)] = @(arrayIndex);
+        }
+        
+        imageIndex--;
+        continue;
       }
 
       if (gradientLayer != nil) {
@@ -1290,6 +1410,9 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 			}
 
 			BackgroundRepeat maskRepeat;
+			// TODO remove
+			maskRepeat.x = BackgroundRepeatStyle::NoRepeat;
+			maskRepeat.y = BackgroundRepeatStyle::NoRepeat;
 			if (!_props->maskRepeat.empty()) {
 				maskRepeat = _props->maskRepeat[imageIndex % _props->maskRepeat.size()];
 			}
@@ -1307,6 +1430,46 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 			} else if (std::holds_alternative<RadialGradient>(maskImage)) {
 				const auto &radialGradient = std::get<RadialGradient>(maskImage);
 				gradientLayer = [RCTRadialGradient gradientLayerWithSize:maskImageSize gradient:radialGradient];
+			} else if (std::holds_alternative<ImageBackground>(maskImage)) {
+				const auto &imageBackground = std::get<ImageBackground>(maskImage);
+				
+				// Create ImageSource from URL
+				NSString *urlString = [NSString stringWithUTF8String:imageBackground.url.c_str()];
+				ImageSource imageSource = [self createImageSourceFromURL:urlString];
+				
+				// Get ImageManager
+				auto imageManager = [self getImageManager];
+				if (imageManager) {
+					// Create ImageRequest - use tag as surfaceId
+					auto imageRequest = new ImageRequest(imageManager->requestImage(imageSource, self.tag, {}, 0));
+					
+					// Create observer
+					auto observerProxy = new std::shared_ptr<RCTImageResponseObserverProxy>(std::make_shared<RCTImageResponseObserverProxy>(self));
+					imageRequest->getObserverCoordinator().addObserver(**observerProxy);
+					
+					// Store request, observer, and context
+					NSUInteger arrayIndex = [_backgroundImageRequests count];
+					[_backgroundImageRequests addObject:[NSValue valueWithPointer:imageRequest]];
+					[_backgroundImageObservers addObject:[NSValue valueWithPointer:observerProxy]];
+					
+					ImageLoadingContext context = {
+						.imageIndex = imageIndex,
+						.positioningArea = maskPositioningArea,
+						.paintingArea = maskPaintingArea,
+						.backgroundSize = maskSize,
+						.backgroundPosition = maskPosition,
+						.backgroundRepeat = maskRepeat,
+						.borderMetrics = borderMetricsBI,
+						.isMask = YES
+					};
+					[_imageLoadingContexts addObject:[NSValue valueWithBytes:&context objCType:@encode(ImageLoadingContext)]];
+					
+					// Map imageIndex + offset to array index for lookup
+					_imageIndexToArrayIndex[@(imageIndex + 10000)] = @(arrayIndex);
+				}
+				
+				imageIndex--;
+				continue;
 			}
 
 			if (gradientLayer != nil) {
@@ -1753,6 +1916,134 @@ static NSString *RCTRecursiveAccessibilityLabel(UIView *view)
   }
 
   return YES;
+}
+
+#pragma mark - RCTImageResponseDelegate
+
+- (void)didReceiveImage:(UIImage *)image metadata:(id)metadata fromObserver:(const void *)observer
+{
+  // Find which image request this response is for
+  NSUInteger matchingIndex = NSNotFound;
+  for (NSUInteger i = 0; i < [_backgroundImageObservers count]; i++) {
+    auto observerProxy = (std::shared_ptr<RCTImageResponseObserverProxy> *)[[_backgroundImageObservers objectAtIndex:i] pointerValue];
+    if (observerProxy->get() == observer) {
+      matchingIndex = i;
+      break;
+    }
+  }
+  
+  if (matchingIndex == NSNotFound) {
+    return;
+  }
+  
+  // Get the loading context
+  ImageLoadingContext context;
+  [[_imageLoadingContexts objectAtIndex:matchingIndex] getValue:&context];
+  
+  if (context.isMask) {
+    // For mask-image: render the loaded image as a mask
+    CALayer *imageLayer = [CALayer layer];
+    imageLayer.contents = (id)image.CGImage;
+    imageLayer.contentsScale = image.scale;
+		CGFloat scale = image.scale;
+		
+		CGSize imageSize = RCTCGRectFromRect(_layoutMetrics.getContentFrame()).size;
+    
+    // Calculate final image size using background-size
+    CGSize finalImageSize = [RCTBackgroundImageUtils calculateBackgroundImageSize:context.positioningArea
+                                                                itemIntrinsicSize:imageSize
+                                                                   backgroundSize:context.backgroundSize
+                                                                 backgroundRepeat:context.backgroundRepeat];
+    
+    imageLayer.bounds = CGRectMake(0, 0, finalImageSize.width, finalImageSize.height);
+    
+    // Create mask layer with proper positioning
+    CALayer *maskImageLayer = [RCTBackgroundImageUtils createBackgroundImageLayerWithSize:context.positioningArea
+                                                                             paintingArea:context.paintingArea
+                                                                                 itemSize:finalImageSize
+                                                                       backgroundPosition:context.backgroundPosition
+                                                                         backgroundRepeat:context.backgroundRepeat
+                                                                                itemLayer:imageLayer];
+    
+    [self shapeLayerToMatchView:maskImageLayer borderMetrics:context.borderMetrics];
+    maskImageLayer.masksToBounds = YES;
+    maskImageLayer.zPosition = BACKGROUND_COLOR_ZPOSITION;
+    
+    // Apply as mask
+    self.currentContainerView.layer.mask = maskImageLayer;
+  }
+  // For background-image: we don't render yet (future implementation)
+  
+  // Clean up C++ objects
+  auto imageRequest = (ImageRequest *)[[_backgroundImageRequests objectAtIndex:matchingIndex] pointerValue];
+  delete imageRequest;
+  auto observerProxyPtr = (std::shared_ptr<RCTImageResponseObserverProxy> *)[[_backgroundImageObservers objectAtIndex:matchingIndex] pointerValue];
+  delete observerProxyPtr;
+  
+  [_backgroundImageRequests removeObjectAtIndex:matchingIndex];
+  [_backgroundImageObservers removeObjectAtIndex:matchingIndex];
+  [_imageLoadingContexts removeObjectAtIndex:matchingIndex];
+  
+  // Update the index mapping
+  NSMutableArray *keysToUpdate = [NSMutableArray new];
+  for (NSNumber *key in _imageIndexToArrayIndex) {
+    NSUInteger idx = [_imageIndexToArrayIndex[key] unsignedIntegerValue];
+    if (idx == matchingIndex) {
+      [keysToUpdate addObject:key];
+    } else if (idx > matchingIndex) {
+      _imageIndexToArrayIndex[key] = @(idx - 1);
+    }
+  }
+  for (NSNumber *key in keysToUpdate) {
+    [_imageIndexToArrayIndex removeObjectForKey:key];
+  }
+}
+
+- (void)didReceiveProgress:(float)progress
+                    loaded:(int64_t)loaded
+                     total:(int64_t)total
+              fromObserver:(const void *)observer
+{
+  // Progress tracking not needed for background/mask images currently
+}
+
+- (void)didReceiveFailure:(NSError *)error fromObserver:(const void *)observer
+{
+  // Find and clean up the failed request
+  NSUInteger matchingIndex = NSNotFound;
+  for (NSUInteger i = 0; i < [_backgroundImageObservers count]; i++) {
+    auto observerProxy = (std::shared_ptr<RCTImageResponseObserverProxy> *)[[_backgroundImageObservers objectAtIndex:i] pointerValue];
+    if (observerProxy->get() == observer) {
+      matchingIndex = i;
+      break;
+    }
+  }
+  
+  if (matchingIndex != NSNotFound) {
+    // Clean up C++ objects
+    auto imageRequest = (ImageRequest *)[[_backgroundImageRequests objectAtIndex:matchingIndex] pointerValue];
+    delete imageRequest;
+    auto observerProxyPtr = (std::shared_ptr<RCTImageResponseObserverProxy> *)[[_backgroundImageObservers objectAtIndex:matchingIndex] pointerValue];
+    delete observerProxyPtr;
+    
+    [_backgroundImageRequests removeObjectAtIndex:matchingIndex];
+    [_backgroundImageObservers removeObjectAtIndex:matchingIndex];
+    [_imageLoadingContexts removeObjectAtIndex:matchingIndex];
+    
+    // Update the index mapping
+    NSMutableArray *keysToUpdate = [NSMutableArray new];
+    for (NSNumber *key in _imageIndexToArrayIndex) {
+      NSUInteger idx = [_imageIndexToArrayIndex[key] unsignedIntegerValue];
+      if (idx == matchingIndex) {
+        [keysToUpdate addObject:key];
+      } else if (idx > matchingIndex) {
+        _imageIndexToArrayIndex[key] = @(idx - 1);
+      }
+    }
+    for (NSNumber *key in keysToUpdate) {
+      [_imageIndexToArrayIndex removeObjectForKey:key];
+    }
+  }
 }
 
 @end

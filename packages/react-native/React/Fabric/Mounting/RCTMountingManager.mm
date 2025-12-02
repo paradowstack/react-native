@@ -24,6 +24,7 @@
 #import <React/RCTComponentViewRegistry.h>
 #import <React/RCTConversions.h>
 #import <React/RCTMountingTransactionObserverCoordinator.h>
+#import "RCTViewComponentView.h"
 
 using namespace facebook::react;
 
@@ -158,6 +159,8 @@ static void RCTPerformMountInstructions(
 - (void)setContextContainer:(std::shared_ptr<const ContextContainer>)contextContainer
 {
   _contextContainer = contextContainer;
+  // Share context container with RCTViewComponentView for image loading
+  [RCTViewComponentView setSharedContextContainer:contextContainer];
 }
 
 - (void)attachSurfaceToView:(UIView *)view surfaceId:(SurfaceId)surfaceId

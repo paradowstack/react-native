@@ -22,7 +22,10 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * UIView class for <View> component.
  */
-@interface RCTViewComponentView : UIView <RCTComponentViewProtocol, RCTTouchableComponentViewProtocol> {
+@protocol RCTImageResponseDelegate;
+
+@interface RCTViewComponentView
+    : UIView <RCTComponentViewProtocol, RCTTouchableComponentViewProtocol, RCTImageResponseDelegate> {
  @protected
   facebook::react::LayoutMetrics _layoutMetrics;
   facebook::react::SharedViewProps _props;
@@ -90,6 +93,11 @@ NS_ASSUME_NONNULL_BEGIN
  * This is a fragment of temporary workaround that we need only temporary and will get rid of soon.
  */
 - (NSString *)componentViewName_DO_NOT_USE_THIS_IS_BROKEN;
+
+/*
+ * Sets the shared context container for image loading
+ */
++ (void)setSharedContextContainer:(std::shared_ptr<const facebook::react::ContextContainer>)contextContainer;
 
 @end
 
