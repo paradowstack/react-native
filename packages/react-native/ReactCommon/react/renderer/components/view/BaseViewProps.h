@@ -84,16 +84,10 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   // Background Repeat
   std::vector<BackgroundRepeat> backgroundRepeat{};
 
-  // Mask Image
+  // Mask
   std::vector<BackgroundImage> maskImage{};
-
-  // Mask Size
   std::vector<BackgroundSize> maskSize{};
-
-  // Mask Position
   std::vector<BackgroundPosition> maskPosition{};
-
-  // Mask Repeat
   std::vector<BackgroundRepeat> maskRepeat{};
 
   // MixBlendMode

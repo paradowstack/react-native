@@ -11,6 +11,10 @@
 #include <sstream>
 #include <string>
 
+#ifdef RN_SERIALIZABLE_STATE
+#include <folly/dynamic.h>
+#endif
+
 namespace facebook::react {
 
 struct ImageBackground {

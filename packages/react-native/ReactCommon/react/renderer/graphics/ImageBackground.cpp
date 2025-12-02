@@ -12,7 +12,6 @@ namespace facebook::react {
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic ImageBackground::toDynamic() const {
   folly::dynamic result = folly::dynamic::object();
-  result["type"] = "image";
   result["url"] = url;
   return result;
 }
