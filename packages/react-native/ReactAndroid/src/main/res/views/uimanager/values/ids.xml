@@ -74,4 +74,7 @@
 
   <!-- tag is used to store mixBlendMode effects to apply to the view -->
   <item type="id" name="mix_blend_mode"/>
+
+  <!-- tag is used to store gradient layer for mask generation when view doesn't have dimensions yet -->
+  <item type="id" name="mask_gradient_layer"/>
 </resources>
