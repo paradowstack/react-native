@@ -10,6 +10,16 @@ package com.facebook.react.views.view
 import android.graphics.Rect
 import android.view.View
 import com.facebook.common.logging.FLog
+import com.facebook.common.references.CloseableReference
+import com.facebook.datasource.BaseDataSubscriber
+import com.facebook.datasource.DataSource
+import com.facebook.drawee.backends.pipeline.Fresco
+import com.facebook.imagepipeline.core.ImagePipeline
+import com.facebook.imagepipeline.image.CloseableBitmap
+import com.facebook.imagepipeline.image.CloseableImage
+import com.facebook.imagepipeline.request.ImageRequest
+import com.facebook.imagepipeline.request.ImageRequestBuilder
+import com.facebook.react.R
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException
@@ -20,6 +30,7 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.modules.fresco.ReactNetworkImageRequest
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
@@ -41,6 +52,7 @@ import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
+import com.facebook.react.views.imagehelper.ImageSource
 
 /** View manager for AndroidViews (plain React Views). */
 @ReactModule(name = ReactViewManager.REACT_CLASS)
@@ -216,10 +228,161 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
   public open fun setMaskImage(view: ReactViewGroup, backgroundImage: ReadableArray?) {
     if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
       if (backgroundImage != null && backgroundImage.size() > 0) {
-        val x = 3;
+        // Use the first mask layer
+        val backgroundImageMap = backgroundImage.getMap(0)
+        val type = backgroundImageMap?.getString("type")
+
+        when (type) {
+          "image" -> {
+            // Load bitmap image mask
+            val url = backgroundImageMap.getString("url")
+            if (url != null) {
+              loadMaskBitmap(view, url)
+            }
+          }
+          "linear-gradient", "radial-gradient" -> {
+            // Create gradient mask from shader
+            createGradientMask(view, backgroundImageMap)
+          }
+          else -> {
+            view.maskBitmap = null
+          }
+        }
       } else {
+        // Clear mask if no image provided
+        view.maskBitmap = null
       }
     }
+  }
+
+  /**
+   * Creates a gradient mask from a gradient definition. Parses the gradient and converts it to a
+   * bitmap mask.
+   */
+  private fun createGradientMask(view: ReactViewGroup, gradientMap: ReadableMap) {
+    val gradientLayer = BackgroundImageLayer.parse(gradientMap, view.context)
+    if (gradientLayer != null) {
+      // Generate mask when view has dimensions
+      view.post {
+        if (view.width > 0 && view.height > 0) {
+          val shader = gradientLayer.getShader(view.width.toFloat(), view.height.toFloat())
+          val maskBitmap = view.createGradientMaskBitmap(view.width, view.height, shader)
+          view.maskBitmap = maskBitmap
+          println("Gradient mask created: ${view.width}x${view.height}")
+        } else {
+          // Store gradient for later when view gets dimensions
+          view.setTag(R.id.mask_gradient_layer, gradientLayer)
+        }
+      }
+    } else {
+      view.maskBitmap = null
+    }
+  }
+
+  /**
+   * Loads a bitmap from the given URL and sets it as the mask for the view. Uses the same pattern
+   * as ImageLoaderModule: prefetches to disk cache first, then loads the decoded image.
+   */
+  private fun loadMaskBitmap(view: ReactViewGroup, url: String) {
+    val imageSource = ImageSource(view.context, url)
+    val imagePipeline: ImagePipeline = Fresco.getImagePipeline()
+
+    val imageRequest: ImageRequest =
+            ReactNetworkImageRequest.fromBuilderWithHeaders(
+                    ImageRequestBuilder.newBuilderWithSource(imageSource.uri),
+                    null,
+                    imageSource.cacheControl
+            )
+
+    // First prefetch to disk cache (similar to ImageLoaderModule.prefetchImage)
+    val prefetchDataSource = imagePipeline.prefetchToDiskCache(imageRequest, view.context)
+
+    prefetchDataSource.subscribe(
+            object : BaseDataSubscriber<Void?>() {
+              override fun onNewResultImpl(dataSource: DataSource<Void?>) {
+                if (!dataSource.isFinished) {
+                  return
+                }
+                // Prefetch completed, now fetch the decoded image
+                fetchDecodedMaskBitmap(view, imageRequest, imagePipeline)
+                dataSource.close()
+              }
+
+              override fun onFailureImpl(dataSource: DataSource<Void?>) {
+                // Even if prefetch fails, try to load the decoded image
+                // (it might already be in cache or could be loaded directly)
+                fetchDecodedMaskBitmap(view, imageRequest, imagePipeline)
+                dataSource.close()
+              }
+            },
+            com.facebook.common.executors.CallerThreadExecutor.getInstance()
+    )
+  }
+
+  /**
+   * Fetches the decoded bitmap and sets it as the mask. This is called after prefetching completes
+   * (or if prefetch fails).
+   */
+  private fun fetchDecodedMaskBitmap(
+          view: ReactViewGroup,
+          imageRequest: ImageRequest,
+          imagePipeline: ImagePipeline
+  ) {
+    val dataSource = imagePipeline.fetchDecodedImage(imageRequest, view.context)
+
+    dataSource.subscribe(
+            object : BaseDataSubscriber<CloseableReference<CloseableImage>>() {
+              override fun onNewResultImpl(
+                      dataSource: DataSource<CloseableReference<CloseableImage>>
+              ) {
+                if (!dataSource.isFinished) {
+                  return
+                }
+                val ref = dataSource.result
+                if (ref != null) {
+                  try {
+                    val image = ref.get()
+                    if (image is CloseableBitmap) {
+                      val bitmap = image.underlyingBitmap
+                      val config = bitmap.config
+                      if (config != null) {
+                        // Create a mutable copy to ensure we can use it independently
+                        val mutableBitmap = bitmap.copy(config, true)
+                        view.post {
+                          view.maskBitmap = mutableBitmap
+                          println("[${view.id}] [${view.viewId}] Image mask loaded: ${mutableBitmap.width}x${mutableBitmap.height}")
+                          // Force a redraw after setting the bitmap
+                          view.invalidate()
+                          view.postInvalidateOnAnimation()
+                        }
+                      } else {
+                        view.maskBitmap = null
+                        println("Image mask failed: bitmap.config is null")
+                      }
+                    } else {
+                      view.maskBitmap = null
+                      println("Image mask failed: image is not CloseableBitmap")
+                    }
+                  } catch (e: Exception) {
+                    view.maskBitmap = null
+                  } finally {
+                    CloseableReference.closeSafely(ref)
+                  }
+                } else {
+                  view.maskBitmap = null
+                }
+                dataSource.close()
+              }
+
+              override fun onFailureImpl(
+                      dataSource: DataSource<CloseableReference<CloseableImage>>
+              ) {
+                view.maskBitmap = null
+                dataSource.close()
+              }
+            },
+            com.facebook.common.executors.CallerThreadExecutor.getInstance()
+    )
   }
   @ReactProp(name = "nextFocusDown", defaultInt = View.NO_ID)
   public open fun nextFocusDown(view: ReactViewGroup, viewId: Int) {

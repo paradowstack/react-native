@@ -12,10 +12,17 @@ package com.facebook.react.views.view
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RadialGradient
 import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.view.MotionEvent
@@ -67,6 +74,7 @@ import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.view.CanvasUtil.enableZ
 import java.util.ArrayList
+import java.util.Random
 import kotlin.concurrent.Volatile
 import kotlin.math.max
 
@@ -156,6 +164,172 @@ public open class ReactViewGroup public constructor(context: Context?) :
       null
   private var focusOnAttach = false
 
+  /**
+   * Bitmap used to mask the view. When set, the view content will be masked using Porter-Duff
+   * DST_IN mode. The bitmap's alpha channel determines what parts of the view are visible.
+   */
+  internal var maskBitmap: Bitmap? = null
+    set(value) {
+      if (field != value) {
+        field?.recycle()
+        field = value
+        // Disable hardware acceleration when masking (required for Porter-Duff compositing)
+        if (value != null) {
+          setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        } else {
+          setLayerType(View.LAYER_TYPE_NONE, null)
+        }
+      }
+    }
+
+  /** Flag to indicate that a test mask should be generated when view gets dimensions */
+  private var shouldGenerateTestMask = false
+
+  /**
+   * Creates a test bitmap mask with noise pattern for testing masking functionality. This generates
+   * a random noise pattern where each pixel has a random alpha value.
+   *
+   * @param width Width of the mask bitmap
+   * @param height Height of the mask bitmap
+   * @param noiseIntensity Controls the randomness (0.0 = solid, 1.0 = full noise)
+   * @return A bitmap with noise pattern in the alpha channel
+   */
+  private fun createNoiseMaskBitmap(width: Int, height: Int, noiseIntensity: Float = 0.7f): Bitmap {
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val pixels = IntArray(width * height)
+    val random = Random()
+
+    for (i in pixels.indices) {
+      val alpha = (random.nextFloat() * 255 * noiseIntensity).toInt()
+      // Create a pixel with random alpha, white color
+      pixels[i] = (alpha shl 24) or 0x00FFFFFF
+    }
+
+    bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+    return bitmap
+  }
+
+  /**
+   * Creates a test bitmap mask with a custom shape (circular gradient) for testing masking
+   * functionality. This generates a radial gradient mask from center to edges.
+   *
+   * @param width Width of the mask bitmap
+   * @param height Height of the mask bitmap
+   * @return A bitmap with circular gradient pattern in the alpha channel
+   */
+  private fun createCircularGradientMaskBitmap(width: Int, height: Int): Bitmap {
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = width / 2f
+    val centerY = height / 2f
+    val radius = minOf(width, height) / 2f
+
+    val gradient =
+            RadialGradient(
+                    centerX,
+                    centerY,
+                    radius,
+                    intArrayOf(0xFFFFFFFF.toInt(), 0x00FFFFFF.toInt()),
+                    floatArrayOf(0f, 1f),
+                    Shader.TileMode.CLAMP
+            )
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = gradient }
+
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+
+    // Verify the bitmap has alpha channel
+    println("Created gradient mask: hasAlpha=${bitmap.hasAlpha()}, config=${bitmap.config}")
+
+    return bitmap
+  }
+
+  /**
+   * Creates a test bitmap mask with a star shape for testing masking functionality.
+   *
+   * @param width Width of the mask bitmap
+   * @param height Height of the mask bitmap
+   * @return A bitmap with star shape pattern in the alpha channel
+   */
+  private fun createStarMaskBitmap(width: Int, height: Int): Bitmap {
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = width / 2f
+    val centerY = height / 2f
+    val outerRadius = minOf(width, height) / 2f * 0.9f
+    val innerRadius = outerRadius * 0.4f
+    val numPoints = 5
+
+    val path = Path()
+    for (i in 0 until numPoints * 2) {
+      val angle = (i * Math.PI / numPoints).toFloat()
+      val radius = if (i % 2 == 0) outerRadius else innerRadius
+      val x = centerX + radius * kotlin.math.cos(angle)
+      val y = centerY + radius * kotlin.math.sin(angle)
+
+      if (i == 0) {
+        path.moveTo(x, y)
+      } else {
+        path.lineTo(x, y)
+      }
+    }
+    path.close()
+
+    val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+              color = 0xFFFFFFFF.toInt()
+              style = Paint.Style.FILL
+            }
+
+    canvas.drawPath(path, paint)
+    return bitmap
+  }
+
+  /**
+   * Generates a test mask bitmap for testing purposes. Currently uses noise pattern, but can be
+   * switched to other patterns.
+   */
+  internal fun generateTestMask() {
+    if (width > 0 && height > 0) {
+      // Use circular gradient mask for more visible testing - can switch to createNoiseMaskBitmap
+      // or
+      // createStarMaskBitmap
+      maskBitmap = createStarMaskBitmap(width, height)
+      shouldGenerateTestMask = false
+      println(
+              "Mask generated: ${width}x${height}, bitmap: ${maskBitmap?.width}x${maskBitmap?.height}"
+      )
+      invalidate()
+    } else {
+      // View doesn't have dimensions yet, mark to generate later
+      shouldGenerateTestMask = true
+      println("Mask generation deferred - view size: ${width}x${height}")
+    }
+  }
+
+  /**
+   * Creates a bitmap mask from a gradient shader. The shader's colors are converted to alpha values
+   * for masking.
+   *
+   * @param width Width of the mask bitmap
+   * @param height Height of the mask bitmap
+   * @param shader The gradient shader to use for masking
+   * @return A bitmap with gradient pattern in the alpha channel
+   */
+  internal fun createGradientMaskBitmap(width: Int, height: Int, shader: Shader): Bitmap {
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+
+    // Draw the gradient - the alpha channel will be used for masking
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+
+    println("Created gradient mask from shader: ${width}x${height}, hasAlpha=${bitmap.hasAlpha()}")
+
+    return bitmap
+  }
+
   init {
     initView()
   }
@@ -212,6 +386,9 @@ public open class ReactViewGroup public constructor(context: Context?) :
 
     // Reset background, borders
     updateBackgroundDrawable(null)
+
+    // Reset mask bitmap (this also resets layer type to LAYER_TYPE_NONE)
+    maskBitmap = null
 
     resetPointerEvents()
 
@@ -584,6 +761,19 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (_removeClippedSubviews) {
       updateClippingRect()
     }
+    // Generate test mask if it was requested before we had dimensions
+    if (shouldGenerateTestMask && w > 0 && h > 0) {
+      generateTestMask()
+    }
+    // Generate gradient mask if one was stored before we had dimensions
+    val gradientLayer =
+            getTag(R.id.mask_gradient_layer) as?
+                    com.facebook.react.uimanager.style.BackgroundImageLayer
+    if (gradientLayer != null && w > 0 && h > 0) {
+      val shader = gradientLayer.getShader(w.toFloat(), h.toFloat())
+      maskBitmap = createGradientMaskBitmap(w, h, shader)
+      setTag(R.id.mask_gradient_layer, null)
+    }
   }
 
   override fun onAttachedToWindow() {
@@ -893,35 +1083,89 @@ public open class ReactViewGroup public constructor(context: Context?) :
   }
 
   override fun draw(canvas: Canvas) {
-    if (
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            getUIManagerType(this) == UIManagerType.FABRIC &&
-            needsIsolatedLayer(this)
-    ) {
-      // Check if the view is a stacking context and has children, if it does, do the rendering
-      // offscreen and then composite back. This follows the idea of group isolation on blending
-      // https://www.w3.org/TR/compositing-1/#isolationblending
+    val bitmap = maskBitmap
+    if (bitmap != null && width > 0 && height > 0) {
+      // Save layer for Porter-Duff compositing to mask everything (background + children)
+      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
+      val saveCount = canvas.saveLayer(bounds, null)
 
-      val overflowInset = overflowInset
-      canvas.saveLayer(
-          overflowInset.left.toFloat(),
-          overflowInset.top.toFloat(),
-          (width + -overflowInset.right).toFloat(),
-          (height + -overflowInset.bottom).toFloat(),
-          null,
-      )
-      super.draw(canvas)
-      canvas.restore()
+      // Draw everything first: background (via super.draw) and children (via dispatchDraw)
+      // super.draw() will:
+      //   1. Draw background
+      //   2. Call dispatchDraw() which draws children
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+          getUIManagerType(this) == UIManagerType.FABRIC &&
+          needsIsolatedLayer(this)
+      ) {
+        val overflowInset = overflowInset
+        canvas.saveLayer(
+            overflowInset.left.toFloat(),
+            overflowInset.top.toFloat(),
+            (width + -overflowInset.right).toFloat(),
+            (height + -overflowInset.bottom).toFloat(),
+            null,
+        )
+        // Call parent's draw which will draw background and call dispatchDraw for children
+        super.draw(canvas)
+        canvas.restore()
+      } else {
+        // Call parent's draw which will draw background and call dispatchDraw for children
+        super.draw(canvas)
+      }
+
+      // Now apply the mask to everything that was drawn (background + children)
+      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        isFilterBitmap = true
+      }
+
+      val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
+      val dstRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+      canvas.drawBitmap(bitmap, srcRect, dstRect, maskPaint)
+
+      // Restore layer (this applies the Porter-Duff compositing)
+      canvas.restoreToCount(saveCount)
     } else {
-      super.draw(canvas)
+      // No mask, draw normally
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+          getUIManagerType(this) == UIManagerType.FABRIC &&
+          needsIsolatedLayer(this)
+      ) {
+        val overflowInset = overflowInset
+        canvas.saveLayer(
+            overflowInset.left.toFloat(),
+            overflowInset.top.toFloat(),
+            (width + -overflowInset.right).toFloat(),
+            (height + -overflowInset.bottom).toFloat(),
+            null,
+        )
+        super.draw(canvas)
+        canvas.restore()
+      } else {
+        super.draw(canvas)
+      }
     }
   }
 
   override fun dispatchDraw(canvas: Canvas) {
+    // Masking is handled in draw() method to include both background and children
+    // Just draw children normally here
     if (_overflow != Overflow.VISIBLE || getTag(R.id.filter) != null) {
       clipToPaddingBox(this, canvas)
     }
     super.dispatchDraw(canvas)
+
+    val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+      isFilterBitmap = true
+    }
+
+    val bitmap = maskBitmap
+    if (bitmap != null && width > 0 && height > 0) {
+      val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
+      val dstRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+      canvas.drawBitmap(bitmap, srcRect, dstRect, maskPaint)
+    }
   }
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
