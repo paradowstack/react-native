@@ -52,6 +52,8 @@ import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
+import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
+import com.facebook.react.uimanager.drawable.GradientMaskDrawable
 import com.facebook.react.views.imagehelper.ImageSource
 
 /** View manager for AndroidViews (plain React Views). */
@@ -227,6 +229,14 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
   @ReactProp(name = ViewProps.MASK_IMAGE, customType = "BackgroundImage")
   public open fun setMaskImage(view: ReactViewGroup, backgroundImage: ReadableArray?) {
     if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
+      // Set SOFTWARE layer type immediately when mask is requested
+      // This ensures Porter-Duff compositing works even if view is drawn before image loads
+      if (backgroundImage != null && backgroundImage.size() > 0) {
+        view.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+      } else {
+        view.setLayerType(View.LAYER_TYPE_NONE, null)
+      }
+
       if (backgroundImage != null && backgroundImage.size() > 0) {
         // Use the first mask layer
         val backgroundImageMap = backgroundImage.getMap(0)
@@ -234,40 +244,48 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
 
         when (type) {
           "image" -> {
-            // Load bitmap image mask
+            // Load image mask using DraweeHolder (no Bitmap copy needed)
             val url = backgroundImageMap.getString("url")
             if (url != null) {
-              loadMaskBitmap(view, url)
+              loadMaskDrawable(view, url)
             }
           }
           "linear-gradient", "radial-gradient" -> {
-            // Create gradient mask from shader
+            // Create gradient mask from shader (still uses Bitmap for gradients)
             createGradientMask(view, backgroundImageMap)
           }
           else -> {
-            view.maskBitmap = null
+            view.maskDrawable = null
           }
         }
       } else {
         // Clear mask if no image provided
-        view.maskBitmap = null
+        view.maskDrawable = null
       }
     }
   }
 
   /**
-   * Creates a gradient mask from a gradient definition. Parses the gradient and converts it to a
-   * bitmap mask.
+   * Creates a gradient mask from a gradient definition. Uses a GradientMaskDrawable
+   * to draw the gradient directly without creating a Bitmap copy.
    */
   private fun createGradientMask(view: ReactViewGroup, gradientMap: ReadableMap) {
     val gradientLayer = BackgroundImageLayer.parse(gradientMap, view.context)
     if (gradientLayer != null) {
+      // Create or get existing GradientMaskDrawable
+      val gradientDrawable = view.maskDrawable as? GradientMaskDrawable
+          ?: GradientMaskDrawable().also {
+            view.maskDrawable = it
+          }
+
       // Generate mask when view has dimensions
       view.post {
         if (view.width > 0 && view.height > 0) {
           val shader = gradientLayer.getShader(view.width.toFloat(), view.height.toFloat())
-          val maskBitmap = view.createGradientMaskBitmap(view.width, view.height, shader)
-          view.maskBitmap = maskBitmap
+          gradientDrawable.setShader(shader)
+          gradientDrawable.setBounds(0, 0, view.width, view.height)
+          view.maskDrawable = gradientDrawable
+          view.invalidate()
           println("Gradient mask created: ${view.width}x${view.height}")
         } else {
           // Store gradient for later when view gets dimensions
@@ -275,18 +293,17 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
         }
       }
     } else {
-      view.maskBitmap = null
+      view.maskDrawable = null
     }
   }
 
   /**
-   * Loads a bitmap from the given URL and sets it as the mask for the view. Uses the same pattern
-   * as ImageLoaderModule: prefetches to disk cache first, then loads the decoded image.
+   * Loads an image mask using DraweeHolder. This avoids creating Bitmap copies and leverages
+   * Fresco's caching and lifecycle management. The DraweeDrawable will be used directly for masking.
    */
-  private fun loadMaskBitmap(view: ReactViewGroup, url: String) {
+  private fun loadMaskDrawable(view: ReactViewGroup, url: String) {
     val imageSource = ImageSource(view.context, url)
-    val imagePipeline: ImagePipeline = Fresco.getImagePipeline()
-
+    
     val imageRequest: ImageRequest =
             ReactNetworkImageRequest.fromBuilderWithHeaders(
                     ImageRequestBuilder.newBuilderWithSource(imageSource.uri),
@@ -294,95 +311,22 @@ public open class ReactViewManager : ReactClippingViewManager<ReactViewGroup>() 
                     imageSource.cacheControl
             )
 
-    // First prefetch to disk cache (similar to ImageLoaderModule.prefetchImage)
-    val prefetchDataSource = imagePipeline.prefetchToDiskCache(imageRequest, view.context)
+    // Create or get existing DraweeMaskDrawable
+    val maskDrawable = (view.maskDrawable as DraweeMaskDrawable?)
+      ?: DraweeMaskDrawable(view.context.resources).also {
+        view.maskDrawable = it
+      }
 
-    prefetchDataSource.subscribe(
-            object : BaseDataSubscriber<Void?>() {
-              override fun onNewResultImpl(dataSource: DataSource<Void?>) {
-                if (!dataSource.isFinished) {
-                  return
-                }
-                // Prefetch completed, now fetch the decoded image
-                fetchDecodedMaskBitmap(view, imageRequest, imagePipeline)
-                dataSource.close()
-              }
+    // Set the ImageRequest - DraweeHolder will handle loading, caching, and lifecycle
+    maskDrawable.setImageRequest(imageRequest)
+    
+    // Update bounds if view already has dimensions
+    if (view.width > 0 && view.height > 0) {
+      maskDrawable.setBounds(0, 0, view.width, view.height)
+    }
 
-              override fun onFailureImpl(dataSource: DataSource<Void?>) {
-                // Even if prefetch fails, try to load the decoded image
-                // (it might already be in cache or could be loaded directly)
-                fetchDecodedMaskBitmap(view, imageRequest, imagePipeline)
-                dataSource.close()
-              }
-            },
-            com.facebook.common.executors.CallerThreadExecutor.getInstance()
-    )
-  }
-
-  /**
-   * Fetches the decoded bitmap and sets it as the mask. This is called after prefetching completes
-   * (or if prefetch fails).
-   */
-  private fun fetchDecodedMaskBitmap(
-          view: ReactViewGroup,
-          imageRequest: ImageRequest,
-          imagePipeline: ImagePipeline
-  ) {
-    val dataSource = imagePipeline.fetchDecodedImage(imageRequest, view.context)
-
-    dataSource.subscribe(
-            object : BaseDataSubscriber<CloseableReference<CloseableImage>>() {
-              override fun onNewResultImpl(
-                      dataSource: DataSource<CloseableReference<CloseableImage>>
-              ) {
-                if (!dataSource.isFinished) {
-                  return
-                }
-                val ref = dataSource.result
-                if (ref != null) {
-                  try {
-                    val image = ref.get()
-                    if (image is CloseableBitmap) {
-                      val bitmap = image.underlyingBitmap
-                      val config = bitmap.config
-                      if (config != null) {
-                        // Create a mutable copy to ensure we can use it independently
-                        val mutableBitmap = bitmap.copy(config, true)
-                        view.post {
-                          view.maskBitmap = mutableBitmap
-                          println("[${view.id}] [${view.viewId}] Image mask loaded: ${mutableBitmap.width}x${mutableBitmap.height}")
-                          // Force a redraw after setting the bitmap
-                          view.invalidate()
-                          view.postInvalidateOnAnimation()
-                        }
-                      } else {
-                        view.maskBitmap = null
-                        println("Image mask failed: bitmap.config is null")
-                      }
-                    } else {
-                      view.maskBitmap = null
-                      println("Image mask failed: image is not CloseableBitmap")
-                    }
-                  } catch (e: Exception) {
-                    view.maskBitmap = null
-                  } finally {
-                    CloseableReference.closeSafely(ref)
-                  }
-                } else {
-                  view.maskBitmap = null
-                }
-                dataSource.close()
-              }
-
-              override fun onFailureImpl(
-                      dataSource: DataSource<CloseableReference<CloseableImage>>
-              ) {
-                view.maskBitmap = null
-                dataSource.close()
-              }
-            },
-            com.facebook.common.executors.CallerThreadExecutor.getInstance()
-    )
+    view.maskDrawable = maskDrawable
+    view.invalidate()
   }
   @ReactProp(name = "nextFocusDown", defaultInt = View.NO_ID)
   public open fun nextFocusDown(view: ReactViewGroup, viewId: Int) {
