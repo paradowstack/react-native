@@ -58,6 +58,10 @@ internal class CompositeBackgroundDrawable(
 
     // Holder value for currently set border radius
     var borderRadius: BorderRadiusStyle? = null,
+
+    // Mask
+    var mask: MaskDrawable? = null
+
 ) :
     LayerDrawable(
         createLayersArray(

@@ -12,7 +12,6 @@ package com.facebook.react.views.view
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -44,6 +43,7 @@ import com.facebook.react.touch.OnInterceptTouchEventListener
 import com.facebook.react.touch.ReactHitSlopView
 import com.facebook.react.touch.ReactInterceptingViewGroup
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
+import com.facebook.react.uimanager.BackgroundStyleApplicator.getMask
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
@@ -71,13 +71,13 @@ import com.facebook.react.uimanager.ReactZIndexedViewGroup
 import com.facebook.react.uimanager.ViewGroupDrawingOrderHelper
 import com.facebook.react.uimanager.common.UIManagerType
 import com.facebook.react.uimanager.common.ViewUtil.getUIManagerType
+import com.facebook.react.uimanager.style.BackgroundImageLayer
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.view.CanvasUtil.enableZ
 import java.util.ArrayList
-import java.util.Random
 import kotlin.concurrent.Volatile
 import kotlin.math.max
 
@@ -167,33 +167,6 @@ public open class ReactViewGroup public constructor(context: Context?) :
       null
   private var focusOnAttach = false
 
-
-  /**
-   * Drawable used for masking the view content. Can be either DraweeMaskDrawable (for images)
-   * or GradientMaskDrawable (for gradients). When set, the view switches to software rendering
-   * to support Porter-Duff compositing.
-   */
-  internal var maskDrawable: MaskDrawable? = null
-    set(value) {
-      if (field != value) {
-        // Detach old drawable if it's a DraweeMaskDrawable
-        (field as? DraweeMaskDrawable)?.onDetach()
-        field = value
-        // Attach new drawable if it's a DraweeMaskDrawable and set layer type
-        if (value != null) {
-          (value as? DraweeMaskDrawable)?.onAttach()
-          setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-          // Set bounds if view has dimensions (both types are Drawables)
-          if (width > 0 && height > 0 && value is Drawable) {
-            value.setBounds(0, 0, width, height)
-          }
-        } else {
-          setLayerType(View.LAYER_TYPE_NONE, null)
-        }
-        invalidate()
-      }
-    }
-
   init {
     initView()
   }
@@ -250,9 +223,6 @@ public open class ReactViewGroup public constructor(context: Context?) :
 
     // Reset background, borders
     updateBackgroundDrawable(null)
-
-    // Reset mask drawable (this also resets layer type to LAYER_TYPE_NONE)
-    maskDrawable = null
 
     resetPointerEvents()
 
@@ -625,23 +595,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (_removeClippedSubviews) {
       updateClippingRect()
     }
-    // Update mask drawable bounds when size changes (both types are Drawables)
-    if (maskDrawable is Drawable) {
-      (maskDrawable as Drawable).setBounds(0, 0, w, h)
-    }
-    // Update gradient mask shader if one was stored before we had dimensions
-    val gradientLayer =
-            getTag(R.id.mask_gradient_layer) as?
-                    com.facebook.react.uimanager.style.BackgroundImageLayer
-    if (gradientLayer != null && w > 0 && h > 0) {
-      val shader = gradientLayer.getShader(w.toFloat(), h.toFloat())
-      val gradientDrawable = maskDrawable as? GradientMaskDrawable
-      if (gradientDrawable != null) {
-        gradientDrawable.setShader(shader)
-        gradientDrawable.setBounds(0, 0, w, h)
-      }
-      setTag(R.id.mask_gradient_layer, null)
-    }
+    getMask(this)?.setBounds(0, 0, w, h)
   }
 
   override fun onAttachedToWindow() {
@@ -655,13 +609,11 @@ public open class ReactViewGroup public constructor(context: Context?) :
       focusOnAttach = false
     }
 
-    // Attach mask drawable DraweeHolder when view is attached
-    maskDrawable?.onAttach()
+    getMask(this)?.onAttach()
   }
 
   override fun onDetachedFromWindow() {
-    // Detach mask drawable DraweeHolder when view is detached (if it's a DraweeMaskDrawable)
-    (maskDrawable as? DraweeMaskDrawable)?.onDetach()
+    getMask(this)?.onDetach()
     super.onDetachedFromWindow()
   }
 
@@ -960,7 +912,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
   }
 
   override fun draw(canvas: Canvas) {
-    val drawable = maskDrawable
+    val drawable = getMask(this)
     if (drawable != null && width > 0 && height > 0) {
       // Save layer for Porter-Duff compositing to mask everything (background + children)
       val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
@@ -995,6 +947,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
       val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
         isFilterBitmap = true
+      }
+
+      if (drawable is DraweeMaskDrawable) {
+        (drawable as DraweeMaskDrawable?)?.setBounds(0, 0, width, height)
       }
 
       // Draw the mask Drawable with Porter-Duff DST_IN mode
@@ -1033,7 +989,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     }
     super.dispatchDraw(canvas)
 
-    val drawable = maskDrawable
+    val drawable = getMask(this)
     if (drawable != null && width > 0 && height > 0) {
       // Save layer for Porter-Duff compositing to mask everything (background + children)
       val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())

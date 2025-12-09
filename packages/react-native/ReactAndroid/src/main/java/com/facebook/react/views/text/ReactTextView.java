@@ -9,7 +9,11 @@ package com.facebook.react.views.text;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.text.Layout;
@@ -43,6 +47,7 @@ import com.facebook.react.uimanager.BackgroundStyleApplicator;
 import com.facebook.react.uimanager.LengthPercentage;
 import com.facebook.react.uimanager.LengthPercentageType;
 import com.facebook.react.uimanager.PixelUtil;
+import com.facebook.react.uimanager.drawable.DraweeMaskDrawable;
 import com.facebook.react.uimanager.ReactCompoundView;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.uimanager.ViewDefaults;
@@ -360,11 +365,77 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
         setText(spanned);
       }
 
-      if (mOverflow != Overflow.VISIBLE) {
-        BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
-      }
+      com.facebook.react.uimanager.drawable.MaskDrawable drawable =
+          BackgroundStyleApplicator.getMask(this);
+      if (drawable != null && getWidth() > 0 && getHeight() > 0) {
+        // Save layer for Porter-Duff compositing to mask everything (background + children)
+        RectF bounds = new RectF(0f, 0f, getWidth(), getHeight());
+        int saveCount = canvas.saveLayer(bounds, null);
 
-      super.onDraw(canvas);
+        // Draw everything first: background (via super.onDraw)
+        if (mOverflow != Overflow.VISIBLE) {
+          BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
+        }
+        super.onDraw(canvas);
+
+        // Now apply the mask Drawable to everything that was drawn
+        // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
+        Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+        maskPaint.setFilterBitmap(true);
+
+        if (drawable instanceof DraweeMaskDrawable) {
+          ((DraweeMaskDrawable) drawable).setBounds(0, 0, getWidth(), getHeight());
+        }
+
+        // Draw the mask Drawable with Porter-Duff DST_IN mode
+        // This will mask everything drawn before
+        drawable.drawWithMaskMode(canvas, maskPaint);
+
+        // Restore layer (this applies the Porter-Duff compositing)
+        canvas.restoreToCount(saveCount);
+      } else {
+        // No mask, draw normally
+        if (mOverflow != Overflow.VISIBLE) {
+          BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
+        }
+        super.onDraw(canvas);
+      }
+    }
+  }
+
+  @Override
+  protected void dispatchDraw(Canvas canvas) {
+    com.facebook.react.uimanager.drawable.MaskDrawable drawable =
+        BackgroundStyleApplicator.getMask(this);
+    Integer saveCount = null;
+    if (drawable != null && getWidth() > 0 && getHeight() > 0) {
+      // Save layer for Porter-Duff compositing to mask everything (background + children)
+      RectF bounds = new RectF(0f, 0f, getWidth(), getHeight());
+      saveCount = canvas.saveLayer(bounds, null);
+    }
+    super.dispatchDraw(canvas);
+    if (drawable != null && getWidth() > 0 && getHeight() > 0) {
+      Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+      maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+      maskPaint.setFilterBitmap(true);
+
+      // Draw the mask Drawable with Porter-Duff DST_IN mode
+      // This will mask everything drawn before (background + children)
+      drawable.drawWithMaskMode(canvas, maskPaint);
+    }
+
+    if (saveCount != null) {
+      canvas.restoreToCount(saveCount);
+    }
+  }
+
+  @Override
+  protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    super.onSizeChanged(w, h, oldw, oldh);
+    com.facebook.react.uimanager.drawable.MaskDrawable mask = BackgroundStyleApplicator.getMask(this);
+    if (mask != null) {
+      mask.setBounds(0, 0, w, h);
     }
   }
 
@@ -511,6 +582,10 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
 
   @Override
   public void onDetachedFromWindow() {
+    com.facebook.react.uimanager.drawable.MaskDrawable mask = BackgroundStyleApplicator.getMask(this);
+    if (mask != null) {
+      mask.onDetach();
+    }
     super.onDetachedFromWindow();
     if (mContainsImages && getText() instanceof Spanned) {
       Spanned text = (Spanned) getText();
@@ -558,6 +633,11 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
       for (TextInlineImageSpan span : spans) {
         span.onAttachedToWindow();
       }
+    }
+
+    com.facebook.react.uimanager.drawable.MaskDrawable mask = BackgroundStyleApplicator.getMask(this);
+    if (mask != null) {
+      mask.onAttach();
     }
   }
 
