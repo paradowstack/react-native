@@ -16,11 +16,8 @@ import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.Rect
-import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -42,6 +39,7 @@ import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.touch.OnInterceptTouchEventListener
 import com.facebook.react.touch.ReactHitSlopView
 import com.facebook.react.touch.ReactInterceptingViewGroup
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
 import com.facebook.react.uimanager.BackgroundStyleApplicator.getMask
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
@@ -49,9 +47,6 @@ import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderStyle
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderWidth
-import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
-import com.facebook.react.uimanager.drawable.GradientMaskDrawable
-import com.facebook.react.uimanager.drawable.MaskDrawable
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setFeedbackUnderlay
 import com.facebook.react.uimanager.BlendModeHelper.needsIsolatedLayer
 import com.facebook.react.uimanager.LengthPercentage
@@ -595,7 +590,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     if (_removeClippedSubviews) {
       updateClippingRect()
     }
-    getMask(this)?.setBounds(0, 0, w, h)
+    BackgroundStyleApplicator.updateMaskBounds(this, w, h)
   }
 
   override fun onAttachedToWindow() {
@@ -609,11 +604,11 @@ public open class ReactViewGroup public constructor(context: Context?) :
       focusOnAttach = false
     }
 
-    getMask(this)?.onAttach()
+    BackgroundStyleApplicator.attachMask(this)
   }
 
   override fun onDetachedFromWindow() {
-    getMask(this)?.onDetach()
+    BackgroundStyleApplicator.detachMask(this)
     super.onDetachedFromWindow()
   }
 
@@ -912,12 +907,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
   }
 
   override fun draw(canvas: Canvas) {
-    val drawable = getMask(this)
-    if (drawable != null && width > 0 && height > 0) {
-      // Save layer for Porter-Duff compositing to mask everything (background + children)
-      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
-      val saveCount = canvas.saveLayer(bounds, null)
-
+    BackgroundStyleApplicator.drawWithMask(canvas, this) {
       // Draw everything first: background (via super.draw) and children (via dispatchDraw)
       // super.draw() will:
       //   1. Draw background
@@ -941,39 +931,6 @@ public open class ReactViewGroup public constructor(context: Context?) :
         // Call parent's draw which will draw background and call dispatchDraw for children
         super.draw(canvas)
       }
-
-      // Now apply the mask Drawable to everything that was drawn (background + children)
-      // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
-      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        isFilterBitmap = true
-      }
-
-      // Draw the mask Drawable with Porter-Duff DST_IN mode
-      // This will mask everything drawn before (background + children)
-      drawable.drawWithMaskMode(canvas, maskPaint)
-
-      // Restore layer (this applies the Porter-Duff compositing)
-      canvas.restoreToCount(saveCount)
-    } else {
-      // No mask, draw normally
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-          getUIManagerType(this) == UIManagerType.FABRIC &&
-          needsIsolatedLayer(this)
-      ) {
-        val overflowInset = overflowInset
-        canvas.saveLayer(
-            overflowInset.left.toFloat(),
-            overflowInset.top.toFloat(),
-            (width + -overflowInset.right).toFloat(),
-            (height + -overflowInset.bottom).toFloat(),
-            null,
-        )
-        super.draw(canvas)
-        canvas.restore()
-      } else {
-        super.draw(canvas)
-      }
     }
   }
 
@@ -984,27 +941,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
       clipToPaddingBox(this, canvas)
     }
     super.dispatchDraw(canvas)
-
-    val drawable = getMask(this)
-    if (drawable != null && width > 0 && height > 0) {
-      // Save layer for Porter-Duff compositing to mask everything (background + children)
-      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
-      val saveCount = canvas.saveLayer(bounds, null)
-
-      // Now apply the mask Drawable to everything that was drawn (background + children)
-      // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
-      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        isFilterBitmap = true
-      }
-
-      // Draw the mask Drawable with Porter-Duff DST_IN mode
-      // This will mask everything drawn before (background + children)
-      drawable.drawWithMaskMode(canvas, maskPaint)
-
-      // Restore layer (this applies the Porter-Duff compositing)
-      canvas.restoreToCount(saveCount)
-    }
+    // Note: Mask is applied in draw() method, not here, to ensure both background and children are masked
   }
 
   override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {

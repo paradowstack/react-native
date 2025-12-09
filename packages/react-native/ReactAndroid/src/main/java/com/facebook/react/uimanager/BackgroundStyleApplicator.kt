@@ -916,4 +916,84 @@ public object BackgroundStyleApplicator {
 
   @JvmStatic
   public fun getMask(view: View): MaskDrawable? = ensureCompositeBackgroundDrawable(view).mask
+
+  /**
+   * Creates a Paint configured for Porter-Duff DST_IN mode mask compositing.
+   * This paint is used to apply mask drawables to views.
+   */
+  @JvmStatic
+  public fun createMaskPaint(): Paint {
+    return Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+      isFilterBitmap = true
+    }
+  }
+
+  /**
+   * Draws content with mask compositing applied if a mask is present.
+   * This handles the saveLayer, content drawing, mask application, and restore pattern.
+   *
+   * @param canvas The canvas to draw on
+   * @param view The view that may have a mask
+   * @param drawContent Lambda that draws the actual content
+   */
+  @JvmStatic
+  public fun drawWithMask(canvas: Canvas, view: View, drawContent: () -> Unit) {
+    val drawable = getMask(view)
+    val saveCount: Int? =
+        if (drawable != null && view.width > 0 && view.height > 0) {
+          val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
+          canvas.saveLayer(bounds, null)
+        } else {
+          null
+        }
+
+    drawContent()
+
+    if (drawable != null && view.width > 0 && view.height > 0 && saveCount != null) {
+      val maskPaint = createMaskPaint()
+      drawable.drawWithMaskMode(canvas, maskPaint)
+      canvas.restoreToCount(saveCount)
+    }
+  }
+
+  /**
+   * Java-friendly overload that accepts a Runnable for drawing content.
+   */
+  @JvmStatic
+  public fun drawWithMask(canvas: Canvas, view: View, drawContent: Runnable) {
+    drawWithMask(canvas, view) { drawContent.run() }
+  }
+
+  /**
+   * Updates the bounds of the mask drawable when view size changes.
+   *
+   * @param view The view with a potential mask
+   * @param w New width
+   * @param h New height
+   */
+  @JvmStatic
+  public fun updateMaskBounds(view: View, w: Int, h: Int) {
+    getMask(view)?.setBounds(0, 0, w, h)
+  }
+
+  /**
+   * Attaches the mask drawable (calls onAttach lifecycle method).
+   *
+   * @param view The view with a potential mask
+   */
+  @JvmStatic
+  public fun attachMask(view: View) {
+    getMask(view)?.onAttach()
+  }
+
+  /**
+   * Detaches the mask drawable (calls onDetach lifecycle method).
+   *
+   * @param view The view with a potential mask
+   */
+  @JvmStatic
+  public fun detachMask(view: View) {
+    getMask(view)?.onDetach()
+  }
 }

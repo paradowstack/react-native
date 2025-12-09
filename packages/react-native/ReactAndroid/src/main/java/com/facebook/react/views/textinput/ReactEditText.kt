@@ -13,10 +13,7 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
-import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
@@ -52,16 +49,15 @@ import com.facebook.react.common.ReactConstants
 import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.internal.featureflags.ReactNativeNewArchitectureFeatureFlags
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
 import com.facebook.react.uimanager.BackgroundStyleApplicator.getBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.getBorderColor
-import com.facebook.react.uimanager.BackgroundStyleApplicator.getMask
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderRadius
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderStyle
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderWidth
-import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil.toDIPFromPixel
@@ -953,7 +949,7 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
   }
 
   public override fun onDetachedFromWindow() {
-    getMask(this)?.onDetach()
+    BackgroundStyleApplicator.detachMask(this)
     super.onDetachedFromWindow()
     if (containsImages) {
       val text: Spanned? = text
@@ -1013,7 +1009,7 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
     }
 
     didAttachToWindow = true
-    getMask(this)?.onAttach()
+    BackgroundStyleApplicator.attachMask(this)
   }
 
   override fun onFinishTemporaryDetach() {
@@ -1211,33 +1207,7 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
   }
 
   public override fun onDraw(canvas: Canvas) {
-    val drawable = getMask(this)
-    if (drawable != null && width > 0 && height > 0) {
-      // Save layer for Porter-Duff compositing to mask everything (background + children)
-      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
-      val saveCount = canvas.saveLayer(bounds, null)
-
-      // Draw everything first: background (via super.onDraw)
-      if (overflow != Overflow.VISIBLE) {
-        clipToPaddingBox(this, canvas)
-      }
-      super.onDraw(canvas)
-
-      // Now apply the mask Drawable to everything that was drawn
-      // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
-      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        isFilterBitmap = true
-      }
-
-      // Draw the mask Drawable with Porter-Duff DST_IN mode
-      // This will mask everything drawn before
-      drawable.drawWithMaskMode(canvas, maskPaint)
-
-      // Restore layer (this applies the Porter-Duff compositing)
-      canvas.restoreToCount(saveCount)
-    } else {
-      // No mask, draw normally
+    BackgroundStyleApplicator.drawWithMask(canvas, this) {
       if (overflow != Overflow.VISIBLE) {
         clipToPaddingBox(this, canvas)
       }
@@ -1246,33 +1216,14 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
   }
 
   public override fun dispatchDraw(canvas: Canvas) {
-    val drawable = getMask(this)
-    var saveCount: Int? = null
-    if (drawable != null && width > 0 && height > 0) {
-      // Save layer for Porter-Duff compositing to mask everything (background + children)
-      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
-      saveCount = canvas.saveLayer(bounds, null)
-    }
-    super.dispatchDraw(canvas)
-    if (drawable != null && width > 0 && height > 0) {
-      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        isFilterBitmap = true
-      }
-
-      // Draw the mask Drawable with Porter-Duff DST_IN mode
-      // This will mask everything drawn before (background + children)
-      drawable.drawWithMaskMode(canvas, maskPaint)
-    }
-
-    if (saveCount != null) {
-      canvas.restoreToCount(saveCount)
+    BackgroundStyleApplicator.drawWithMask(canvas, this) {
+      super.dispatchDraw(canvas)
     }
   }
 
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
     super.onSizeChanged(w, h, oldw, oldh)
-    getMask(this)?.setBounds(0, 0, w, h)
+    BackgroundStyleApplicator.updateMaskBounds(this, w, h)
   }
 
   public override fun onDragEvent(event: DragEvent): Boolean {

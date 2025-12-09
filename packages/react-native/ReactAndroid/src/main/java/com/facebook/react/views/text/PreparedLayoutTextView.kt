@@ -11,10 +11,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
-import android.graphics.RectF
 import android.os.Build
 import android.text.Layout
 import android.text.Spanned
@@ -28,9 +25,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.view.ViewCompat
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.BackgroundStyleApplicator
-import com.facebook.react.uimanager.BackgroundStyleApplicator.getMask
 import com.facebook.react.uimanager.ReactCompoundView
-import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
 import com.facebook.react.uimanager.style.Overflow
 import com.facebook.react.views.text.internal.span.ReactFragmentIndexSpan
 import kotlin.collections.ArrayList
@@ -107,95 +102,51 @@ internal class PreparedLayoutTextView(context: Context) : ViewGroup(context), Re
   }
 
   override fun onDraw(canvas: Canvas) {
-    val drawable = getMask(this)
-    val saveCount: Int? =
-        if (drawable != null && width > 0 && height > 0) {
-          // Save layer for Porter-Duff compositing to mask everything (background + children)
-          val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
-          canvas.saveLayer(bounds, null)
-        } else {
-          null
+    BackgroundStyleApplicator.drawWithMask(canvas, this) {
+      // Draw everything first: background and layout
+      if (overflow != Overflow.VISIBLE) {
+        BackgroundStyleApplicator.clipToPaddingBox(this, canvas)
+      }
+
+      canvas.translate(
+          paddingLeft.toFloat(),
+          paddingTop.toFloat() + (preparedLayout?.verticalOffset ?: 0f),
+      )
+
+      val layout = preparedLayout?.layout
+      if (layout != null) {
+        if (selection != null) {
+          selectionPaint.color =
+              selectionColor ?: DefaultStyleValuesUtil.getDefaultTextColorHighlight(context)
         }
 
-    // Draw everything first: background and layout
-    if (overflow != Overflow.VISIBLE) {
-      BackgroundStyleApplicator.clipToPaddingBox(this, canvas)
-    }
-
-    canvas.translate(
-        paddingLeft.toFloat(),
-        paddingTop.toFloat() + (preparedLayout?.verticalOffset ?: 0f),
-    )
-
-    val layout = preparedLayout?.layout
-    if (layout != null) {
-      if (selection != null) {
-        selectionPaint.color =
-            selectionColor ?: DefaultStyleValuesUtil.getDefaultTextColorHighlight(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+          Api34Utils.draw(layout, canvas, selection?.path, selectionPaint)
+        } else {
+          layout.draw(canvas, selection?.path, selectionPaint, 0)
+        }
       }
-
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        Api34Utils.draw(layout, canvas, selection?.path, selectionPaint)
-      } else {
-        layout.draw(canvas, selection?.path, selectionPaint, 0)
-      }
-    }
-
-    // Apply mask if present
-    if (drawable != null && width > 0 && height > 0 && saveCount != null) {
-      // Now apply the mask Drawable to everything that was drawn
-      // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
-      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        isFilterBitmap = true
-      }
-
-      // Draw the mask Drawable with Porter-Duff DST_IN mode
-      // This will mask everything drawn before
-      drawable.drawWithMaskMode(canvas, maskPaint)
-
-      // Restore layer (this applies the Porter-Duff compositing)
-      canvas.restoreToCount(saveCount)
     }
   }
 
   override fun dispatchDraw(canvas: Canvas) {
-    val drawable = getMask(this)
-    var saveCount: Int? = null
-    if (drawable != null && width > 0 && height > 0) {
-      // Save layer for Porter-Duff compositing to mask everything (background + children)
-      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
-      saveCount = canvas.saveLayer(bounds, null)
-    }
-    super.dispatchDraw(canvas)
-    if (drawable != null && width > 0 && height > 0) {
-      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        isFilterBitmap = true
-      }
-
-      // Draw the mask Drawable with Porter-Duff DST_IN mode
-      // This will mask everything drawn before (background + children)
-      drawable.drawWithMaskMode(canvas, maskPaint)
-    }
-
-    if (saveCount != null) {
-      canvas.restoreToCount(saveCount)
+    BackgroundStyleApplicator.drawWithMask(canvas, this) {
+      super.dispatchDraw(canvas)
     }
   }
 
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
     super.onSizeChanged(w, h, oldw, oldh)
-    getMask(this)?.setBounds(0, 0, w, h)
+    BackgroundStyleApplicator.updateMaskBounds(this, w, h)
   }
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
-    getMask(this)?.onAttach()
+    BackgroundStyleApplicator.attachMask(this)
   }
 
   override fun onDetachedFromWindow() {
-    getMask(this)?.onDetach()
+    BackgroundStyleApplicator.detachMask(this)
     super.onDetachedFromWindow()
   }
 
