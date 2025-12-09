@@ -949,10 +949,6 @@ public open class ReactViewGroup public constructor(context: Context?) :
         isFilterBitmap = true
       }
 
-      if (drawable is DraweeMaskDrawable) {
-        (drawable as DraweeMaskDrawable?)?.setBounds(0, 0, width, height)
-      }
-
       // Draw the mask Drawable with Porter-Duff DST_IN mode
       // This will mask everything drawn before (background + children)
       drawable.drawWithMaskMode(canvas, maskPaint)

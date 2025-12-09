@@ -384,10 +384,6 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
         maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
         maskPaint.setFilterBitmap(true);
 
-        if (drawable instanceof DraweeMaskDrawable) {
-          ((DraweeMaskDrawable) drawable).setBounds(0, 0, getWidth(), getHeight());
-        }
-
         // Draw the mask Drawable with Porter-Duff DST_IN mode
         // This will mask everything drawn before
         drawable.drawWithMaskMode(canvas, maskPaint);
