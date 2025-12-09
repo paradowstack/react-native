@@ -15,11 +15,11 @@ import android.graphics.drawable.Drawable
  * Common interface for mask Drawables that can be used to mask view content.
  * Both DraweeMaskDrawable and GradientMaskDrawable implement this interface.
  */
-internal interface MaskDrawable {
+public interface MaskDrawable {
     /**
      * Draws this Drawable with Porter-Duff compositing applied.
      * This is called from ReactViewGroup.draw() to apply the mask.
      */
-    fun drawWithMaskMode(canvas: Canvas, maskPaint: Paint)
-    fun onAttach()
+    public fun drawWithMaskMode(canvas: Canvas, maskPaint: Paint)
+    public fun onAttach()
 }

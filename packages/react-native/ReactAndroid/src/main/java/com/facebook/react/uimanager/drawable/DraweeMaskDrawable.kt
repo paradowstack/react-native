@@ -45,8 +45,8 @@ internal class DraweeMaskDrawable(
         // Set ourselves as callback to invalidate when DraweeDrawable changes
         // This will be updated when the controller is set
     }
-    
-    /**
+
+  /**
      * Sets the ImageRequest to load as the mask.
      * The DraweeHolder will handle loading, caching, and lifecycle management.
      */
@@ -155,5 +155,14 @@ internal class DraweeMaskDrawable(
     override fun getOpacity(): Int {
         return draweeHolder.topLevelDrawable?.opacity ?: PixelFormat.TRANSLUCENT
     }
+
+
+  override fun getIntrinsicWidth(): Int {
+    return draweeHolder.topLevelDrawable?.intrinsicWidth ?: -1
+  }
+
+  override fun getIntrinsicHeight(): Int {
+    return draweeHolder.topLevelDrawable?.intrinsicHeight ?: -1
+  }
 }
 

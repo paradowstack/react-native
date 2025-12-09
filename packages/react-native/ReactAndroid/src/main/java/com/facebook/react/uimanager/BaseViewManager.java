@@ -860,6 +860,11 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     BackgroundStyleApplicator.setBoxShadow(view, shadows);
   }
 
+  @ReactProp(name = ViewProps.MASK_IMAGE, customType = "BackgroundImage")
+  public void setMaskImage(T view, @Nullable ReadableArray images) {
+    BackgroundStyleApplicator.setMaskImage(view, images);
+  }
+
   private void logUnsupportedPropertyWarning(String propName) {
     FLog.w(ReactConstants.TAG, "%s doesn't support property '%s'", getName(), propName);
   }

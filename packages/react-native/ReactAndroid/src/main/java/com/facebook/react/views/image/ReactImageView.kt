@@ -16,7 +16,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Shader.TileMode
 import android.graphics.drawable.Animatable
@@ -59,6 +62,7 @@ import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.UIManagerHelper
+import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.util.RNLog
@@ -371,6 +375,62 @@ public class ReactImageView(
   // or outline which may draw outside of bounds.
   public override fun hasOverlappingRendering(): Boolean = false
 
+  public override fun draw(canvas: Canvas) {
+    val drawable = BackgroundStyleApplicator.getMask(this)
+    var saveCount: Int? = null
+    if (drawable != null && width > 0 && height > 0) {
+      // Save layer for Porter-Duff compositing to mask everything (background + children)
+      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
+      saveCount = canvas.saveLayer(bounds, null)
+    }
+    super.draw(canvas)
+    if (drawable != null && width > 0 && height > 0) {
+      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        isFilterBitmap = true
+      }
+
+      // Draw the mask Drawable with Porter-Duff DST_IN mode
+      // This will mask everything drawn before (background + children)
+      if (drawable is DraweeMaskDrawable) {
+//        (drawable as DraweeMaskDrawable?)?.setBounds(0, 0, width, height)
+      }
+      drawable.drawWithMaskMode(canvas, maskPaint)
+    }
+
+    if (saveCount != null) {
+      canvas.restoreToCount(saveCount)
+    }
+  }
+
+  public override fun dispatchDraw(canvas: Canvas) {
+    val drawable = BackgroundStyleApplicator.getMask(this)
+    var saveCount: Int? = null
+    if (drawable != null && width > 0 && height > 0) {
+      // Save layer for Porter-Duff compositing to mask everything (background + children)
+      val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
+      saveCount = canvas.saveLayer(bounds, null)
+    }
+    super.dispatchDraw(canvas)
+    if (drawable != null && width > 0 && height > 0) {
+      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        isFilterBitmap = true
+      }
+
+      // Draw the mask Drawable with Porter-Duff DST_IN mode
+      // This will mask everything drawn before (background + children)
+      drawable.drawWithMaskMode(canvas, maskPaint)
+    }
+
+    if (saveCount != null) {
+      canvas.restoreToCount(saveCount)
+    }
+  }
+
+
+
+
   public override fun onDraw(canvas: Canvas) {
     BackgroundStyleApplicator.clipToPaddingBoxWithAntiAliasing(this, canvas) {
       try {
@@ -546,6 +606,9 @@ public class ReactImageView(
     super.onSizeChanged(w, h, oldw, oldh)
     if (w > 0 && h > 0) {
       isDirty = isDirty || hasMultipleSources() || isTiled
+      if (BackgroundStyleApplicator.getMask(this) != null) {
+        (BackgroundStyleApplicator.getMask(this) as DraweeMaskDrawable?)?.setBounds(0, 0, width, height)
+      }
       maybeUpdateView()
     }
   }

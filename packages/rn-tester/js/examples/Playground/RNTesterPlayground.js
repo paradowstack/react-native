@@ -30,14 +30,15 @@ function BackgroundImageBox({
   );
 }
 
-const SIZE = 100;
-const URL = 'https://static.thenounproject.com/png/432965-200.png';
-const REPEAT = 'https://reactnative.dev/img/tiny_logo.png';
+const SIZE = 110;
+const HEART_URL = 'https://static.thenounproject.com/png/432965-200.png';
+const REACT_URL = 'https://reactjs.org/logo-og.png';
+const URL = `url(${HEART_URL})`;
+const REPEAT = 'no-repeat';
 const ACCENT = '#4ecdc4';
 function Playground() {
   return (
-    <View style={styles.row}>
-      {/* <View style={styles.col}> */}
+    <View style={styles.col}>
       <RNTesterText
         style={[
           styles.text,
@@ -45,36 +46,38 @@ function Playground() {
         ]}>
         linear-gradient(...)
       </RNTesterText>
-      <View
-        style={[
-          styles.box,
-          {
-            backgroundColor: ACCENT,
-          },
-        ]}
-      />
-      <RNTesterText style={styles.text}>→</RNTesterText>
-      <View
-        style={[
-          styles.box,
-          {
-            experimental_backgroundImage:
-              'linear-gradient(115deg, black 10%, transparent 30% 70%, black 90%)',
-          },
-        ]}
-      />
-      <RNTesterText style={styles.text}>→</RNTesterText>
-      <View
-        style={[
-          styles.box,
-          {
-            backgroundColor: ACCENT,
-            maskImage:
-              'linear-gradient(115deg, black 10%, transparent 30% 70%, black 90%)',
-            // maskRepeat: 'no-repeat',
-          },
-        ]}
-      />
+      {/* <View style={styles.row}>
+        <View
+          style={[
+            styles.box,
+            {
+              backgroundColor: ACCENT,
+            },
+          ]}
+        />
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <View
+          style={[
+            styles.box,
+            {
+              experimental_backgroundImage:
+                'linear-gradient(115deg, black 10%, transparent 30% 70%, black 90%)',
+            },
+          ]}
+        />
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <View
+          style={[
+            styles.box,
+            {
+              backgroundColor: ACCENT,
+              maskImage:
+                'linear-gradient(115deg, black 10%, transparent 30% 70%, black 90%)',
+              // maskRepeat: REPEAT,
+            },
+          ]}
+        />
+      </View>
       <RNTesterText
         style={[
           styles.text,
@@ -82,29 +85,73 @@ function Playground() {
         ]}>
         url(mask.png)
       </RNTesterText>
-      <View
-        style={[
-          styles.box,
-          {
-            backgroundColor: ACCENT,
-          },
-        ]}
-      />
-      <RNTesterText style={styles.text}>→</RNTesterText>
-      <Image source={[{uri: URL}]} style={styles.box} />
-      <RNTesterText style={styles.text}>→</RNTesterText>
-      <View
-        style={[
-          styles.box,
-          {
-            backgroundColor: ACCENT,
-            maskImage:
-              'url(https://static.thenounproject.com/png/432965-200.png)',
-            maskRepeat: 'no-repeat',
-          },
-        ]}
-      />
-      {/* </View> */}
+      <View style={styles.row}>
+        <View
+          style={[
+            styles.box,
+            {
+              backgroundColor: ACCENT,
+            },
+          ]}
+        />
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <Image source={[{uri: HEART_URL}]} style={styles.box} />
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <View
+          style={[
+            styles.box,
+            {
+              backgroundColor: ACCENT,
+              maskImage: URL,
+              maskRepeat: REPEAT,
+            },
+          ]}
+        />
+      </View>
+      <View style={styles.row}>
+        <RNTesterText
+          style={[
+            styles.text,
+            {width: SIZE, fontWeight: 'bold', textAlign: 'center'},
+          ]}>
+          TEAAXT
+        </RNTesterText>
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <Image source={[{uri: HEART_URL}]} style={styles.box} />
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <RNTesterText
+          style={[
+            styles.text,
+            {
+              width: SIZE,
+              fontWeight: 'bold',
+              textAlign: 'center',
+              backgroundColor: ACCENT,
+              maskImage:
+                'linear-gradient(90deg, black 0%, transparent 50%, black 100%)',
+              maskRepeat: REPEAT,
+            },
+          ]}>
+          TEAAXT
+        </RNTesterText>
+      </View> */}
+      <View style={styles.row}>
+        <Image source={[{uri: REACT_URL}]} style={[styles.box]}></Image>
+        <RNTesterText style={styles.text}>→</RNTesterText>
+        <Image source={[{uri: HEART_URL}]} style={styles.box} />
+        <RNTesterText style={styles.text}>→</RNTesterText>
+
+        <Image
+          source={[{uri: REACT_URL}]}
+          style={[
+            styles.box,
+            {
+              backgroundColor: ACCENT,
+              maskImage: URL,
+              maskRepeat: REPEAT,
+            },
+          ]}></Image>
+      </View>
     </View>
   );
 }

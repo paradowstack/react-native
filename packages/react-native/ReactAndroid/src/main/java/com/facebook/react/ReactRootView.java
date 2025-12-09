@@ -19,6 +19,8 @@ import android.graphics.Canvas;
 import android.graphics.Insets;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
@@ -70,7 +72,9 @@ import com.facebook.react.uimanager.RootViewUtil;
 import com.facebook.react.uimanager.UIManagerHelper;
 import com.facebook.react.uimanager.common.UIManagerType;
 import com.facebook.react.uimanager.common.ViewUtil;
+import com.facebook.react.uimanager.drawable.GradientMaskDrawable;
 import com.facebook.react.uimanager.events.EventDispatcher;
+import com.facebook.react.uimanager.style.BackgroundImageLayer;
 import com.facebook.systrace.Systrace;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -313,6 +317,7 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
         && ViewUtil.getUIManagerType(this) == UIManagerType.FABRIC
         && needsIsolatedLayer(this)) {
       mixBlendMode = (BlendMode) child.getTag(R.id.mix_blend_mode);
+
       if (mixBlendMode != null) {
         Paint p = new Paint();
         p.setBlendMode(mixBlendMode);
@@ -320,11 +325,31 @@ public class ReactRootView extends FrameLayout implements RootView, ReactRoot {
       }
     }
 
+//    BackgroundImageLayer mask = (BackgroundImageLayer)child.getTag(R.id.mask_gradient_layer);
+//    int saveCount = -1;
+//    if (mask != null) {
+//      saveCount = canvas.saveLayer(0, 0, getWidth(), getHeight(), null);
+//    }
+
     boolean result = super.drawChild(canvas, child, drawingTime);
 
     if (mixBlendMode != null) {
       canvas.restore();
     }
+
+//    if (mask != null) {
+//      Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+//        maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+//        maskPaint.setFilterBitmap(true);
+//      GradientMaskDrawable maskDrawable = new GradientMaskDrawable();
+//      maskDrawable.setShader(mask.getShader(child.getWidth(), child.getHeight()));
+//      maskDrawable.setBounds(0, 0, child.getWidth(), child.getHeight());
+//      maskDrawable.drawWithMaskMode(canvas, maskPaint);
+//    }
+//
+//    if (saveCount != -1) {
+//      canvas.restoreToCount(saveCount);
+//    }
 
     return result;
   }

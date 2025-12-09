@@ -43,6 +43,7 @@ import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.touch.OnInterceptTouchEventListener
 import com.facebook.react.touch.ReactHitSlopView
 import com.facebook.react.touch.ReactInterceptingViewGroup
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.BackgroundStyleApplicator.clipToPaddingBox
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBackgroundColor
 import com.facebook.react.uimanager.BackgroundStyleApplicator.setBorderColor
@@ -71,6 +72,7 @@ import com.facebook.react.uimanager.ReactZIndexedViewGroup
 import com.facebook.react.uimanager.ViewGroupDrawingOrderHelper
 import com.facebook.react.uimanager.common.UIManagerType
 import com.facebook.react.uimanager.common.ViewUtil.getUIManagerType
+import com.facebook.react.uimanager.style.BackgroundImageLayer
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
@@ -960,7 +962,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
   }
 
   override fun draw(canvas: Canvas) {
-    val drawable = maskDrawable
+    val drawable = BackgroundStyleApplicator.getMask(this)
     if (drawable != null && width > 0 && height > 0) {
       // Save layer for Porter-Duff compositing to mask everything (background + children)
       val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
@@ -995,6 +997,10 @@ public open class ReactViewGroup public constructor(context: Context?) :
       val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
         isFilterBitmap = true
+      }
+
+      if (drawable is DraweeMaskDrawable) {
+        (drawable as DraweeMaskDrawable?)?.setBounds(0, 0, width, height)
       }
 
       // Draw the mask Drawable with Porter-Duff DST_IN mode
@@ -1033,7 +1039,7 @@ public open class ReactViewGroup public constructor(context: Context?) :
     }
     super.dispatchDraw(canvas)
 
-    val drawable = maskDrawable
+    val drawable = BackgroundStyleApplicator.getMask(this)
     if (drawable != null && width > 0 && height > 0) {
       // Save layer for Porter-Duff compositing to mask everything (background + children)
       val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
@@ -1083,11 +1089,39 @@ public open class ReactViewGroup public constructor(context: Context?) :
       }
     }
 
+//    val gradient = child.getTag(R.id.mask_gradient_layer) as? BackgroundImageLayer?
+//    var saveCount: Int? = null
+//
+//    if (gradient != null) {
+//      saveCount = canvas.saveLayer(
+//        overflowInset.left.toFloat(),
+//        overflowInset.top.toFloat(),
+//        (width + -overflowInset.right).toFloat(),
+//        (height + -overflowInset.bottom).toFloat(),
+//        null,
+//      )
+//    }
+
     val result = super.drawChild(canvas, child, drawingTime)
 
     if (mixBlendMode != null) {
       canvas.restore()
     }
+
+//    if (gradient != null) {
+//      val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+//        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+//        isFilterBitmap = true
+//      }
+//      val maskDrawable = GradientMaskDrawable()
+//      maskDrawable.setShader(gradient.getShader(width.toFloat(), height.toFloat()))
+//      maskDrawable.setBounds(0, 0, width, height)
+//      maskDrawable.drawWithMaskMode(canvas, maskPaint);
+//    }
+//
+//    if (saveCount != null) {
+//      canvas.restoreToCount(saveCount)
+//    }
 
     if (drawWithZ) {
       enableZ(canvas, false)

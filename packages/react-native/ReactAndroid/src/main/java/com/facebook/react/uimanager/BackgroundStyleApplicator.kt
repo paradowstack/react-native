@@ -20,9 +20,14 @@ import android.os.Build
 import android.view.View
 import android.widget.ImageView
 import androidx.annotation.ColorInt
+import com.facebook.imagepipeline.request.ImageRequest
+import com.facebook.imagepipeline.request.ImageRequestBuilder
+import com.facebook.react.R
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.common.annotations.UnstableReactNativeAPI
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import com.facebook.react.modules.fresco.ReactNetworkImageRequest
 import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.common.UIManagerType
@@ -31,9 +36,12 @@ import com.facebook.react.uimanager.drawable.BackgroundDrawable
 import com.facebook.react.uimanager.drawable.BackgroundImageDrawable
 import com.facebook.react.uimanager.drawable.BorderDrawable
 import com.facebook.react.uimanager.drawable.CompositeBackgroundDrawable
+import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
+import com.facebook.react.uimanager.drawable.GradientMaskDrawable
 import com.facebook.react.uimanager.drawable.InsetBoxShadowDrawable
 import com.facebook.react.uimanager.drawable.MIN_INSET_BOX_SHADOW_SDK_VERSION
 import com.facebook.react.uimanager.drawable.MIN_OUTSET_BOX_SHADOW_SDK_VERSION
+import com.facebook.react.uimanager.drawable.MaskDrawable
 import com.facebook.react.uimanager.drawable.OutlineDrawable
 import com.facebook.react.uimanager.drawable.OutsetBoxShadowDrawable
 import com.facebook.react.uimanager.style.BackgroundImageLayer
@@ -47,6 +55,8 @@ import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.BoxShadow
 import com.facebook.react.uimanager.style.LogicalEdge
 import com.facebook.react.uimanager.style.OutlineStyle
+import com.facebook.react.views.imagehelper.ImageSource
+import com.facebook.react.views.view.ReactViewGroup
 
 /**
  * Utility object responsible for applying backgrounds, borders, and related visual effects to
@@ -795,4 +805,121 @@ public object BackgroundStyleApplicator {
     )
     return paddingBoxPath
   }
+
+  @JvmStatic
+  public fun setMaskImage(
+    view: View,
+    maskImage: ReadableArray?,
+  ) {
+    val composite = ensureCompositeBackgroundDrawable(view)
+    if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
+      // Set SOFTWARE layer type immediately when mask is requested
+      // This ensures Porter-Duff compositing works even if view is drawn before image loads
+      if (maskImage != null && maskImage.size() > 0) {
+        view.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+      } else {
+        view.setLayerType(View.LAYER_TYPE_NONE, null)
+      }
+
+      (composite.mask as? DraweeMaskDrawable)?.onDetach()
+
+      if (maskImage != null && maskImage.size() > 0) {
+        // Use the first mask layer
+        val maskImageMap = maskImage.getMap(0)
+        val type = maskImageMap?.getString("type")
+
+        when (type) {
+          "image" -> {
+            // Load image mask using DraweeHolder (no Bitmap copy needed)
+            val url = maskImageMap.getString("url")
+            if (url != null) {
+              loadMaskDrawable(view, url)
+            }
+          }
+          "linear-gradient", "radial-gradient" -> {
+            // Create gradient mask from shader (still uses Bitmap for gradients)
+            createGradientMask(view, maskImageMap)
+          }
+          else -> {
+            composite.mask = null
+          }
+        }
+      } else {
+        composite.mask = null
+      }
+      if (composite.mask != null && composite.mask is DraweeMaskDrawable) {
+        (composite.mask as DraweeMaskDrawable).onAttach()
+      }
+    }
+  }
+
+
+  /**
+   * Creates a gradient mask from a gradient definition. Uses a GradientMaskDrawable
+   * to draw the gradient directly without creating a Bitmap copy.
+   */
+  private fun createGradientMask(view: View, gradientMap: ReadableMap) {
+    val gradientLayer = BackgroundImageLayer.parse(gradientMap, view.context)
+    val composite = ensureCompositeBackgroundDrawable(view)
+    if (gradientLayer != null) {
+      // Create or get existing GradientMaskDrawable
+      val gradientDrawable = composite.mask as? GradientMaskDrawable
+        ?: GradientMaskDrawable().also {
+          composite.mask = it
+        }
+
+      // Generate mask when view has dimensions
+      view.post {
+        if (view.width > 0 && view.height > 0) {
+          val shader = gradientLayer.getShader(view.width.toFloat(), view.height.toFloat())
+          gradientDrawable.setShader(shader)
+          gradientDrawable.setBounds(0, 0, view.width, view.height)
+          composite.mask = gradientDrawable
+          println("Gradient mask created: ${view.width}x${view.height}")
+          view.setTag(R.id.mask_gradient_layer, gradientLayer)
+          view.invalidate()
+        } else {
+          // Store gradient for later when view gets dimensions
+          view.setTag(R.id.mask_gradient_layer, gradientLayer)
+        }
+      }
+    } else {
+      composite.mask = null
+    }
+  }
+
+  /**
+   * Loads an image mask using DraweeHolder. This avoids creating Bitmap copies and leverages
+   * Fresco's caching and lifecycle management. The DraweeDrawable will be used directly for masking.
+   */
+  private fun loadMaskDrawable(view: View, url: String) {
+    val imageSource = ImageSource(view.context, url)
+    val composite = ensureCompositeBackgroundDrawable(view)
+    val imageRequest: ImageRequest =
+      ReactNetworkImageRequest.fromBuilderWithHeaders(
+        ImageRequestBuilder.newBuilderWithSource(imageSource.uri),
+        null,
+        imageSource.cacheControl
+      )
+
+    // Create or get existing DraweeMaskDrawable
+    val maskDrawable = (composite.mask as DraweeMaskDrawable?)
+      ?: DraweeMaskDrawable(view.context.resources).also {
+        composite.mask = it
+      }
+
+    // Set the ImageRequest - DraweeHolder will handle loading, caching, and lifecycle
+    maskDrawable.setImageRequest(imageRequest)
+
+    // Update bounds if view already has dimensions
+    if (view.width > 0 && view.height > 0) {
+      maskDrawable.setBounds(0, 0, view.width, view.height)
+    }
+
+    composite.mask = maskDrawable
+    view.invalidate()
+  }
+
+  @JvmStatic
+  internal fun getMask(view: View): MaskDrawable? = ensureCompositeBackgroundDrawable(view).mask
 }
