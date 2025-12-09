@@ -341,62 +341,63 @@ public class ReactTextView extends AppCompatTextView implements ReactCompoundVie
   }
 
   @Override
+  public void draw(Canvas canvas) {
+    com.facebook.react.uimanager.drawable.MaskDrawable drawable =
+      BackgroundStyleApplicator.getMask(this);
+    int saveCount = -1;
+    if (drawable != null && getWidth() > 0 && getHeight() > 0) {
+      // Save layer for Porter-Duff compositing to mask everything (background + children)
+      RectF bounds = new RectF(0f, 0f, getWidth(), getHeight());
+      saveCount = canvas.saveLayer(bounds, null);
+    }
+
+    super.draw(canvas);
+
+    if (drawable != null && getWidth() > 0 && getHeight() > 0) {
+      // Now apply the mask Drawable to everything that was drawn
+      // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
+      Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+      maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+      maskPaint.setFilterBitmap(true);
+
+      // Draw the mask Drawable with Porter-Duff DST_IN mode
+      // This will mask everything drawn before
+      drawable.drawWithMaskMode(canvas, maskPaint);
+
+      // Restore layer (this applies the Porter-Duff compositing)
+      canvas.restoreToCount(saveCount);
+    }
+  }
+
+  @Override
   protected void onDraw(Canvas canvas) {
     try (SystraceSection s = new SystraceSection("ReactTextView.onDraw")) {
       Spannable spanned = getSpanned();
       if (mAdjustsFontSizeToFit && spanned != null && mShouldAdjustSpannableFontSize) {
         mShouldAdjustSpannableFontSize = false;
         TextLayoutManager.adjustSpannableFontToFit(
-            spanned,
-            getWidth(),
-            YogaMeasureMode.EXACTLY,
-            getHeight(),
-            YogaMeasureMode.EXACTLY,
-            mMinimumFontSize,
-            mNumberOfLines,
-            getIncludeFontPadding(),
-            getBreakStrategy(),
-            getHyphenationFrequency(),
-            // always passing ALIGN_NORMAL here should be fine, since this method doesn't depend on
-            // how exactly lines are aligned, just their width
-            Layout.Alignment.ALIGN_NORMAL,
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) ? -1 : getJustificationMode(),
-            getPaint());
+          spanned,
+          getWidth(),
+          YogaMeasureMode.EXACTLY,
+          getHeight(),
+          YogaMeasureMode.EXACTLY,
+          mMinimumFontSize,
+          mNumberOfLines,
+          getIncludeFontPadding(),
+          getBreakStrategy(),
+          getHyphenationFrequency(),
+          // always passing ALIGN_NORMAL here should be fine, since this method doesn't depend on
+          // how exactly lines are aligned, just their width
+          Layout.Alignment.ALIGN_NORMAL,
+          (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) ? -1 : getJustificationMode(),
+          getPaint());
         setText(spanned);
       }
 
-      com.facebook.react.uimanager.drawable.MaskDrawable drawable =
-          BackgroundStyleApplicator.getMask(this);
-      if (drawable != null && getWidth() > 0 && getHeight() > 0) {
-        // Save layer for Porter-Duff compositing to mask everything (background + children)
-        RectF bounds = new RectF(0f, 0f, getWidth(), getHeight());
-        int saveCount = canvas.saveLayer(bounds, null);
-
-        // Draw everything first: background (via super.onDraw)
-        if (mOverflow != Overflow.VISIBLE) {
-          BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
-        }
-        super.onDraw(canvas);
-
-        // Now apply the mask Drawable to everything that was drawn
-        // Use Porter-Duff DST_IN mode - the Drawable's alpha channel determines visibility
-        Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
-        maskPaint.setFilterBitmap(true);
-
-        // Draw the mask Drawable with Porter-Duff DST_IN mode
-        // This will mask everything drawn before
-        drawable.drawWithMaskMode(canvas, maskPaint);
-
-        // Restore layer (this applies the Porter-Duff compositing)
-        canvas.restoreToCount(saveCount);
-      } else {
-        // No mask, draw normally
-        if (mOverflow != Overflow.VISIBLE) {
-          BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
-        }
-        super.onDraw(canvas);
+      if (mOverflow != Overflow.VISIBLE) {
+        BackgroundStyleApplicator.clipToPaddingBox(this, canvas);
       }
+      super.onDraw(canvas);
     }
   }
 
