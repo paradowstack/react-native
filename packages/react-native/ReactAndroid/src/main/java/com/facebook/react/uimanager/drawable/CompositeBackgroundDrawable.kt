@@ -16,6 +16,9 @@ import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import com.facebook.react.common.annotations.UnstableReactNativeAPI
 import com.facebook.react.uimanager.PixelUtil.dpToPx
+import com.facebook.react.uimanager.style.BackgroundPosition
+import com.facebook.react.uimanager.style.BackgroundRepeat
+import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderInsets
 import com.facebook.react.uimanager.style.BorderRadiusStyle
 
@@ -60,8 +63,12 @@ internal class CompositeBackgroundDrawable(
     var borderRadius: BorderRadiusStyle? = null,
 
     // Mask
-    var mask: MaskDrawable? = null
-
+    var mask: MaskDrawable? = null,
+    
+    // Mask properties (stored when mask doesn't exist yet)
+    var maskSize: BackgroundSize? = null,
+    var maskPosition: BackgroundPosition? = null,
+    var maskRepeat: BackgroundRepeat? = null,
 ) :
     LayerDrawable(
         createLayersArray(
@@ -98,6 +105,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -114,6 +125,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -133,6 +148,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -149,6 +168,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -165,6 +188,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -181,6 +208,90 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
+    )
+  }
+
+  fun withNewMask(newMask: MaskDrawable?): CompositeBackgroundDrawable {
+    return CompositeBackgroundDrawable(
+        context,
+        originalBackground,
+        outerShadows,
+        background,
+        backgroundImage,
+        border,
+        feedbackUnderlay,
+        innerShadows,
+        outline,
+        borderInsets,
+        borderRadius,
+        newMask,
+        maskSize,
+        maskPosition,
+        maskRepeat
+    )
+  }
+
+  fun withMaskSize(newMaskSize: BackgroundSize?): CompositeBackgroundDrawable {
+    return CompositeBackgroundDrawable(
+        context,
+        originalBackground,
+        outerShadows,
+        background,
+        backgroundImage,
+        border,
+        feedbackUnderlay,
+        innerShadows,
+        outline,
+        borderInsets,
+        borderRadius,
+        mask,
+        newMaskSize,
+        maskPosition,
+        maskRepeat
+    )
+  }
+
+  fun withMaskPosition(newMaskPosition: BackgroundPosition?): CompositeBackgroundDrawable {
+    return CompositeBackgroundDrawable(
+        context,
+        originalBackground,
+        outerShadows,
+        background,
+        backgroundImage,
+        border,
+        feedbackUnderlay,
+        innerShadows,
+        outline,
+        borderInsets,
+        borderRadius,
+        mask,
+        maskSize,
+        newMaskPosition,
+        maskRepeat
+    )
+  }
+
+  fun withMaskRepeat(newMaskRepeat: BackgroundRepeat?): CompositeBackgroundDrawable {
+    return CompositeBackgroundDrawable(
+        context,
+        originalBackground,
+        outerShadows,
+        background,
+        backgroundImage,
+        border,
+        feedbackUnderlay,
+        innerShadows,
+        outline,
+        borderInsets,
+        borderRadius,
+        mask,
+        maskSize,
+        maskPosition,
+        newMaskRepeat
     )
   }
 

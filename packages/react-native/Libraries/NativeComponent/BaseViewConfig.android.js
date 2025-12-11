@@ -206,6 +206,15 @@ const validAttributesForNonEventProps = {
   maskImage: ReactNativeFeatureFlags.enableNativeCSSParsing()
     ? (true as const)
     : {process: require('../StyleSheet/processBackgroundImage').default},
+  maskSize: {
+    process: require('../StyleSheet/processBackgroundSize').default,
+  },
+  maskPosition: {
+    process: require('../StyleSheet/processBackgroundPosition').default,
+  },
+  maskRepeat: {
+    process: require('../StyleSheet/processBackgroundRepeat').default,
+  },
   boxShadow: ReactNativeFeatureFlags.enableNativeCSSParsing()
     ? (true as const)
     : {process: require('../StyleSheet/processBoxShadow').default},

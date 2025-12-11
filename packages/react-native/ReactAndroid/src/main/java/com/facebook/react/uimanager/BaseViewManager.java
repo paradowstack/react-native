@@ -865,6 +865,21 @@ public abstract class BaseViewManager<T extends View, C extends LayoutShadowNode
     BackgroundStyleApplicator.setMaskImage(view, images);
   }
 
+  @ReactProp(name = ViewProps.MASK_SIZE, customType = "BackgroundSize")
+  public void setMaskSize(T view, @Nullable ReadableArray sizes) {
+    BackgroundStyleApplicator.setMaskSize(view, sizes);
+  }
+
+  @ReactProp(name = ViewProps.MASK_POSITION, customType = "BackgroundPosition")
+  public void setMaskPosition(T view, @Nullable ReadableArray positions) {
+    BackgroundStyleApplicator.setMaskPosition(view, positions);
+  }
+
+  @ReactProp(name = ViewProps.MASK_REPEAT, customType = "BackgroundRepeat")
+  public void setMaskRepeat(T view, @Nullable ReadableArray repeats) {
+    BackgroundStyleApplicator.setMaskRepeat(view, repeats);
+  }
+
   private void logUnsupportedPropertyWarning(String propName) {
     FLog.w(ReactConstants.TAG, "%s doesn't support property '%s'", getName(), propName);
   }

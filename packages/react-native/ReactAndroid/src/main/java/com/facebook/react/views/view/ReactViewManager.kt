@@ -10,16 +10,6 @@ package com.facebook.react.views.view
 import android.graphics.Rect
 import android.view.View
 import com.facebook.common.logging.FLog
-import com.facebook.common.references.CloseableReference
-import com.facebook.datasource.BaseDataSubscriber
-import com.facebook.datasource.DataSource
-import com.facebook.drawee.backends.pipeline.Fresco
-import com.facebook.imagepipeline.core.ImagePipeline
-import com.facebook.imagepipeline.image.CloseableBitmap
-import com.facebook.imagepipeline.image.CloseableImage
-import com.facebook.imagepipeline.request.ImageRequest
-import com.facebook.imagepipeline.request.ImageRequestBuilder
-import com.facebook.react.R
 import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.DynamicFromObject
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException
@@ -30,7 +20,6 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.common.ReactConstants
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.module.annotations.ReactModule
-import com.facebook.react.modules.fresco.ReactNetworkImageRequest
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
@@ -52,9 +41,6 @@ import com.facebook.react.uimanager.style.BackgroundSize
 import com.facebook.react.uimanager.style.BorderRadiusProp
 import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
-import com.facebook.react.uimanager.drawable.DraweeMaskDrawable
-import com.facebook.react.uimanager.drawable.GradientMaskDrawable
-import com.facebook.react.views.imagehelper.ImageSource
 
 /** View manager for AndroidViews (plain React Views). */
 @ReactModule(name = ReactViewManager.REACT_CLASS)

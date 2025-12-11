@@ -9,11 +9,17 @@ package com.facebook.react.uimanager.drawable
 
 import android.graphics.Canvas
 import android.graphics.ColorFilter
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
+import com.facebook.react.uimanager.LengthPercentageType
+import com.facebook.react.uimanager.PixelUtil.dpToPx
 import com.facebook.react.uimanager.style.BackgroundImageLayer
+import com.facebook.react.uimanager.style.BackgroundPosition
+import com.facebook.react.uimanager.style.BackgroundRepeat
+import com.facebook.react.uimanager.style.BackgroundSize
 
 /**
  * A Drawable that draws a gradient shader for masking.
@@ -25,7 +31,7 @@ import com.facebook.react.uimanager.style.BackgroundImageLayer
 internal class GradientMaskDrawable(
     shader: Shader? = null,
     gradientLayer: BackgroundImageLayer? = null,
-) : Drawable(), MaskDrawable {
+) : Drawable() {
 
     private var shader: Shader? = shader
         set(value) {
@@ -48,6 +54,125 @@ internal class GradientMaskDrawable(
         this@GradientMaskDrawable.shader?.let { this.shader = it }
     }
 
+    private val shaderMatrix = Matrix()
+
+    var size: BackgroundSize? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                updateShader()
+                invalidateSelf()
+            }
+        }
+
+    var position: BackgroundPosition? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                updateShader()
+                invalidateSelf()
+            }
+        }
+
+    var repeat: BackgroundRepeat? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                updateShader()
+                invalidateSelf()
+            }
+        }
+
+    private fun updateShader() {
+        if (bounds.isEmpty) return
+        val width = bounds.width().toFloat()
+        val height = bounds.height().toFloat()
+        
+        gradientLayer?.takeIf { width > 0 && height > 0 }?.let { layer ->
+            val baseShader = layer.getShader(width, height)
+            
+            // Apply size/position/repeat transforms via matrix
+            shaderMatrix.reset()
+            
+            // Calculate effective size (gradients use container size by default)
+            val (finalWidth, finalHeight) = calculateGradientSize(width, height)
+            
+            // Apply size scaling
+            val scaleX = finalWidth / width
+            val scaleY = finalHeight / height
+            shaderMatrix.setScale(scaleX, scaleY)
+            
+            // Apply position offset (for no-repeat)
+            val isNoRepeat = repeat?.x == com.facebook.react.uimanager.style.BackgroundRepeatKeyword.NoRepeat &&
+                             repeat?.y == com.facebook.react.uimanager.style.BackgroundRepeatKeyword.NoRepeat
+            if (isNoRepeat) {
+                val (translateX, translateY) = calculateGradientPosition(width, height, finalWidth, finalHeight)
+                shaderMatrix.postTranslate(translateX, translateY)
+            }
+            
+            // Apply matrix to shader
+            baseShader?.setLocalMatrix(shaderMatrix)
+            shader = baseShader
+        }
+    }
+
+    private fun calculateGradientSize(
+        containerWidth: Float,
+        containerHeight: Float
+    ): Pair<Float, Float> {
+        var finalWidth = containerWidth
+        var finalHeight = containerHeight
+
+        if (size is BackgroundSize.LengthPercentageAuto) {
+            val lengthPercentage = (size as BackgroundSize.LengthPercentageAuto).lengthPercentage
+            val w = lengthPercentage.x
+            val h = lengthPercentage.y
+            if (w != null && h != null) {
+                finalWidth = positionToPixels(w, containerWidth)
+                finalHeight = positionToPixels(h, containerHeight)
+            } else if (w != null) {
+                finalWidth = positionToPixels(w, containerWidth)
+                finalHeight = containerHeight
+            } else if (h != null) {
+                finalHeight = positionToPixels(h, containerHeight)
+                finalWidth = containerWidth
+            }
+        }
+
+        return finalWidth to finalHeight
+    }
+
+    private fun calculateGradientPosition(
+        containerWidth: Float,
+        containerHeight: Float,
+        gradientWidth: Float,
+        gradientHeight: Float
+    ): Pair<Float, Float> {
+        val availableSpaceX = containerWidth - gradientWidth
+        val availableSpaceY = containerHeight - gradientHeight
+
+        val translateX = when {
+            position?.left != null -> positionToPixels(position!!.left!!, availableSpaceX)
+            position?.right != null -> availableSpaceX - positionToPixels(position!!.right!!, availableSpaceX)
+            else -> 0.0f
+        }
+
+        val translateY = when {
+            position?.top != null -> positionToPixels(position!!.top!!, availableSpaceY)
+            position?.bottom != null -> availableSpaceY - positionToPixels(position!!.bottom!!, availableSpaceY)
+            else -> 0.0f
+        }
+
+        return translateX to translateY
+    }
+
+    private fun positionToPixels(lengthPercentage: com.facebook.react.uimanager.LengthPercentage, availableSpace: Float): Float =
+        if (lengthPercentage.type == LengthPercentageType.PERCENT) {
+            lengthPercentage.resolve(availableSpace)
+        } else {
+            lengthPercentage.resolve(availableSpace).dpToPx()
+        }
+
     override fun draw(canvas: Canvas) {
         if (paint.shader == null || bounds.isEmpty) return
 
@@ -68,7 +193,7 @@ internal class GradientMaskDrawable(
      * a nested saveLayer with Porter-Duff Paint. When we restore this inner layer,
      * it composites with the outer layer using Porter-Duff DST_IN mode.
      */
-    override fun drawWithMaskMode(canvas: Canvas, maskPaint: Paint) {
+    fun drawWithMaskMode(canvas: Canvas, maskPaint: Paint) {
         if (paint.shader == null || bounds.isEmpty) return
 
         // Create a nested saveLayer with Porter-Duff DST_IN mode
@@ -96,18 +221,13 @@ internal class GradientMaskDrawable(
     }
 
     override fun setBounds(left: Int, top: Int, right: Int, bottom: Int) {
-        val width = right - left
-        val height = bottom - top
-
-        gradientLayer?.takeIf { width > 0 && height > 0 }?.let { layer ->
-            shader = layer.getShader(width.toFloat(), height.toFloat())
-            super.setBounds(0, 0, width, height)
-        }
+        super.setBounds(left, top, right, bottom)
+        updateShader()
     }
 
-    override fun onAttach() = Unit
+    fun onAttach() = Unit
 
-    override fun onDetach() = Unit
+    fun onDetach() = Unit
 
     override fun setAlpha(alpha: Int) {
         paint.alpha = alpha
@@ -121,5 +241,8 @@ internal class GradientMaskDrawable(
 
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+
+  override fun getIntrinsicWidth(): Int  = -1
+  override fun getIntrinsicHeight(): Int  = -1
 }
 
