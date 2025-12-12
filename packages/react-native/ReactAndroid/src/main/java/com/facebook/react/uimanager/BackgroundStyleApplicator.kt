@@ -820,27 +820,42 @@ public object BackgroundStyleApplicator {
       } else {
         view.setLayerType(View.LAYER_TYPE_NONE, null)
       }
-
-//      composite.mask?.onDetach()
       
-      // Create new mask from array
-      val newMask = MaskDrawable.fromMaskImageArray(maskImage, view.context, composite.mask)
-
-      // Apply stored size/position/repeat if they were set before mask was created
-      if (newMask != null) {
-        composite.maskSize?.let { newMask.setSize(it) }
-        composite.maskPosition?.let { newMask.setPosition(it) }
-        composite.maskRepeat?.let { newMask.setRepeat(it) }
+      // Create new masks from array
+      val newMasks = if (maskImage != null && maskImage.size() > 0) {
+        val masks = mutableListOf<MaskDrawable>()
+        for (i in 0 until maskImage.size()) {
+          val maskImageMap = maskImage.getMap(i)
+          val existingMask = composite.masks.getOrNull(i)
+          val newMask = MaskDrawable.fromMaskImageArray(
+              com.facebook.react.bridge.JavaOnlyArray.of(maskImageMap),
+              view.context,
+              existingMask
+          )
+          if (newMask != null) {
+            masks.add(newMask)
+          }
+        }
+        masks
+      } else {
+        emptyList()
       }
 
-      // Update composite with new mask (preserves maskSize, maskPosition, maskRepeat)
-      val updatedComposite = composite.withNewMask(newMask)
+      // Apply stored size/position/repeat if they were set before masks were created
+      newMasks.forEachIndexed { index, mask ->
+        composite.maskSizes.getOrNull(index)?.let { mask.setSize(it) }
+        composite.maskPositions.getOrNull(index)?.let { mask.setPosition(it) }
+        composite.maskRepeats.getOrNull(index)?.let { mask.setRepeat(it) }
+      }
+
+      // Update composite with new masks (preserves maskSizes, maskPositions, maskRepeats)
+      val updatedComposite = composite.withNewMasks(newMasks)
       view.background = updatedComposite
-      
-//      updatedComposite.mask?.onAttach()
 
       if (view.width > 0 && view.height > 0) {
-        updatedComposite.mask?.drawable?.setBounds(0, 0, view.width, view.height)
+        updatedComposite.masks.forEach { mask ->
+          mask.drawable.setBounds(0, 0, view.width, view.height)
+        }
       }
     }
   }
@@ -849,21 +864,28 @@ public object BackgroundStyleApplicator {
   public fun setMaskSize(view: View, sizes: ReadableArray?): Unit {
     val composite = ensureCompositeBackgroundDrawable(view)
     if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
-      val parsedSize = if (sizes != null && sizes.size() > 0) {
-        BackgroundSize.parse(sizes.getDynamic(0))
+      val parsedSizes = if (sizes != null && sizes.size() > 0) {
+        val sizeList = mutableListOf<BackgroundSize?>()
+        for (i in 0 until sizes.size()) {
+          val parsedSize = BackgroundSize.parse(sizes.getDynamic(i))
+          sizeList.add(parsedSize)
+        }
+        sizeList
       } else {
-        null
+        emptyList()
       }
       
-      // Store in composite for later application (when mask is created)
-      val updatedComposite = composite.withMaskSize(parsedSize)
+      // Store in composite for later application (when masks are created)
+      val updatedComposite = composite.withMaskSizes(parsedSizes)
       view.background = updatedComposite
       
-      // Apply to existing mask if present
-      updatedComposite.mask?.setSize(parsedSize)
+      // Apply to existing masks if present
+      updatedComposite.masks.forEachIndexed { index, mask ->
+        parsedSizes.getOrNull(index)?.let { mask.setSize(it) }
+      }
       
-      // Update bounds if view has dimensions and size is set
-      if (view.width > 0 && view.height > 0 && parsedSize != null) {
+      // Update bounds if view has dimensions and sizes are set
+      if (view.width > 0 && view.height > 0 && parsedSizes.isNotEmpty()) {
         updateMaskBounds(view, view.width, view.height)
       }
     }
@@ -873,20 +895,27 @@ public object BackgroundStyleApplicator {
   public fun setMaskPosition(view: View, positions: ReadableArray?): Unit {
     val composite = ensureCompositeBackgroundDrawable(view)
     if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
-      val parsedPosition = if (positions != null && positions.size() > 0) {
-        val positionMap = positions.getMap(0)
-        BackgroundPosition.parse(positionMap)
+      val parsedPositions = if (positions != null && positions.size() > 0) {
+        val positionList = mutableListOf<BackgroundPosition?>()
+        for (i in 0 until positions.size()) {
+          val positionMap = positions.getMap(i)
+          val parsedPosition = BackgroundPosition.parse(positionMap)
+          positionList.add(parsedPosition)
+        }
+        positionList
       } else {
-        null
+        emptyList()
       }
       
-      // Store in composite for later application (when mask is created)
-      val updatedComposite = composite.withMaskPosition(parsedPosition)
+      // Store in composite for later application (when masks are created)
+      val updatedComposite = composite.withMaskPositions(parsedPositions)
       view.background = updatedComposite
       
-      // Apply to existing mask if present
-      updatedComposite.mask?.setPosition(parsedPosition)
-      updatedComposite.mask?.drawable?.invalidateSelf()
+      // Apply to existing masks if present
+      updatedComposite.masks.forEachIndexed { index, mask ->
+        parsedPositions.getOrNull(index)?.let { mask.setPosition(it) }
+        mask.drawable.invalidateSelf()
+      }
     }
   }
 
@@ -894,31 +923,38 @@ public object BackgroundStyleApplicator {
   public fun setMaskRepeat(view: View, repeats: ReadableArray?): Unit {
     val composite = ensureCompositeBackgroundDrawable(view)
     if (ViewUtil.getUIManagerType(view) == UIManagerType.FABRIC) {
-      val parsedRepeat = if (repeats != null && repeats.size() > 0) {
-        val repeatMap = repeats.getMap(0)
-        BackgroundRepeat.parse(repeatMap)
+      val parsedRepeats = if (repeats != null && repeats.size() > 0) {
+        val repeatList = mutableListOf<BackgroundRepeat?>()
+        for (i in 0 until repeats.size()) {
+          val repeatMap = repeats.getMap(i)
+          val parsedRepeat = BackgroundRepeat.parse(repeatMap)
+          repeatList.add(parsedRepeat)
+        }
+        repeatList
       } else {
-        null
+        emptyList()
       }
       
-      // Store in composite for later application (when mask is created)
-      val updatedComposite = composite.withMaskRepeat(parsedRepeat)
+      // Store in composite for later application (when masks are created)
+      val updatedComposite = composite.withMaskRepeats(parsedRepeats)
       view.background = updatedComposite
       
-      // Apply to existing mask if present
-      updatedComposite.mask?.setRepeat(parsedRepeat)
-      updatedComposite.mask?.drawable?.invalidateSelf()
+      // Apply to existing masks if present
+      updatedComposite.masks.forEachIndexed { index, mask ->
+        parsedRepeats.getOrNull(index)?.let { mask.setRepeat(it) }
+        mask.drawable.invalidateSelf()
+      }
     }
   }
 
   @JvmStatic
-  public fun getMask(view: View): Drawable? = ensureCompositeBackgroundDrawable(view).mask?.drawable
+  public fun getMask(view: View): Drawable? = ensureCompositeBackgroundDrawable(view).masks.firstOrNull()?.drawable
 
   @JvmStatic
   internal fun getMaskSize(view: View): BackgroundSize? {
     val composite = ensureCompositeBackgroundDrawable(view)
-    // Return from mask if it exists, otherwise return stored value
-    return composite.mask?.size ?: composite.maskSize
+    // Return from first mask if it exists, otherwise return first stored value
+    return composite.masks.firstOrNull()?.size ?: composite.maskSizes.firstOrNull()
   }
 
   /**
@@ -943,22 +979,41 @@ public object BackgroundStyleApplicator {
    */
   @JvmStatic
   public fun drawWithMask(canvas: Canvas, view: View, drawContent: () -> Unit) {
-    val mask = ensureCompositeBackgroundDrawable(view).mask
-    val saveCount: Int? =
-        if (mask != null && view.width > 0 && view.height > 0) {
-          val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
-          canvas.saveLayer(bounds, null)
-        } else {
-          null
-        }
-
-    drawContent()
-
-    if (mask != null && view.width > 0 && view.height > 0 && saveCount != null) {
-      val maskPaint = createMaskPaint()
-      mask.drawWithMaskMode(canvas, maskPaint)
-      canvas.restoreToCount(saveCount)
+    val masks = ensureCompositeBackgroundDrawable(view).masks
+    if (masks.isEmpty() || view.width <= 0 || view.height <= 0) {
+      drawContent()
+      return
     }
+
+    val bounds = RectF(0f, 0f, view.width.toFloat(), view.height.toFloat())
+    
+    // Save the canvas state
+    val saveCount = canvas.saveLayer(bounds, null)
+    
+    // Draw the content
+    drawContent()
+    
+    // Now apply the combined mask using DST_IN mode
+    // All masks will be drawn with DST_IN, but we need them to combine as a union
+    // The trick is to use SRC_OVER for combining masks, then DST_IN for the final composite
+    
+    // Create a separate layer for combining all masks
+    val maskPaint = createMaskPaint()
+    
+    // For union of masks, we draw each mask normally (SRC_OVER) in a separate layer,
+    // then apply that layer with DST_IN
+    val maskLayerCount = canvas.saveLayer(bounds, maskPaint)
+    
+    // Draw all masks - they combine with SRC_OVER (union)
+    masks.forEach { mask ->
+      mask.drawable.draw(canvas)
+    }
+    
+    // Restore mask layer - this applies DST_IN to the content with the combined masks
+    canvas.restoreToCount(maskLayerCount)
+    
+    // Restore the main layer
+    canvas.restoreToCount(saveCount)
   }
 
   /**
@@ -979,7 +1034,9 @@ public object BackgroundStyleApplicator {
   @JvmStatic
   public fun updateMaskBounds(view: View, w: Int, h: Int) {
     val composite = ensureCompositeBackgroundDrawable(view)
-    composite.mask?.drawable?.setBounds(0, 0, w, h)
+    composite.masks.forEach { mask ->
+      mask.drawable.setBounds(0, 0, w, h)
+    }
   }
 
   /**
@@ -989,7 +1046,9 @@ public object BackgroundStyleApplicator {
    */
   @JvmStatic
   public fun attachMask(view: View) {
-    ensureCompositeBackgroundDrawable(view).mask?.onAttach(view)
+    ensureCompositeBackgroundDrawable(view).masks.forEach { mask ->
+      mask.onAttach(view)
+    }
   }
 
   /**
@@ -999,6 +1058,8 @@ public object BackgroundStyleApplicator {
    */
   @JvmStatic
   public fun detachMask(view: View) {
-    ensureCompositeBackgroundDrawable(view).mask?.onDetach(view)
+    ensureCompositeBackgroundDrawable(view).masks.forEach { mask ->
+      mask.onDetach(view)
+    }
   }
 }

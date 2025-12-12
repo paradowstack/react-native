@@ -16,17 +16,15 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Rect
-import android.graphics.Shader
 import android.graphics.Shader.TileMode
-import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.view.View
 import com.facebook.common.references.CloseableReference
 import com.facebook.drawee.backends.pipeline.Fresco
+import com.facebook.drawee.drawable.ScalingUtils
 import com.facebook.drawee.generic.GenericDraweeHierarchy
 import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder
 import com.facebook.drawee.view.DraweeHolder
-import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.bitmaps.PlatformBitmapFactory
 import com.facebook.imagepipeline.request.BasePostprocessor
 import com.facebook.imagepipeline.request.ImageRequest
@@ -53,7 +51,8 @@ internal class ImageMaskDrawable(
 ) : Drawable(), Drawable.Callback {
 
     private val tileProcessor: TilePostprocessor = TilePostprocessor()
-    
+    private var scaleType: PositioningScaleType = PositioningScaleType()
+
     private var imageUrl: String? = null
     private var isDirty: Boolean = false
 
@@ -98,7 +97,7 @@ internal class ImageMaskDrawable(
     private val draweeHolder: DraweeHolder<GenericDraweeHierarchy> =
         DraweeHolder(GenericDraweeHierarchyBuilder.newInstance(context.resources)
           .setFadeDuration(0)
-          .setActualImageScaleType(::createTransformMatrix)
+          .setActualImageScaleType(scaleType)
           .build()).apply { this.topLevelDrawable?.callback = this@ImageMaskDrawable }
     
     /**
@@ -107,44 +106,6 @@ internal class ImageMaskDrawable(
     private fun needsTiling(): Boolean {
         val r = repeat ?: return true // Default is repeat
         return r.x != BackgroundRepeatKeyword.NoRepeat || r.y != BackgroundRepeatKeyword.NoRepeat
-    }
-
-    private fun createTransformMatrix(
-        out: Matrix,
-        parent: Rect,
-        childW: Int,
-        childH: Int,
-        focusX: Float,
-        focusY: Float
-    ): Matrix {
-        val parentW = parent.width().toFloat()
-        val parentH = parent.height().toFloat()
-        
-        if (parentW <= 0 || parentH <= 0 || childW <= 0 || childH <= 0) {
-            out.reset()
-            return out
-        }
-
-        val repeat = this.repeat ?: BackgroundRepeat(BackgroundRepeatKeyword.Repeat, BackgroundRepeatKeyword.Repeat)
-        val isNoRepeat = repeat.x == BackgroundRepeatKeyword.NoRepeat && repeat.y == BackgroundRepeatKeyword.NoRepeat
-        
-        out.reset()
-        
-        if (isNoRepeat) {
-            // For no-repeat, this transform handles sizing and positioning
-            val (finalWidth, finalHeight) = calculateImageSize(parentW, parentH, childW.toFloat(), childH.toFloat())
-            
-            val scaleX = finalWidth / childW
-            val scaleY = finalHeight / childH
-            out.setScale(scaleX, scaleY)
-            
-            val (translateX, translateY) = calculatePosition(parentW, parentH, finalWidth, finalHeight)
-            out.postTranslate(translateX, translateY)
-        }
-        // For repeat cases, TilePostprocessor handles sizing and tiling,
-        // so we use identity matrix (no transform)
-        
-        return out
     }
 
     private fun calculateImageSize(
@@ -248,7 +209,7 @@ internal class ImageMaskDrawable(
         // For tiling modes, we MUST wait for valid bounds
         // because TilePostprocessor needs the container dimensions
         val imageSource = ImageSource(context, url)
-        
+
         val imageRequestBuilder = ImageRequestBuilder.newBuilderWithSource(imageSource.uri)
         
         // Add TilePostprocessor when tiling is needed (bounds are guaranteed valid here)
@@ -375,7 +336,6 @@ internal class ImageMaskDrawable(
     override fun getOpacity(): Int = draweeHolder.topLevelDrawable?.opacity ?: PixelFormat.TRANSLUCENT
 
   override fun invalidateDrawable(who: Drawable) {
-    val x = 3
     view?.invalidate()
   }
 
@@ -384,14 +344,45 @@ internal class ImageMaskDrawable(
     what: Runnable,
     `when`: Long
   ) {
-    val x = 3
   }
 
   override fun unscheduleDrawable(
     who: Drawable,
     what: Runnable
   ) {
-    val x = 3
+  }
+
+  internal inner class PositioningScaleType : ScalingUtils.ScaleType, ScalingUtils.StatefulScaleType {
+    override fun getTransform(
+      outTransform: Matrix,
+      parentBounds: Rect,
+      childWidth: Int,
+      childHeight: Int,
+      focusX: Float,
+      focusY: Float
+    ): Matrix {
+      val parentWidth = parentBounds.width().toFloat()
+      val parentHeight = parentBounds.height().toFloat()
+
+      outTransform.reset()
+      if (parentWidth <= 0 || parentHeight <= 0 || childWidth <= 0 || childHeight <= 0 || needsTiling()) {
+        return outTransform
+      }
+
+      val (finalWidth, finalHeight) = calculateImageSize(parentWidth, parentHeight, childWidth.toFloat(), childHeight.toFloat())
+      val scaleX = finalWidth / childWidth
+      val scaleY = finalHeight / childHeight
+      outTransform.setScale(scaleX, scaleY)
+
+      val (translateX, translateY) = calculatePosition(parentWidth, parentHeight, finalWidth, finalHeight)
+      outTransform.postTranslate(translateX, translateY)
+
+      return outTransform
+    }
+
+    override fun getState(): Any {
+      return listOf(this@ImageMaskDrawable.size, this@ImageMaskDrawable.position, this@ImageMaskDrawable.repeat)
+    }
   }
 
   internal inner class TilePostprocessor : BasePostprocessor() {
