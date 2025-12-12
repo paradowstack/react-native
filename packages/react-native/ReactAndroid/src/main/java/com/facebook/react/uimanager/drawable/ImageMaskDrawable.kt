@@ -7,6 +7,7 @@
 
 package com.facebook.react.uimanager.drawable
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
@@ -17,23 +18,28 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.Shader.TileMode
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
-import android.widget.ImageView
+import android.view.View
 import com.facebook.common.references.CloseableReference
-import com.facebook.drawee.drawable.ScalingUtils
+import com.facebook.drawee.backends.pipeline.Fresco
 import com.facebook.drawee.generic.GenericDraweeHierarchy
 import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder
 import com.facebook.drawee.view.DraweeHolder
+import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.bitmaps.PlatformBitmapFactory
 import com.facebook.imagepipeline.request.BasePostprocessor
+import com.facebook.imagepipeline.request.ImageRequest
+import com.facebook.imagepipeline.request.ImageRequestBuilder
+import com.facebook.react.modules.fresco.ReactNetworkImageRequest
 import com.facebook.react.uimanager.LengthPercentageType
 import com.facebook.react.uimanager.PixelUtil.dpToPx
-import com.facebook.react.uimanager.PixelUtil.pxToDp
 import com.facebook.react.uimanager.style.BackgroundPosition
 import com.facebook.react.uimanager.style.BackgroundRepeat
 import com.facebook.react.uimanager.style.BackgroundRepeatKeyword
 import com.facebook.react.uimanager.style.BackgroundSize
-import com.facebook.react.views.image.ReactImageView
+import com.facebook.react.views.image.MultiPostprocessor
+import com.facebook.react.views.imagehelper.ImageSource
 
 /**
  * A Drawable that uses DraweeHolder to load and display an image mask.
@@ -43,15 +49,21 @@ import com.facebook.react.views.image.ReactImageView
  * determines what parts of the view are visible.
  */
 internal class ImageMaskDrawable(
-    resources: android.content.res.Resources,
-) : Drawable() {
+    private val context: Context,
+) : Drawable(), Drawable.Callback {
 
-    internal val tileProcessor: TilePostprocessor = TilePostprocessor()
+    private val tileProcessor: TilePostprocessor = TilePostprocessor()
+    
+    private var imageUrl: String? = null
+    private var isDirty: Boolean = false
 
     var size: BackgroundSize? = null
         set(value) {
             if (field != value) {
                 field = value
+                if (needsTiling()) {
+                    isDirty = true
+                }
                 updateTransform()
                 invalidateSelf()
             }
@@ -61,6 +73,9 @@ internal class ImageMaskDrawable(
         set(value) {
             if (field != value) {
                 field = value
+                if (needsTiling()) {
+                    isDirty = true
+                }
                 updateTransform()
                 invalidateSelf()
             }
@@ -69,17 +84,30 @@ internal class ImageMaskDrawable(
     var repeat: BackgroundRepeat? = null
         set(value) {
             if (field != value) {
+                val wasTiling = needsTiling()
                 field = value
+                val nowTiling = needsTiling()
+                if (wasTiling || nowTiling) {
+                    isDirty = true
+                }
                 updateTransform()
                 invalidateSelf()
             }
         }
 
     private val draweeHolder: DraweeHolder<GenericDraweeHierarchy> =
-        DraweeHolder(GenericDraweeHierarchyBuilder.newInstance(resources)
+        DraweeHolder(GenericDraweeHierarchyBuilder.newInstance(context.resources)
           .setFadeDuration(0)
           .setActualImageScaleType(::createTransformMatrix)
-          .build())
+          .build()).apply { this.topLevelDrawable?.callback = this@ImageMaskDrawable }
+    
+    /**
+     * Returns true if tiling is needed (any repeat mode other than no-repeat on both axes).
+     */
+    private fun needsTiling(): Boolean {
+        val r = repeat ?: return true // Default is repeat
+        return r.x != BackgroundRepeatKeyword.NoRepeat || r.y != BackgroundRepeatKeyword.NoRepeat
+    }
 
     private fun createTransformMatrix(
         out: Matrix,
@@ -182,39 +210,80 @@ internal class ImageMaskDrawable(
         // Force update by invalidating the hierarchy
         draweeHolder.topLevelDrawable?.invalidateSelf()
         invalidateSelf()
-
-        // For repeat cases, need to reload image to trigger tileProcessor reprocessing with new bounds
-        // For no-repeat cases, the transformer will be called automatically by Drawee with new bounds
-        val controller = draweeHolder.controller
-        if (controller != null) {
-            val isRepeat = repeat?.x != BackgroundRepeatKeyword.NoRepeat || repeat?.y != BackgroundRepeatKeyword.NoRepeat
-            if (isRepeat) {
-                // Reload to trigger tileProcessor with updated bounds
-//                draweeHolder.controller = controller
-            } else {
-                // For no-repeat, just invalidate - transformer will be called with new bounds automatically
-//                invalidateSelf()
-            }
-        }
+        
+        // For repeat cases, maybeUpdateView will handle reloading with new bounds
+        // For no-repeat cases, the transformer will be called automatically by Drawee
+        maybeUpdateView()
     }
-
+    
     /**
-     * Sets the ImageRequest to load as the mask.
-     * The DraweeHolder will handle loading, caching, and lifecycle management.
+     * Sets the image URL to load as the mask.
+     * The image will be loaded when bounds are available (for tiling) or immediately (for no-repeat).
      */
-    fun setImageRequest(imageRequest: com.facebook.imagepipeline.request.ImageRequest?) {
-        draweeHolder.controller = imageRequest?.let {
-            com.facebook.drawee.backends.pipeline.Fresco.newDraweeControllerBuilder()
-                .setImageRequest(it)
-                .setAutoPlayAnimations(true)
-                .setOldController(draweeHolder.controller)
-                .build()
+    fun setImageUrl(url: String) {
+        if (imageUrl != url) {
+            imageUrl = url
+            isDirty = true
+            maybeUpdateView()
         }
     }
+    
+    /**
+     * Rebuilds the image request if needed.
+     * For tiling modes, waits until valid bounds are available because TilePostprocessor
+     * needs the container dimensions. For no-repeat mode, loads immediately.
+     */
+    private fun maybeUpdateView() {
+        if (!isDirty) {
+            return
+        }
 
-    fun onAttach() = draweeHolder.onAttach()
+        val hasBounds = bounds.width() > 0 && bounds.height() > 0
+        if (!hasBounds) {
+          return
+        }
 
-    fun onDetach() = draweeHolder.onDetach()
+        val url = imageUrl ?: return
+        
+        // For tiling modes, we MUST wait for valid bounds
+        // because TilePostprocessor needs the container dimensions
+        val imageSource = ImageSource(context, url)
+        
+        val imageRequestBuilder = ImageRequestBuilder.newBuilderWithSource(imageSource.uri)
+        
+        // Add TilePostprocessor when tiling is needed (bounds are guaranteed valid here)
+        if (needsTiling()) {
+            val postprocessor = MultiPostprocessor.from(listOf(tileProcessor))
+            imageRequestBuilder.setPostprocessor(postprocessor)
+        }
+        
+        val imageRequest: ImageRequest = ReactNetworkImageRequest.fromBuilderWithHeaders(
+            imageRequestBuilder,
+            null,
+            imageSource.cacheControl
+        )
+
+        draweeHolder.controller = Fresco.newDraweeControllerBuilder()
+            .setImageRequest(imageRequest)
+            .setAutoPlayAnimations(true)
+            .setOldController(draweeHolder.controller)
+            .build()
+
+        isDirty = false
+    }
+    private var view: View? = null
+
+    fun onAttach(view: View) {
+      this.view = view
+      draweeHolder.onAttach()
+    }
+
+    fun onDetach(view: View) {
+      draweeHolder.onDetach()
+      if (this.view == view) {
+        this.view = null
+      }
+    }
 
     override fun draw(canvas: Canvas) {
         val drawable = draweeHolder.topLevelDrawable ?: return
@@ -246,6 +315,8 @@ internal class ImageMaskDrawable(
             drawable.bounds = bounds
         }
 
+        val b = draweeHolder.isAttached
+        val c = draweeHolder.isControllerValid
         // Create a nested saveLayer with Porter-Duff DST_IN mode
         // When we restore this layer, it will composite with the outer layer (which contains
         // the background + children) using DST_IN mode, effectively masking the content
@@ -265,13 +336,27 @@ internal class ImageMaskDrawable(
     }
 
     override fun setBounds(left: Int, top: Int, right: Int, bottom: Int) {
+        val oldWidth = bounds.width()
+        val oldHeight = bounds.height()
         val changed = bounds.left != left || bounds.top != top || 
                       bounds.right != right || bounds.bottom != bottom
         super.setBounds(left, top, right, bottom)
         draweeHolder.topLevelDrawable?.setBounds(left, top, right, bottom)
         
-        // Update transforms when bounds change
         if (changed) {
+            val width = right - left
+            val height = bottom - top
+            
+            // Mark dirty when:
+            // 1. We're transitioning from invalid to valid bounds (first time we can load with tiling)
+            // 2. OR dimensions changed and we need tiling (need to re-tile with new dimensions)
+            val hadValidBounds = oldWidth > 0 && oldHeight > 0
+            val hasValidBounds = width > 0 && height > 0
+            val becameValid = !hadValidBounds && hasValidBounds
+            
+            if (needsTiling() && (becameValid || (hasValidBounds && (width != oldWidth || height != oldHeight)))) {
+                isDirty = true
+            }
             updateTransform()
         }
     }
@@ -289,13 +374,33 @@ internal class ImageMaskDrawable(
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = draweeHolder.topLevelDrawable?.opacity ?: PixelFormat.TRANSLUCENT
 
+  override fun invalidateDrawable(who: Drawable) {
+    val x = 3
+    view?.invalidate()
+  }
+
+  override fun scheduleDrawable(
+    who: Drawable,
+    what: Runnable,
+    `when`: Long
+  ) {
+    val x = 3
+  }
+
+  override fun unscheduleDrawable(
+    who: Drawable,
+    what: Runnable
+  ) {
+    val x = 3
+  }
+
   internal inner class TilePostprocessor : BasePostprocessor() {
     override fun process(
       source: Bitmap,
       bitmapFactory: PlatformBitmapFactory,
     ): CloseableReference<Bitmap> {
-      val containerWidth = 1050
-      val containerHeight = 1050
+      val containerWidth = bounds.width()
+      val containerHeight = bounds.height()
 
       // Guard against invalid dimensions
       if (containerWidth <= 0 || containerHeight <= 0 || source.width <= 0 || source.height <= 0) {
@@ -356,7 +461,9 @@ internal class ImageMaskDrawable(
           scaledTile.recycle()
         }
 
-        return output.clone()
+        val c = output.clone()
+        this@ImageMaskDrawable.invalidateSelf()
+        return c
       } finally {
         CloseableReference.closeSafely(output)
       }

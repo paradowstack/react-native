@@ -821,7 +821,7 @@ public object BackgroundStyleApplicator {
         view.setLayerType(View.LAYER_TYPE_NONE, null)
       }
 
-      composite.mask?.onDetach()
+//      composite.mask?.onDetach()
       
       // Create new mask from array
       val newMask = MaskDrawable.fromMaskImageArray(maskImage, view.context, composite.mask)
@@ -837,7 +837,7 @@ public object BackgroundStyleApplicator {
       val updatedComposite = composite.withNewMask(newMask)
       view.background = updatedComposite
       
-      updatedComposite.mask?.onAttach()
+//      updatedComposite.mask?.onAttach()
 
       if (view.width > 0 && view.height > 0) {
         updatedComposite.mask?.drawable?.setBounds(0, 0, view.width, view.height)
@@ -989,7 +989,7 @@ public object BackgroundStyleApplicator {
    */
   @JvmStatic
   public fun attachMask(view: View) {
-    ensureCompositeBackgroundDrawable(view).mask?.onAttach()
+    ensureCompositeBackgroundDrawable(view).mask?.onAttach(view)
   }
 
   /**
@@ -999,6 +999,6 @@ public object BackgroundStyleApplicator {
    */
   @JvmStatic
   public fun detachMask(view: View) {
-    ensureCompositeBackgroundDrawable(view).mask?.onDetach()
+    ensureCompositeBackgroundDrawable(view).mask?.onDetach(view)
   }
 }

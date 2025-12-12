@@ -612,6 +612,16 @@ public open class ReactViewGroup public constructor(context: Context?) :
     super.onDetachedFromWindow()
   }
 
+  override fun onStartTemporaryDetach() {
+    super.onStartTemporaryDetach();
+    BackgroundStyleApplicator.detachMask(this);
+  }
+
+  override fun onFinishTemporaryDetach() {
+    super.onFinishTemporaryDetach();
+    BackgroundStyleApplicator.attachMask(this);
+  }
+
   private fun customDrawOrderDisabled(): Boolean {
     if (id == NO_ID) {
       return false

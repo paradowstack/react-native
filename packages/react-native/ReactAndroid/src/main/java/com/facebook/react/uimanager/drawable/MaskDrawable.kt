@@ -11,18 +11,13 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.drawable.Drawable
-import com.facebook.imagepipeline.request.ImageRequest
-import com.facebook.imagepipeline.request.ImageRequestBuilder
-import com.facebook.imagepipeline.request.Postprocessor
+import android.view.View
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
-import com.facebook.react.modules.fresco.ReactNetworkImageRequest
 import com.facebook.react.uimanager.style.BackgroundImageLayer
 import com.facebook.react.uimanager.style.BackgroundPosition
 import com.facebook.react.uimanager.style.BackgroundRepeat
 import com.facebook.react.uimanager.style.BackgroundSize
-import com.facebook.react.views.image.MultiPostprocessor.Companion.from
-import com.facebook.react.views.imagehelper.ImageSource
 
 /**
  * A wrapper that holds either a GradientMaskDrawable or ImageMaskDrawable
@@ -36,7 +31,6 @@ internal class MaskDrawable private constructor(
      */
     val drawable: Drawable
 ) {
-
     companion object {
         /**
          * Creates a MaskDrawable from a GradientMaskDrawable.
@@ -71,36 +65,26 @@ internal class MaskDrawable private constructor(
          * Loads an image mask using DraweeHolder.
          * This avoids creating Bitmap copies and leverages Fresco's caching and lifecycle management.
          *
+         * The image will be loaded when the drawable has valid bounds (for tiling modes)
+         * or immediately (for no-repeat mode).
+         *
          * @param url The image URL to load
          * @param context The Android context
          * @param existingMask Optional existing MaskDrawable to reuse the ImageMaskDrawable from
-         * @return A MaskDrawable wrapping an ImageMaskDrawable with the image request set
+         * @return A MaskDrawable wrapping an ImageMaskDrawable with the image URL set
          */
         fun loadImageMask(
             url: String,
             context: Context,
             existingMask: MaskDrawable? = null
         ): MaskDrawable {
-            val imageSource = ImageSource(context, url)
-            val postprocessorList = mutableListOf<Postprocessor>()
-
             // Get or create ImageMaskDrawable
             val imageMaskDrawable = existingMask?.imageDrawable
-                ?: ImageMaskDrawable(context.resources)
+                ?: ImageMaskDrawable(context)
 
-            imageMaskDrawable.tileProcessor.let { postprocessorList.add(it) }
-            val postprocessor = from(postprocessorList)
-
-            val imageRequest: ImageRequest =
-                ReactNetworkImageRequest.fromBuilderWithHeaders(
-                    ImageRequestBuilder.newBuilderWithSource(imageSource.uri)
-                        .setPostprocessor(postprocessor),
-                    null,
-                    imageSource.cacheControl
-                )
-
-            // Set the ImageRequest - DraweeHolder will handle loading, caching, and lifecycle
-            imageMaskDrawable.setImageRequest(imageRequest)
+            // Set the URL - ImageMaskDrawable handles request building internally
+            // and will load when bounds are available (for tiling) or immediately (for no-repeat)
+            imageMaskDrawable.setImageUrl(url)
 
             return MaskDrawable(imageMaskDrawable)
         }
@@ -190,10 +174,10 @@ internal class MaskDrawable private constructor(
      * Attaches the mask drawable (calls onAttach lifecycle method).
      * Delegates to the underlying drawable's onAttach implementation.
      */
-    fun onAttach() {
+    fun onAttach(view: View) {
         when (val d = drawable) {
             is GradientMaskDrawable -> d.onAttach()
-            is ImageMaskDrawable -> d.onAttach()
+            is ImageMaskDrawable -> d.onAttach(view)
         }
     }
 
@@ -201,10 +185,10 @@ internal class MaskDrawable private constructor(
      * Detaches the mask drawable (calls onDetach lifecycle method).
      * Delegates to the underlying drawable's onDetach implementation.
      */
-    fun onDetach() {
+    fun onDetach(view: View) {
         when (val d = drawable) {
             is GradientMaskDrawable -> d.onDetach()
-            is ImageMaskDrawable -> d.onDetach()
+            is ImageMaskDrawable -> d.onDetach(view)
         }
     }
 
