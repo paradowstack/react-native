@@ -13,9 +13,12 @@ import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.view.View
 import com.facebook.react.uimanager.FloatUtil
 import com.facebook.react.uimanager.LengthPercentage
 import com.facebook.react.uimanager.LengthPercentageType
@@ -45,10 +48,39 @@ internal class BackgroundImageDrawable(
   private var backgroundImageClipPath: Path? = null
   private var backgroundPositioningArea: RectF? = null
   private var backgroundPaintingArea: RectF? = null
+  
+  // Map to store ImageLayerRenderer instances for each image layer
+  private val imageRenderers = mutableMapOf<Int, ImageLayerRenderer>()
+  private var view: View? = null
 
   var backgroundImageLayers: List<BackgroundImageLayer>? = null
     set(value) {
       if (field != value) {
+        // Clean up old image renderers that are no longer needed
+        val oldLayers = field
+        val newLayers = value
+        
+        if (oldLayers != null && newLayers != null) {
+          // Detach renderers for removed/changed image layers
+          oldLayers.forEachIndexed { index, layer ->
+            if (layer.isImage) {
+              val newLayer = newLayers.getOrNull(index)
+              if (newLayer == null || !newLayer.isImage || newLayer.getImageSource()?.uri != layer.getImageSource()?.uri) {
+                imageRenderers[index]?.let { renderer ->
+                  view?.let { renderer.onDetach(it) }
+                }
+                imageRenderers.remove(index)
+              }
+            }
+          }
+        } else if (oldLayers != null) {
+          // All layers removed, detach all renderers
+          imageRenderers.values.forEach { renderer ->
+            view?.let { renderer.onDetach(it) }
+          }
+          imageRenderers.clear()
+        }
+        
         field = value
         invalidateSelf()
       }
@@ -138,130 +170,287 @@ internal class BackgroundImageDrawable(
         val repeat = backgroundRepeat?.let { it.getOrNull(index % it.size) }
         val position = backgroundPosition?.let { it.getOrNull(index % it.size) }
 
-        // 2. Calculate the size of a single tile.
-        val (tileWidth, tileHeight) =
-            calculateBackgroundImageSize(
-                backgroundPositioningArea.width(),
-                backgroundPositioningArea.height(),
-                backgroundPositioningArea.width(),
-                backgroundPositioningArea.height(),
-                size,
-                repeat,
-            )
-
-        if (tileWidth <= 0 || tileHeight <= 0) {
-          continue
-        }
-
-        // 3. Set paint shader
-        backgroundPaint.setShader(backgroundImageLayer.getShader(tileWidth, tileHeight))
-
-        // 4. Calculate spacing, x and y tiles count and position for tiles
-        var (initialX, initialY) = calculateBackgroundPosition(tileWidth, tileHeight, position)
-
-        val repeatX = repeat?.x ?: BackgroundRepeatKeyword.Repeat
-        var xTilesCount = 1
-        var xSpacing = 0f
-
-        if (repeatX == BackgroundRepeatKeyword.Space) {
-          // The image is repeated as much as possible
-          // without clipping. The first and last images are pinned to either side of
-          // the element, and whitespace is distributed evenly between the images.
-          // The background-position property is ignored unless only one image can be displayed
-          // without
-          // clipping.
-          val widthOfEdgePinnedImages = tileWidth * 2
-          val availableWidthForCenterImages =
-              backgroundPaintingArea.width() - widthOfEdgePinnedImages
-          val roundedTileWidth = round(tileWidth)
-          if (
-              roundedTileWidth > 0 &&
-                  (availableWidthForCenterImages > 0 ||
-                      FloatUtil.floatsEqual(availableWidthForCenterImages, 0f))
-          ) {
-            // round the values when flooring to avoid floating point precision issues
-            val centerImagesCount =
-                floor(round(availableWidthForCenterImages) / roundedTileWidth).toInt()
-            val centerImagesWidth = centerImagesCount * tileWidth
-            val totalFreeSpace = availableWidthForCenterImages - centerImagesWidth
-            val totalInstances = centerImagesCount + 2
-            xSpacing = totalFreeSpace / (totalInstances - 1)
-            xTilesCount = totalInstances
-            initialX = backgroundPaintingArea.left
-          } else {
-            xTilesCount = 1
-          }
-        } else if (
-            repeatX == BackgroundRepeatKeyword.Round || repeatX == BackgroundRepeatKeyword.Repeat
-        ) {
-          val roundedTileWidth = round(tileWidth)
-          if (roundedTileWidth > 0) {
-            val tilesBeforeX = ceil(round(initialX) / roundedTileWidth).toInt()
-            val tilesAfterX =
-                ceil(round((backgroundPaintingArea.width() - initialX)) / roundedTileWidth).toInt()
-            xTilesCount = tilesBeforeX + tilesAfterX
-            initialX -= (tilesBeforeX * tileWidth)
-          }
-          xSpacing = 0f
-        }
-
-        val repeatY = repeat?.y ?: BackgroundRepeatKeyword.Repeat
-        var yTilesCount = 1
-        var ySpacing = 0f
-
-        if (repeatY == BackgroundRepeatKeyword.Space) {
-          val heightOfEdgePinnedImages = tileHeight * 2
-          val availableHeightForCenterImages =
-              backgroundPaintingArea.height() - heightOfEdgePinnedImages
-          val roundedTileHeight = round(tileHeight)
-          if (
-              roundedTileHeight > 0 &&
-                  (availableHeightForCenterImages > 0 ||
-                      FloatUtil.floatsEqual(availableHeightForCenterImages, 0f))
-          ) {
-            val centerImagesCount =
-                floor(round(availableHeightForCenterImages) / roundedTileHeight).toInt()
-            val centerImagesHeight = centerImagesCount * tileHeight
-            val totalFreeSpace = availableHeightForCenterImages - centerImagesHeight
-            val totalInstances = centerImagesCount + 2
-            ySpacing = totalFreeSpace / (totalInstances - 1)
-            yTilesCount = totalInstances
-            initialY = backgroundPaintingArea.top
-          } else {
-            yTilesCount = 1
-          }
-        } else if (
-            repeatY == BackgroundRepeatKeyword.Round || repeatY == BackgroundRepeatKeyword.Repeat
-        ) {
-          val roundedTileHeight = round(tileHeight)
-          if (roundedTileHeight > 0) {
-            val tilesBeforeY = ceil(round(initialY) / roundedTileHeight).toInt()
-            val tilesAfterY =
-                ceil(round((backgroundPaintingArea.height() - initialY)) / roundedTileHeight)
-                    .toInt()
-            yTilesCount = tilesBeforeY + tilesAfterY
-            initialY -= (tilesBeforeY * tileHeight)
-          }
-          ySpacing = 0f
-        }
-
-        // 5. draw the repeating tiles using translate
-        var translateX = initialX
-        var translateY: Float
-        repeat(xTilesCount) {
-          translateY = initialY
-          repeat(yTilesCount) {
-            canvas.save()
-            canvas.translate(translateX, translateY)
-            canvas.drawRect(0f, 0f, tileWidth, tileHeight, backgroundPaint)
-            canvas.restore()
-            translateY += tileHeight + ySpacing
-          }
-          translateX += tileWidth + xSpacing
+        if (backgroundImageLayer.isGradient) {
+          // Draw gradient using shader
+          drawGradientLayer(
+              canvas,
+              backgroundImageLayer,
+              backgroundPositioningArea,
+              backgroundPaintingArea,
+              size,
+              repeat,
+              position
+          )
+        } else if (backgroundImageLayer.isImage) {
+          // Draw image using ImageLayerRenderer
+          drawImageLayer(
+              canvas,
+              backgroundImageLayer,
+              index,
+              backgroundPositioningArea,
+              backgroundPaintingArea,
+              size,
+              repeat,
+              position
+          )
         }
       }
     }
     canvas.restore()
+  }
+  
+  private fun drawGradientLayer(
+      canvas: Canvas,
+      layer: BackgroundImageLayer,
+      positioningArea: RectF,
+      paintingArea: RectF,
+      size: BackgroundSize?,
+      repeat: BackgroundRepeat?,
+      position: BackgroundPosition?
+  ) {
+    // 2. Calculate the size of a single tile.
+    val (tileWidth, tileHeight) =
+        calculateBackgroundImageSize(
+            positioningArea.width(),
+            positioningArea.height(),
+            positioningArea.width(),
+            positioningArea.height(),
+            size,
+            repeat,
+        )
+
+    if (tileWidth <= 0 || tileHeight <= 0) {
+      return
+    }
+
+    // 3. Set paint shader
+    backgroundPaint.shader = layer.getShader(tileWidth, tileHeight)
+
+    // 4. Calculate spacing, x and y tiles count and position for tiles
+    var (initialX, initialY) = calculateBackgroundPosition(tileWidth, tileHeight, position)
+
+    val repeatX = repeat?.x ?: BackgroundRepeatKeyword.Repeat
+    var xTilesCount = 1
+    var xSpacing = 0f
+
+    if (repeatX == BackgroundRepeatKeyword.Space) {
+      // The image is repeated as much as possible
+      // without clipping. The first and last images are pinned to either side of
+      // the element, and whitespace is distributed evenly between the images.
+      // The background-position property is ignored unless only one image can be displayed
+      // without
+      // clipping.
+      val widthOfEdgePinnedImages = tileWidth * 2
+      val availableWidthForCenterImages =
+          paintingArea.width() - widthOfEdgePinnedImages
+      val roundedTileWidth = round(tileWidth)
+      if (
+          roundedTileWidth > 0 &&
+              (availableWidthForCenterImages > 0 ||
+                  FloatUtil.floatsEqual(availableWidthForCenterImages, 0f))
+      ) {
+        // round the values when flooring to avoid floating point precision issues
+        val centerImagesCount =
+            floor(round(availableWidthForCenterImages) / roundedTileWidth).toInt()
+        val centerImagesWidth = centerImagesCount * tileWidth
+        val totalFreeSpace = availableWidthForCenterImages - centerImagesWidth
+        val totalInstances = centerImagesCount + 2
+        xSpacing = totalFreeSpace / (totalInstances - 1)
+        xTilesCount = totalInstances
+        initialX = paintingArea.left
+      } else {
+        xTilesCount = 1
+      }
+    } else if (
+        repeatX == BackgroundRepeatKeyword.Round || repeatX == BackgroundRepeatKeyword.Repeat
+    ) {
+      val roundedTileWidth = round(tileWidth)
+      if (roundedTileWidth > 0) {
+        val tilesBeforeX = ceil(round(initialX) / roundedTileWidth).toInt()
+        val tilesAfterX =
+            ceil(round((paintingArea.width() - initialX)) / roundedTileWidth).toInt()
+        xTilesCount = tilesBeforeX + tilesAfterX
+        initialX -= (tilesBeforeX * tileWidth)
+      }
+      xSpacing = 0f
+    }
+
+    val repeatY = repeat?.y ?: BackgroundRepeatKeyword.Repeat
+    var yTilesCount = 1
+    var ySpacing = 0f
+
+    if (repeatY == BackgroundRepeatKeyword.Space) {
+      val heightOfEdgePinnedImages = tileHeight * 2
+      val availableHeightForCenterImages =
+          paintingArea.height() - heightOfEdgePinnedImages
+      val roundedTileHeight = round(tileHeight)
+      if (
+          roundedTileHeight > 0 &&
+              (availableHeightForCenterImages > 0 ||
+                  FloatUtil.floatsEqual(availableHeightForCenterImages, 0f))
+      ) {
+        val centerImagesCount =
+            floor(round(availableHeightForCenterImages) / roundedTileHeight).toInt()
+        val centerImagesHeight = centerImagesCount * tileHeight
+        val totalFreeSpace = availableHeightForCenterImages - centerImagesHeight
+        val totalInstances = centerImagesCount + 2
+        ySpacing = totalFreeSpace / (totalInstances - 1)
+        yTilesCount = totalInstances
+        initialY = paintingArea.top
+      } else {
+        yTilesCount = 1
+      }
+    } else if (
+        repeatY == BackgroundRepeatKeyword.Round || repeatY == BackgroundRepeatKeyword.Repeat
+    ) {
+      val roundedTileHeight = round(tileHeight)
+      if (roundedTileHeight > 0) {
+        val tilesBeforeY = ceil(round(initialY) / roundedTileHeight).toInt()
+        val tilesAfterY =
+            ceil(round((paintingArea.height() - initialY)) / roundedTileHeight)
+                .toInt()
+        yTilesCount = tilesBeforeY + tilesAfterY
+        initialY -= (tilesBeforeY * tileHeight)
+      }
+      ySpacing = 0f
+    }
+
+    // 5. draw the repeating tiles using translate
+    var translateX = initialX
+    var translateY: Float
+    repeat(xTilesCount) {
+      translateY = initialY
+      repeat(yTilesCount) {
+        canvas.save()
+        canvas.translate(translateX, translateY)
+        canvas.drawRect(0f, 0f, tileWidth, tileHeight, backgroundPaint)
+        canvas.restore()
+        translateY += tileHeight + ySpacing
+      }
+      translateX += tileWidth + xSpacing
+    }
+  }
+  
+  private fun drawImageLayer(
+      canvas: Canvas,
+      layer: BackgroundImageLayer,
+      index: Int,
+      positioningArea: RectF,
+      paintingArea: RectF,
+      size: BackgroundSize?,
+      repeat: BackgroundRepeat?,
+      position: BackgroundPosition?
+  ) {
+    val imageSource = layer.getImageSource() ?: return
+    
+    // Get or create ImageLayerRenderer for this layer
+    val renderer = imageRenderers.getOrPut(index) {
+      ImageLayerRenderer(context, imageSource).also { newRenderer ->
+        view?.let { newRenderer.onAttach(it) }
+      }
+    }
+    
+    // Always update properties before drawing (they may have changed)
+    renderer.size = size
+    renderer.position = position
+    renderer.repeat = repeat
+    
+    // Update renderer bounds
+    renderer.setBounds(bounds, positioningArea)
+    
+    // Draw the image layer
+    renderer.draw(canvas, paintingArea)
+  }
+  
+  /**
+   * Draws this Drawable with Porter-Duff compositing applied for masking.
+   * This is called when the drawable is used as a mask.
+   *
+   * Since we're already inside a saveLayer in ReactViewGroup.draw(), we create
+   * a nested saveLayer with Porter-Duff Paint. When we restore this inner layer,
+   * it composites with the outer layer using Porter-Duff DST_IN mode.
+   */
+  fun drawWithMaskMode(canvas: Canvas, maskPaint: Paint) {
+    if (backgroundImageLayers == null || backgroundImageLayers?.isEmpty() == true) {
+      return
+    }
+
+    updatePath()
+
+    val backgroundPaintingArea = backgroundPaintingArea ?: return
+    val backgroundPositioningArea = backgroundPositioningArea ?: return
+
+    if (hasInvalidDimensions(backgroundPositioningArea, backgroundPaintingArea)) {
+      return
+    }
+
+    // Create a nested saveLayer with Porter-Duff DST_IN mode
+    val saveCount = canvas.saveLayer(
+        backgroundPaintingArea.left,
+        backgroundPaintingArea.top,
+        backgroundPaintingArea.right,
+        backgroundPaintingArea.bottom,
+        maskPaint
+    )
+
+    // Clip the canvas to match the rounded border path
+    backgroundImageClipPath?.let { canvas.clipPath(it) }
+
+    backgroundImageLayers?.let { layers ->
+      // iterate in reverse to match CSS spec
+      for (index in layers.indices.reversed()) {
+        val backgroundImageLayer = layers[index]
+        val size = backgroundSize?.let { it.getOrNull(index % it.size) }
+        val repeat = backgroundRepeat?.let { it.getOrNull(index % it.size) }
+        val position = backgroundPosition?.let { it.getOrNull(index % it.size) }
+
+        if (backgroundImageLayer.isGradient) {
+          drawGradientLayer(
+              canvas,
+              backgroundImageLayer,
+              backgroundPositioningArea,
+              backgroundPaintingArea,
+              size,
+              repeat,
+              position
+          )
+        } else if (backgroundImageLayer.isImage) {
+          drawImageLayer(
+              canvas,
+              backgroundImageLayer,
+              index,
+              backgroundPositioningArea,
+              backgroundPaintingArea,
+              size,
+              repeat,
+              position
+          )
+        }
+      }
+    }
+
+    // Restore the inner layer - this composites it with the outer layer using DST_IN mode
+    canvas.restoreToCount(saveCount)
+  }
+  
+  /**
+   * Attaches the drawable and its image renderers to a view.
+   * Should be called when the view is attached to the window.
+   */
+  fun onAttach(view: View) {
+    this.view = view
+    imageRenderers.values.forEach { it.onAttach(view) }
+  }
+  
+  /**
+   * Detaches the drawable and its image renderers from a view.
+   * Should be called when the view is detached from the window.
+   */
+  fun onDetach(view: View) {
+    imageRenderers.values.forEach { it.onDetach(view) }
+    if (this.view == view) {
+      this.view = null
+    }
   }
 
   private fun computeBorderInsets(): RectF =

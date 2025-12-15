@@ -11,35 +11,50 @@ import android.content.Context
 import android.graphics.Shader
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
+import com.facebook.react.views.imagehelper.ImageSource
 
-public class BackgroundImageLayer() {
-  private lateinit var gradient: Gradient
-
-  private constructor(gradient: Gradient) : this() {
-    this.gradient = gradient
-  }
+public class BackgroundImageLayer private constructor(
+  private val gradient: Gradient?,
+  private val imageSource: ImageSource?
+) {
+  
+  public val isGradient: Boolean = gradient != null
+  public val isImage: Boolean = imageSource != null
 
   public companion object {
-    public fun parse(gradientMap: ReadableMap?, context: Context): BackgroundImageLayer? {
-      if (gradientMap == null) {
+    public fun parse(layerMap: ReadableMap?, context: Context): BackgroundImageLayer? {
+      if (layerMap == null) {
         return null
       }
-      val gradient = parseGradient(gradientMap, context) ?: return null
-      return BackgroundImageLayer(gradient)
-    }
-
-    private fun parseGradient(gradientMap: ReadableMap, context: Context): Gradient? {
-      if (!gradientMap.hasKey("type") || gradientMap.getType("type") != ReadableType.String) {
+      
+      if (!layerMap.hasKey("type") || layerMap.getType("type") != ReadableType.String) {
         return null
       }
 
-      return when (gradientMap.getString("type")) {
-        "linear-gradient" -> LinearGradient.parse(gradientMap, context)
-        "radial-gradient" -> RadialGradient.parse(gradientMap, context)
+      return when (layerMap.getString("type")) {
+        "linear-gradient" -> {
+          val gradient = LinearGradient.parse(layerMap, context)
+          if (gradient != null) BackgroundImageLayer(gradient, null) else null
+        }
+        "radial-gradient" -> {
+          val gradient = RadialGradient.parse(layerMap, context)
+          if (gradient != null) BackgroundImageLayer(gradient, null) else null
+        }
+        "image" -> {
+          val url = layerMap.getString("url")
+          if (url != null) {
+            val imageSource = ImageSource(context, url)
+            BackgroundImageLayer(null, imageSource)
+          } else {
+            null
+          }
+        }
         else -> null
       }
     }
   }
 
-  public fun getShader(width: Float, height: Float): Shader = gradient.getShader(width, height)
+  public fun getShader(width: Float, height: Float): Shader? = gradient?.getShader(width, height)
+  
+  public fun getImageSource(): ImageSource? = imageSource
 }

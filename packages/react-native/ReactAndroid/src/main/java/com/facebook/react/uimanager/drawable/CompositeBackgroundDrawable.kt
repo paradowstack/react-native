@@ -62,13 +62,13 @@ internal class CompositeBackgroundDrawable(
     // Holder value for currently set border radius
     var borderRadius: BorderRadiusStyle? = null,
 
-    // Masks - multiple mask layers
-    var masks: List<MaskDrawable> = emptyList(),
+    // Mask - a single BackgroundImageDrawable that can contain multiple mask layers
+    var mask: BackgroundImageDrawable? = null,
     
-    // Mask properties (stored when masks don't exist yet) - one per mask layer
-    var maskSizes: List<BackgroundSize?> = emptyList(),
-    var maskPositions: List<BackgroundPosition?> = emptyList(),
-    var maskRepeats: List<BackgroundRepeat?> = emptyList(),
+    // Stored mask properties (applied when mask is created)
+    var maskSize: List<BackgroundSize>? = null,
+    var maskPosition: List<BackgroundPosition>? = null,
+    var maskRepeat: List<BackgroundRepeat>? = null,
 ) :
     LayerDrawable(
         createLayersArray(
@@ -105,10 +105,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -125,10 +125,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -148,10 +148,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -168,10 +168,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -188,10 +188,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
@@ -208,14 +208,14 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
 
-  fun withNewMasks(newMasks: List<MaskDrawable>): CompositeBackgroundDrawable {
+  fun withNewMask(newMask: BackgroundImageDrawable?): CompositeBackgroundDrawable {
     return CompositeBackgroundDrawable(
         context,
         originalBackground,
@@ -228,14 +228,14 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        newMasks,
-        maskSizes,
-        maskPositions,
-        maskRepeats
+        newMask,
+        maskSize,
+        maskPosition,
+        maskRepeat
     )
   }
-
-  fun withMaskSizes(newMaskSizes: List<BackgroundSize?>): CompositeBackgroundDrawable {
+  
+  fun withMaskSize(newMaskSize: List<BackgroundSize>?): CompositeBackgroundDrawable {
     return CompositeBackgroundDrawable(
         context,
         originalBackground,
@@ -248,14 +248,14 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        newMaskSizes,
-        maskPositions,
-        maskRepeats
+        mask,
+        newMaskSize,
+        maskPosition,
+        maskRepeat
     )
   }
-
-  fun withMaskPositions(newMaskPositions: List<BackgroundPosition?>): CompositeBackgroundDrawable {
+  
+  fun withMaskPosition(newMaskPosition: List<BackgroundPosition>?): CompositeBackgroundDrawable {
     return CompositeBackgroundDrawable(
         context,
         originalBackground,
@@ -268,14 +268,14 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        newMaskPositions,
-        maskRepeats
+        mask,
+        maskSize,
+        newMaskPosition,
+        maskRepeat
     )
   }
-
-  fun withMaskRepeats(newMaskRepeats: List<BackgroundRepeat?>): CompositeBackgroundDrawable {
+  
+  fun withMaskRepeat(newMaskRepeat: List<BackgroundRepeat>?): CompositeBackgroundDrawable {
     return CompositeBackgroundDrawable(
         context,
         originalBackground,
@@ -288,10 +288,10 @@ internal class CompositeBackgroundDrawable(
         outline,
         borderInsets,
         borderRadius,
-        masks,
-        maskSizes,
-        maskPositions,
-        newMaskRepeats
+        mask,
+        maskSize,
+        maskPosition,
+        newMaskRepeat
     )
   }
 
