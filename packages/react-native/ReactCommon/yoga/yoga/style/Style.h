@@ -304,7 +304,7 @@ class YG_EXPORT Style {
     }
 
     FloatOptional dimensionPaddingAndBorder = FloatOptional{
-        computePaddingAndBorderForDimension(direction, axis, ownerWidth)};
+        computePaddingAndBorderForDimension(direction, axis, ownerWidth, node)};
 
     return value +
         (dimensionPaddingAndBorder.isDefined() ? dimensionPaddingAndBorder
@@ -333,7 +333,7 @@ class YG_EXPORT Style {
     }
 
     FloatOptional dimensionPaddingAndBorder = FloatOptional{
-        computePaddingAndBorderForDimension(direction, axis, ownerWidth)};
+        computePaddingAndBorderForDimension(direction, axis, ownerWidth, node)};
 
     return value +
         (dimensionPaddingAndBorder.isDefined() ? dimensionPaddingAndBorder
@@ -485,14 +485,19 @@ class YG_EXPORT Style {
         .unwrapOrDefault(0.0f);
   }
 
-  float computeFlexStartBorder(FlexDirection axis, Direction direction) const {
+  float computeFlexStartBorder(
+      FlexDirection axis,
+      Direction direction,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(computeBorder(flexStartEdge(axis), direction), 0.0f).unwrap(),
         0.0f);
   }
 
-  float computeInlineStartBorder(FlexDirection axis, Direction direction)
-      const {
+  float computeInlineStartBorder(
+      FlexDirection axis,
+      Direction direction,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(
             computeBorder(inlineStartEdge(axis, direction), direction), 0.0f)
@@ -500,13 +505,19 @@ class YG_EXPORT Style {
         0.0f);
   }
 
-  float computeFlexEndBorder(FlexDirection axis, Direction direction) const {
+  float computeFlexEndBorder(
+      FlexDirection axis,
+      Direction direction,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(computeBorder(flexEndEdge(axis), direction), 0.0f).unwrap(),
         0.0f);
   }
 
-  float computeInlineEndBorder(FlexDirection axis, Direction direction) const {
+  float computeInlineEndBorder(
+      FlexDirection axis,
+      Direction direction,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(computeBorder(inlineEndEdge(axis, direction), direction), 0.0f)
             .unwrap(),
@@ -516,7 +527,8 @@ class YG_EXPORT Style {
   float computeFlexStartPadding(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(computePadding(flexStartEdge(axis), direction), widthSize)
             .unwrap(),
@@ -526,7 +538,8 @@ class YG_EXPORT Style {
   float computeInlineStartPadding(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(
             computePadding(inlineStartEdge(axis, direction), direction),
@@ -538,7 +551,8 @@ class YG_EXPORT Style {
   float computeFlexEndPadding(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(computePadding(flexEndEdge(axis), direction), widthSize)
             .unwrap(),
@@ -548,7 +562,8 @@ class YG_EXPORT Style {
   float computeInlineEndPadding(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(
             computePadding(inlineEndEdge(axis, direction), direction),
@@ -560,67 +575,79 @@ class YG_EXPORT Style {
   float computeInlineStartPaddingAndBorder(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
-    return computeInlineStartPadding(axis, direction, widthSize) +
-        computeInlineStartBorder(axis, direction);
+      float widthSize,
+      YGNodeConstRef node) const {
+    return computeInlineStartPadding(axis, direction, widthSize, node) +
+        computeInlineStartBorder(axis, direction, node);
   }
 
   float computeFlexStartPaddingAndBorder(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
-    return computeFlexStartPadding(axis, direction, widthSize) +
-        computeFlexStartBorder(axis, direction);
+      float widthSize,
+      YGNodeConstRef node) const {
+    return computeFlexStartPadding(axis, direction, widthSize, node) +
+        computeFlexStartBorder(axis, direction, node);
   }
 
   float computeInlineEndPaddingAndBorder(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
-    return computeInlineEndPadding(axis, direction, widthSize) +
-        computeInlineEndBorder(axis, direction);
+      float widthSize,
+      YGNodeConstRef node) const {
+    return computeInlineEndPadding(axis, direction, widthSize, node) +
+        computeInlineEndBorder(axis, direction, node);
   }
 
   float computeFlexEndPaddingAndBorder(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
-    return computeFlexEndPadding(axis, direction, widthSize) +
-        computeFlexEndBorder(axis, direction);
+      float widthSize,
+      YGNodeConstRef node) const {
+    return computeFlexEndPadding(axis, direction, widthSize, node) +
+        computeFlexEndBorder(axis, direction, node);
   }
 
   float computePaddingAndBorderForDimension(
       Direction direction,
       Dimension dimension,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     FlexDirection flexDirectionForDimension = dimension == Dimension::Width
         ? FlexDirection::Row
         : FlexDirection::Column;
 
     return computeFlexStartPaddingAndBorder(
-               flexDirectionForDimension, direction, widthSize) +
+               flexDirectionForDimension, direction, widthSize, node) +
         computeFlexEndPaddingAndBorder(
-               flexDirectionForDimension, direction, widthSize);
+               flexDirectionForDimension, direction, widthSize, node);
   }
 
-  float computeBorderForAxis(FlexDirection axis) const {
-    return computeInlineStartBorder(axis, Direction::LTR) +
-        computeInlineEndBorder(axis, Direction::LTR);
+  float computeBorderForAxis(FlexDirection axis, YGNodeConstRef node) const {
+    return computeInlineStartBorder(axis, Direction::LTR, node) +
+        computeInlineEndBorder(axis, Direction::LTR, node);
   }
 
-  float computeMarginForAxis(FlexDirection axis, float widthSize) const {
-    // The total margin for a given axis does not depend on the direction
-    // so hardcoding LTR here to avoid piping direction to this function
-    return computeInlineStartMargin(axis, Direction::LTR, widthSize) +
-        computeInlineEndMargin(axis, Direction::LTR, widthSize);
+  float computeMarginForAxis(
+      FlexDirection axis,
+      float widthSize,
+      YGNodeConstRef node) const {
+    return computeInlineStartMargin(axis, Direction::LTR, widthSize, node) +
+        computeInlineEndMargin(axis, Direction::LTR, widthSize, node);
   }
 
-  float computeGapForAxis(FlexDirection axis, float ownerSize) const {
+  float computeGapForAxis(
+      FlexDirection axis,
+      float ownerSize,
+      YGNodeConstRef node) const {
     auto gap = isRow(axis) ? computeColumnGap() : computeRowGap();
     return maxOrDefined(resolve(gap, ownerSize).unwrap(), 0.0f);
   }
 
-  float computeGapForDimension(Dimension dimension, float ownerSize) const {
+  float computeGapForDimension(
+      Dimension dimension,
+      float ownerSize,
+      YGNodeConstRef node) const {
     auto gap =
         dimension == Dimension::Width ? computeColumnGap() : computeRowGap();
     return maxOrDefined(resolve(gap, ownerSize).unwrap(), 0.0f);

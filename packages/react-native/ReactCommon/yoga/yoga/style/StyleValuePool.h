@@ -32,6 +32,8 @@ class StyleValuePool {
       handle.setType(StyleValueHandle::Type::Undefined);
     } else if (length.isAuto()) {
       handle.setType(StyleValueHandle::Type::Auto);
+    } else if (length.isDynamic()) {
+      storeDynamic(handle, length.callback(), length.callbackId());
     } else {
       auto type = length.isPoints() ? StyleValueHandle::Type::Point
                                     : StyleValueHandle::Type::Percent;
@@ -50,6 +52,8 @@ class StyleValuePool {
       storeKeyword(handle, StyleValueHandle::Keyword::Stretch);
     } else if (sizeValue.isFitContent()) {
       storeKeyword(handle, StyleValueHandle::Keyword::FitContent);
+    } else if (sizeValue.isDynamic()) {
+      storeDynamic(handle, sizeValue.callback(), sizeValue.callbackId());
     } else {
       auto type = sizeValue.isPoints() ? StyleValueHandle::Type::Point
                                        : StyleValueHandle::Type::Percent;
@@ -70,6 +74,9 @@ class StyleValuePool {
       return StyleLength::undefined();
     } else if (handle.isAuto()) {
       return StyleLength::ofAuto();
+    } else if (handle.isDynamic()) {
+      return StyleLength::dynamic(
+          getDynamicCallback(handle), getDynamicCallbackID(handle));
     } else {
       assert(
           handle.type() == StyleValueHandle::Type::Point ||
@@ -95,6 +102,9 @@ class StyleValuePool {
       return StyleSizeLength::ofFitContent();
     } else if (handle.isKeyword(StyleValueHandle::Keyword::Stretch)) {
       return StyleSizeLength::ofStretch();
+    } else if (handle.isDynamic()) {
+      return StyleSizeLength::dynamic(
+          getDynamicCallback(handle), getDynamicCallbackID(handle));
     } else {
       assert(
           handle.type() == StyleValueHandle::Type::Point ||
@@ -163,6 +173,19 @@ class StyleValuePool {
     } else {
       handle.setValue(static_cast<uint16_t>(keyword));
     }
+  }
+
+  YGValueDynamic getDynamicCallback(StyleValueHandle handle) const {
+    assert(handle.isDynamic());
+    assert(handle.isValueIndexed());
+    return reinterpret_cast<YGValueDynamic>(
+        static_cast<uintptr_t>(buffer_.get64(handle.value())));
+  }
+
+  YGValueDynamicID getDynamicCallbackID(StyleValueHandle handle) const {
+    assert(handle.isDynamic());
+    assert(handle.isValueIndexed());
+    return static_cast<uint8_t>(buffer_.get32(handle.value() + 2));
   }
 
   static constexpr bool isIntegerPackable(float f) {
