@@ -215,7 +215,6 @@ using namespace facebook::react;
     layoutContext.viewportOffset = RCTPointFromCGPoint(viewportOffset);
   }
   layoutContext.viewportSize = layoutConstraints.maximumSize;
-
   _surfaceHandler->constraintLayout(layoutConstraints, layoutContext);
 }
 
@@ -238,7 +237,6 @@ using namespace facebook::react;
   layoutConstraints.maximumSize = RCTSizeFromCGSize(maximumSize);
 
   layoutContext.viewportSize = layoutConstraints.maximumSize;
-
   return RCTCGSizeFromSize(_surfaceHandler->measure(layoutConstraints, layoutContext));
 }
 
