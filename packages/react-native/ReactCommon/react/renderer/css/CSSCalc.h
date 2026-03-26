@@ -13,6 +13,7 @@
 #include <react/renderer/css/CSSDataType.h>
 #include <react/renderer/css/CSSLength.h>
 #include <react/renderer/css/CSSLengthUnit.h>
+#include <react/renderer/css/CSSMathOperator.h>
 #include <react/renderer/css/CSSNumber.h>
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSSyntaxParser.h>
@@ -187,19 +188,13 @@ struct CSSDataTypeParser<CSSCalc> {
       auto savedParser = parser.syntaxParser();
       parser.syntaxParser().consumeWhitespace();
 
-      auto opResult =
-          parser.syntaxParser().consumeComponentValue<std::optional<char>>(
+      auto op =
+          parser.syntaxParser().consumeComponentValue<std::optional<CSSMathOperator>>(
               CSSDelimiter::None, [](const CSSPreservedToken &token) {
-                if (token.type() == CSSTokenType::Delim) {
-                  auto sv = token.stringValue();
-                  if (!sv.empty() && (sv[0] == '+' || sv[0] == '-')) {
-                    return std::optional<char>{sv[0]};
-                  }
-                }
-                return std::optional<char>{};
+                return token.mathOperator();
               });
 
-      if (!opResult) {
+      if (op != CSSMathOperator::Add && op != CSSMathOperator::Subtract) {
         parser.syntaxParser() = savedParser;
         break;
       }
@@ -214,7 +209,7 @@ struct CSSDataTypeParser<CSSCalc> {
         return std::nullopt;
       }
 
-      if (*opResult == '+') {
+      if (op == CSSMathOperator::Add) {
         left = *left + *right;
       } else {
         left = *left - *right;
@@ -236,19 +231,13 @@ struct CSSDataTypeParser<CSSCalc> {
       auto savedParser = parser.syntaxParser();
       parser.syntaxParser().consumeWhitespace();
 
-      auto opResult =
-          parser.syntaxParser().consumeComponentValue<std::optional<char>>(
+      auto op =
+          parser.syntaxParser().consumeComponentValue<std::optional<CSSMathOperator>>(
               CSSDelimiter::None, [](const CSSPreservedToken &token) {
-                if (token.type() == CSSTokenType::Delim) {
-                  auto sv = token.stringValue();
-                  if (!sv.empty() && (sv[0] == '*' || sv[0] == '/')) {
-                    return std::optional<char>{sv[0]};
-                  }
-                }
-                return std::optional<char>{};
+                return token.mathOperator();
               });
 
-      if (!opResult) {
+      if (op != CSSMathOperator::Multiply && op != CSSMathOperator::Divide) {
         parser.syntaxParser() = savedParser;
         break;
       }
@@ -259,7 +248,7 @@ struct CSSDataTypeParser<CSSCalc> {
         return std::nullopt;
       }
 
-      if (*opResult == '*') {
+      if (op == CSSMathOperator::Multiply) {
         if (right->isUnitless()) {
           left = *left * right->px;
         } else if (left->isUnitless()) {
@@ -284,25 +273,19 @@ struct CSSDataTypeParser<CSSCalc> {
     {
     auto savedParser = parser.syntaxParser();
 
-    auto opResult =
-        parser.syntaxParser().consumeComponentValue<std::optional<char>>(
+    auto op =
+        parser.syntaxParser().consumeComponentValue<std::optional<CSSMathOperator>>(
           CSSDelimiter::None, [](const CSSPreservedToken &token) {
-              if (token.type() == CSSTokenType::Delim) {
-                auto sv = token.stringValue();
-                if (!sv.empty() && (sv[0] == '+' || sv[0] == '-')) {
-                  return std::optional<char>{sv[0]};
-                }
-              }
-              return std::optional<char>{};
+              return token.mathOperator();
             });
 
-    if (opResult) {
+    if (op == CSSMathOperator::Add || op == CSSMathOperator::Subtract) {
       parser.syntaxParser().consumeWhitespace();
       auto value = parseUnary(parser);
       if (!value) {
         return std::nullopt;
       }
-      return *opResult == '-' ? -*value : *value;
+      return op == CSSMathOperator::Subtract ? -*value : *value;
     }
 
     parser.syntaxParser() = savedParser;
