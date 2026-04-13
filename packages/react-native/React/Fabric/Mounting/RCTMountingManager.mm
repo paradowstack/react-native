@@ -16,6 +16,7 @@
 #import <cxxreact/TraceSection.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/root/RootShadowNode.h>
+#import <react/renderer/core/LayoutContext.h>
 #import <react/renderer/core/LayoutableShadowNode.h>
 #import <react/renderer/core/RawProps.h>
 #import <react/renderer/mounting/TelemetryController.h>
@@ -24,6 +25,7 @@
 #import <React/RCTComponentViewProtocol.h>
 #import <React/RCTComponentViewRegistry.h>
 #import <React/RCTConversions.h>
+#import <React/RCTMountingManagerDelegate.h>
 #import <React/RCTMountingTransactionObserverCoordinator.h>
 
 using namespace facebook::react;
@@ -44,7 +46,8 @@ static void RCTPerformMountInstructions(
     const ShadowViewMutationList &mutations,
     RCTComponentViewRegistry *registry,
     RCTMountingTransactionObserverCoordinator &observerCoordinator,
-    SurfaceId surfaceId)
+    SurfaceId surfaceId,
+    const LayoutContext &layoutContext)
 {
   TraceSection s("RCTPerformMountInstructions");
 
@@ -80,6 +83,7 @@ static void RCTPerformMountInstructions(
 
         RCTAssert(newChildShadowView.props, @"`newChildShadowView.props` must not be null.");
 
+        [newChildComponentView updateLayoutContext:layoutContext];
         [newChildComponentView updateProps:newChildShadowView.props oldProps:nullptr];
         [newChildComponentView updateEventEmitter:newChildShadowView.eventEmitter];
         [newChildComponentView updateState:newChildShadowView.state oldState:nullptr];
@@ -109,6 +113,8 @@ static void RCTPerformMountInstructions(
 
         RCTAssert(newChildShadowView.props, @"`newChildShadowView.props` must not be null.");
 
+        [newChildComponentView updateLayoutContext:layoutContext];
+
         if (oldChildShadowView.props != newChildShadowView.props) {
           [newChildComponentView updateProps:newChildShadowView.props oldProps:oldChildShadowView.props];
           mask |= RNComponentViewUpdateMaskProps;
@@ -130,9 +136,7 @@ static void RCTPerformMountInstructions(
           mask |= RNComponentViewUpdateMaskLayoutMetrics;
         }
 
-        if (mask != RNComponentViewUpdateMaskNone) {
-          [newChildComponentView finalizeUpdates:mask];
-        }
+        [newChildComponentView finalizeUpdates:mask];
 
         break;
       }
@@ -262,8 +266,13 @@ static void RCTPerformMountInstructions(
         _observerCoordinator.notifyObserversMountingTransactionWillMount(transaction, surfaceTelemetry);
       },
       [&](const MountingTransaction &transaction, const SurfaceTelemetry &surfaceTelemetry) {
+        LayoutContext layoutContext{};
+        if (self.delegate != nil &&
+            [self.delegate respondsToSelector:@selector(mountingManager:layoutContextForRootTag:)]) {
+          layoutContext = [self.delegate mountingManager:self layoutContextForRootTag:surfaceId];
+        }
         RCTPerformMountInstructions(
-            transaction.getMutations(), _componentViewRegistry, _observerCoordinator, surfaceId);
+            transaction.getMutations(), _componentViewRegistry, _observerCoordinator, surfaceId, layoutContext);
       },
       [&](const MountingTransaction &transaction, const SurfaceTelemetry &surfaceTelemetry) {
         _observerCoordinator.notifyObserversMountingTransactionDidMount(transaction, surfaceTelemetry);
@@ -304,6 +313,11 @@ static void RCTPerformMountInstructions(
   }
 
   SurfaceId surfaceId = RCTSurfaceIdForView(componentView);
+  if (self.delegate != nil &&
+      [self.delegate respondsToSelector:@selector(mountingManager:layoutContextForRootTag:)]) {
+    LayoutContext layoutContext = [self.delegate mountingManager:self layoutContextForRootTag:surfaceId];
+    [componentView updateLayoutContext:layoutContext];
+  }
   Props::Shared oldProps = [componentView props];
   Props::Shared newProps = componentDescriptor.cloneProps(
       PropsParserContext{surfaceId, *_contextContainer}, oldProps, RawProps(std::move(props)));

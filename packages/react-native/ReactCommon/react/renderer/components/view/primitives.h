@@ -14,9 +14,11 @@
 #include <react/renderer/graphics/ValueUnit.h>
 
 #include <array>
+#include <bit>
 #include <bitset>
 #include <cmath>
 #include <optional>
+#include <type_traits>
 #include <unordered_map>
 
 namespace facebook::react {
@@ -71,19 +73,16 @@ struct ViewEvents {
     PointerUpCapture = 37,
   };
 
-  constexpr bool operator[](const Offset offset) const
-  {
+  constexpr bool operator[](const Offset offset) const {
     return bits[static_cast<std::size_t>(offset)];
   }
 
-  std::bitset<64>::reference operator[](const Offset offset)
-  {
+  std::bitset<64>::reference operator[](const Offset offset) {
     return bits[static_cast<std::size_t>(offset)];
   }
 };
 
-inline static bool operator==(const ViewEvents &lhs, const ViewEvents &rhs)
-{
+inline static bool operator==(const ViewEvents& lhs, const ViewEvents& rhs) {
   return lhs.bits == rhs.bits;
 }
 
@@ -99,7 +98,7 @@ struct CornerRadii {
   float vertical{0.0f};
   float horizontal{0.0f};
 
-  bool operator==(const CornerRadii &other) const = default;
+  bool operator==(const CornerRadii& other) const = default;
 };
 
 enum class Cursor : uint8_t {
@@ -161,26 +160,29 @@ struct CascadedRectangleEdges {
   OptionalT blockStart{};
   OptionalT blockEnd{};
 
-  Counterpart resolve(bool isRTL, T defaults) const
-  {
+  Counterpart resolve(bool isRTL, T defaults) const {
     const auto leadingEdge = isRTL ? end : start;
     const auto trailingEdge = isRTL ? start : end;
-    const auto horizontalOrAllOrDefault = horizontal.value_or(all.value_or(defaults));
-    const auto verticalOrAllOrDefault = vertical.value_or(all.value_or(defaults));
+    const auto horizontalOrAllOrDefault =
+        horizontal.value_or(all.value_or(defaults));
+    const auto verticalOrAllOrDefault =
+        vertical.value_or(all.value_or(defaults));
 
     return {
         /* .left = */
         left.value_or(leadingEdge.value_or(horizontalOrAllOrDefault)),
         /* .top = */
-        blockStart.value_or(block.value_or(top.value_or(verticalOrAllOrDefault))),
+        blockStart.value_or(
+            block.value_or(top.value_or(verticalOrAllOrDefault))),
         /* .right = */
         right.value_or(trailingEdge.value_or(horizontalOrAllOrDefault)),
         /* .bottom = */
-        blockEnd.value_or(block.value_or(bottom.value_or(verticalOrAllOrDefault))),
+        blockEnd.value_or(
+            block.value_or(bottom.value_or(verticalOrAllOrDefault))),
     };
   }
 
-  bool operator==(const CascadedRectangleEdges<T> &rhs) const = default;
+  bool operator==(const CascadedRectangleEdges<T>& rhs) const = default;
 };
 
 template <typename T>
@@ -202,8 +204,7 @@ struct CascadedRectangleCorners {
   OptionalT startEnd{};
   OptionalT startStart{};
 
-  Counterpart resolve(bool isRTL, T defaults) const
-  {
+  Counterpart resolve(bool isRTL, T defaults) const {
     const auto logicalTopStart = topStart ? topStart : startStart;
     const auto logicalTopEnd = topEnd ? topEnd : startEnd;
     const auto logicalBottomStart = bottomStart ? bottomStart : endStart;
@@ -215,7 +216,8 @@ struct CascadedRectangleCorners {
     const auto bottomTrailing = isRTL ? logicalBottomStart : logicalBottomEnd;
 
     return {
-        /* .topLeft = */ topLeft.value_or(topLeading.value_or(all.value_or(defaults))),
+        /* .topLeft = */ topLeft.value_or(
+            topLeading.value_or(all.value_or(defaults))),
         /* .topRight = */
         topRight.value_or(topTrailing.value_or(all.value_or(defaults))),
         /* .bottomLeft = */
@@ -225,7 +227,7 @@ struct CascadedRectangleCorners {
     };
   }
 
-  bool operator==(const CascadedRectangleCorners<T> &rhs) const = default;
+  bool operator==(const CascadedRectangleCorners<T>& rhs) const = default;
 };
 
 using BorderWidths = RectangleEdges<Float>;
@@ -247,9 +249,89 @@ struct BorderMetrics {
   BorderCurves borderCurves{};
   BorderStyles borderStyles{};
 
-  bool operator==(const BorderMetrics &rhs) const = default;
+  bool operator==(const BorderMetrics& rhs) const = default;
 };
 
-using CalcExpressions = std::unordered_map<uint32_t, CSSCalc>;
+using FloatDynamicId =
+    std::conditional_t<sizeof(Float) == sizeof(uint32_t), uint32_t, uint64_t>;
+
+using CalcExpressions = std::unordered_map<FloatDynamicId, CSSCalc>;
+
+enum class FloatDynamicType : bool {
+  Float,
+  Dynamic,
+};
+
+struct FloatDynamic {
+  Float value{0.0f};
+  FloatDynamicType type{FloatDynamicType::Float};
+
+  constexpr FloatDynamic() = default;
+  constexpr explicit FloatDynamic(Float val)
+      : value(val), type(FloatDynamicType::Float) {}
+  constexpr explicit FloatDynamic(FloatDynamicId calcId)
+      : value(std::bit_cast<Float>(calcId)), type(FloatDynamicType::Dynamic) {}
+  constexpr FloatDynamic& operator=(Float val) {
+    value = val;
+    type = FloatDynamicType::Float;
+    return *this;
+  }
+
+  constexpr bool isDynamic() const {
+    return type == FloatDynamicType::Dynamic;
+  }
+  constexpr Float asFloat() const {
+    return value;
+  }
+  constexpr FloatDynamicId asDynamicId() const {
+    return std::bit_cast<FloatDynamicId>(value);
+  }
+
+  constexpr operator Float() const {
+    return asFloat();
+  }
+
+  constexpr operator FloatDynamicId() const {
+    return asDynamicId();
+  }
+
+#ifdef RN_SERIALIZABLE_STATE
+  operator folly::dynamic() const {
+    return value;
+  }
+#endif
+
+  constexpr bool operator!=(float v) const {
+    return !isDynamic() && this->value != v;
+  }
+
+  constexpr bool operator!=(double v) const {
+    return !isDynamic() && this->value != v;
+  }
+
+  constexpr Float operator-(Float val) const {
+    return val - asFloat();
+  }
+  constexpr Float operator+(Float val) const {
+    return val + asFloat();
+  }
+
+  constexpr bool operator==(const FloatDynamic& rhs) const {
+    if (type != rhs.type) {
+      return false;
+    }
+    if (isDynamic()) {
+      return asDynamicId() == rhs.asDynamicId();
+    }
+    return value == rhs.value;
+  }
+};
+
+inline std::string toString(FloatDynamic value) {
+  if (value.isDynamic()) {
+    return std::to_string(value.asDynamicId());
+  }
+  return std::to_string(value.asFloat());
+}
 
 } // namespace facebook::react

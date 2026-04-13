@@ -10,6 +10,7 @@
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -32,18 +33,22 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
  public:
   BaseViewProps() = default;
   BaseViewProps(
-      const PropsParserContext &context,
-      const BaseViewProps &sourceProps,
-      const RawProps &rawProps,
-      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const PropsParserContext& context,
+      const BaseViewProps& sourceProps,
+      const RawProps& rawProps,
+      const std::function<bool(const std::string&)>& filterObjectKeys =
+          nullptr);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
 #pragma mark - Props
 
   // Color
-  Float opacity{1.0};
+  FloatDynamic opacity{1.0f};
   SharedColor backgroundColor{};
 
   // Borders
@@ -54,15 +59,15 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   // Outline
   SharedColor outlineColor{};
-  Float outlineOffset{};
+  FloatDynamic outlineOffset{};
   OutlineStyle outlineStyle{OutlineStyle::Solid};
-  Float outlineWidth{};
+  FloatDynamic outlineWidth{};
 
   // Shadow
   SharedColor shadowColor{};
   Size shadowOffset{0, -3};
-  Float shadowOpacity{};
-  Float shadowRadius{3};
+  FloatDynamic shadowOpacity{};
+  FloatDynamic shadowRadius{3.0f};
 
   Cursor cursor{};
 
@@ -109,15 +114,22 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   bool removeClippedSubviews{false};
 
+  std::shared_ptr<CalcExpressions> calcMap;
+
 #pragma mark - Convenience Methods
 
   CascadedBorderWidths getBorderWidths() const;
-  BorderMetrics resolveBorderMetrics(const LayoutMetrics &layoutMetrics) const;
-  Transform resolveTransform(const LayoutMetrics &layoutMetrics) const;
+  BorderMetrics resolveBorderMetrics(const LayoutMetrics& layoutMetrics) const;
+  Float resolveOffsetX(
+      const LayoutMetrics& layoutMetrics,
+      const LayoutContext& layoutContext) const;
+  Transform resolveTransform(const LayoutMetrics& layoutMetrics) const;
   bool getClipsContentToBounds() const;
 
-  static Transform
-  resolveTransform(const Size &frameSize, const Transform &transform, const TransformOrigin &transformOrigin);
+  static Transform resolveTransform(
+      const Size& frameSize,
+      const Transform& transform,
+      const TransformOrigin& transformOrigin);
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;

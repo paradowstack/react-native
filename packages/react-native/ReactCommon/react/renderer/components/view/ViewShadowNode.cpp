@@ -72,7 +72,7 @@ void ViewShadowNode::initialize() noexcept {
       !viewProps.testId.empty() || !viewProps.boxShadow.empty() ||
       !viewProps.backgroundImage.empty() ||
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
-      viewProps.outlineWidth > 0;
+      viewProps.outlineWidth.asFloat() > 0;
 
   if (formsView) {
     traits_.set(ShadowNodeTraits::Trait::FormsView);

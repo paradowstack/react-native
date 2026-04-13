@@ -190,14 +190,18 @@ ComponentName ImageProps::getDiffPropsImplementationTarget() const {
   return "Image";
 }
 
-folly::dynamic ImageProps::getDiffProps(const Props* prevProps) const {
+folly::dynamic ImageProps::getDiffProps(
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = ImageProps();
 
   const ImageProps* oldProps = prevProps == nullptr
       ? &defaultProps
       : static_cast<const ImageProps*>(prevProps);
 
-  folly::dynamic result = ViewProps::getDiffProps(oldProps);
+  folly::dynamic result =
+      ViewProps::getDiffProps(oldProps, layoutMetrics, layoutContext);
 
   if (sources != oldProps->sources) {
     auto sourcesArray = folly::dynamic::array();

@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <react/renderer/css/CSSCalc.h>
 #include <react/renderer/css/CSSLengthUnit.h>
+#include <react/renderer/css/CSSList.h>
 #include <react/renderer/css/CSSValueParser.h>
 
 namespace facebook::react {
@@ -398,6 +399,60 @@ TEST(CSSCalc, equality) {
   CSSCalc c{10.0f, 20.0f, 5.0f, 2.0f, true};
   EXPECT_EQ(a, b);
   EXPECT_NE(a, c);
+}
+
+TEST(CSSCalc, mixed_units_px_vw) {
+  auto result = parseCalc("calc(10px + 10vw)");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->px, 10.0f);
+  EXPECT_FLOAT_EQ(result->vw, 10.0f);
+  EXPECT_FLOAT_EQ(result->vh, 0.0f);
+  EXPECT_FLOAT_EQ(result->percent, 0.0f);
+}
+
+TEST(CSSCalc, multi_calc_list) {
+  auto result = parseCSSProperty<CSSWhitespaceSeparatedList<CSSLength>>(
+      "calc(10px) calc(20px)");
+
+  ASSERT_TRUE(
+      std::holds_alternative<CSSWhitespaceSeparatedList<CSSLength>>(result));
+  auto& list = std::get<CSSWhitespaceSeparatedList<CSSLength>>(result);
+
+  ASSERT_EQ(list.size(), 2);
+  EXPECT_FLOAT_EQ(list[0].value, 10.0f);
+  EXPECT_EQ(list[0].unit, CSSLengthUnit::Px);
+  EXPECT_FLOAT_EQ(list[1].value, 20.0f);
+  EXPECT_EQ(list[1].unit, CSSLengthUnit::Px);
+}
+
+TEST(CSSCalc, mixed_calc_and_fixed_list) {
+  auto result = parseCSSProperty<CSSWhitespaceSeparatedList<CSSLength>>(
+      "10px calc(20px) 30px");
+
+  ASSERT_TRUE(
+      std::holds_alternative<CSSWhitespaceSeparatedList<CSSLength>>(result));
+  auto& list = std::get<CSSWhitespaceSeparatedList<CSSLength>>(result);
+
+  ASSERT_EQ(list.size(), 3);
+  EXPECT_FLOAT_EQ(list[0].value, 10.0f);
+  EXPECT_FLOAT_EQ(list[1].value, 20.0f);
+  EXPECT_FLOAT_EQ(list[2].value, 30.0f);
+}
+
+TEST(CSSCalc, number_calc_generic) {
+  auto result = parseCSSProperty<CSSNumber>("calc(2 * 5)");
+
+  ASSERT_TRUE(std::holds_alternative<CSSNumber>(result));
+  auto& num = std::get<CSSNumber>(result);
+  EXPECT_FLOAT_EQ(num.value, 10.0f);
+}
+
+TEST(CSSCalc, percentage_calc_generic) {
+  auto result = parseCSSProperty<CSSPercentage>("calc(10% + 20%)");
+
+  ASSERT_TRUE(std::holds_alternative<CSSPercentage>(result));
+  auto& pct = std::get<CSSPercentage>(result);
+  EXPECT_FLOAT_EQ(pct.value, 30.0f);
 }
 
 TEST(CSSCalc, invalid_wrong_function) {

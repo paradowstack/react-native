@@ -94,14 +94,17 @@ ComponentName HostPlatformParagraphProps::getDiffPropsImplementationTarget()
 }
 
 folly::dynamic HostPlatformParagraphProps::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = HostPlatformParagraphProps();
 
   const HostPlatformParagraphProps* oldProps = prevProps == nullptr
       ? &defaultProps
       : static_cast<const HostPlatformParagraphProps*>(prevProps);
 
-  folly::dynamic result = ViewProps::getDiffProps(oldProps);
+  folly::dynamic result =
+      ViewProps::getDiffProps(oldProps, layoutMetrics, layoutContext);
 
   BaseTextProps::appendTextAttributesProps(result, oldProps);
 

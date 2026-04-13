@@ -113,6 +113,30 @@ void FabricUIManagerBinding::reportMount(SurfaceId surfaceId) {
   scheduler->reportMount(surfaceId);
 }
 
+LayoutContext FabricUIManagerBinding::getLayoutContextForSurface(
+    SurfaceId surfaceId) {
+  std::shared_lock lock(surfaceHandlerRegistryMutex_);
+  auto iterator = surfaceHandlerRegistry_.find(surfaceId);
+  if (iterator == surfaceHandlerRegistry_.end()) {
+    return {};
+  }
+  const SurfaceHandler* surfaceHandler =
+      std::get_if<SurfaceHandler>(&iterator->second);
+  if (surfaceHandler == nullptr) {
+    auto javaSurfaceHandler =
+        std::get<jni::weak_ref<SurfaceHandlerBinding::jhybridobject>>(
+            iterator->second)
+            .lockLocal();
+    if (javaSurfaceHandler) {
+      surfaceHandler = &javaSurfaceHandler->cthis()->getSurfaceHandler();
+    }
+  }
+  if (surfaceHandler == nullptr) {
+    return {};
+  }
+  return surfaceHandler->getLayoutContext();
+}
+
 #pragma mark - Surface management
 
 // Used by bridgeless
@@ -542,6 +566,10 @@ void FabricUIManagerBinding::installFabricUIManager(
   auto globalJavaUiManager = make_global(javaUIManager);
   mountingManager_ =
       std::make_shared<FabricMountingManager>(globalJavaUiManager);
+  mountingManager_->setLayoutContextProvider(
+      [this](SurfaceId surfaceId) {
+        return getLayoutContextForSurface(surfaceId);
+      });
 
   std::shared_ptr<const ContextContainer> contextContainer =
       std::make_shared<ContextContainer>();
@@ -604,6 +632,9 @@ void FabricUIManagerBinding::uninstallFabricUIManager() {
   std::unique_lock lock(installMutex_);
   animationDriver_ = nullptr;
   scheduler_ = nullptr;
+  if (mountingManager_) {
+    mountingManager_->setLayoutContextProvider({});
+  }
   mountingManager_ = nullptr;
 }
 

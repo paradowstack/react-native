@@ -36,7 +36,6 @@ YogaStylableProps::YogaStylableProps(
     const std::function<bool(const std::string&)>& filterObjectKeys)
     : Props() {
   initialize(context, sourceProps, rawProps, filterObjectKeys);
-
   yogaStyle = ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
       ? sourceProps.yogaStyle
       : convertRawProp(context, rawProps, sourceProps.yogaStyle);
@@ -204,6 +203,25 @@ static inline const T getFieldValue(
   APPLY_CALC_YG_INDEXED(                                                       \
       setter, yoga::Edge::Vertical, prefix "Vertical", LengthType)             \
   APPLY_CALC_YG_INDEXED(setter, yoga::Edge::All, prefix, LengthType)
+
+#define APPLY_CALC_YG_EDGES_BORDER(setter, LengthType)                         \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Left, "borderLeftWidth", LengthType)               \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Top, "borderTopWidth", LengthType)                   \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Right, "borderRightWidth", LengthType)             \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Bottom, "borderBottomWidth", LengthType)             \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Start, "borderStartWidth", LengthType)             \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::End, "borderEndWidth", LengthType)                   \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Horizontal, "borderHorizontalWidth", LengthType)   \
+  APPLY_CALC_YG_INDEXED(                                                     \
+      setter, yoga::Edge::Vertical, "borderVerticalWidth", LengthType)       \
+  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::All, "borderWidth", LengthType)
 
 #define APPLY_CALC_YG_EDGES_PADDING(setter, LengthType, prefix)                \
   APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Left, prefix "Left", LengthType)   \
@@ -660,6 +678,7 @@ CalcExpressions YogaStylableProps::buildCalcExpressions(
   APPLY_CALC_YG_EDGES_POSITION()
   APPLY_CALC_YG_EDGES_MARGIN(setMargin, yoga::StyleLength, "margin")
   APPLY_CALC_YG_EDGES_PADDING(setPadding, yoga::StyleLength, "padding")
+  APPLY_CALC_YG_EDGES_BORDER(setBorder, yoga::StyleLength)
   return calcExpressions;
 }
 

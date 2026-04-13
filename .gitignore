@@ -185,3 +185,6 @@ __pycache__/
 /packages/react-native/**/api/codegen
 /packages/react-native/**/.doxygen.config.*.generated
 /scripts/cxx-api/codegen
+
+/packages/react-native/ReactCommon/react/renderer/css/tests/build
+/packages/react-native-compatibility-check/dist

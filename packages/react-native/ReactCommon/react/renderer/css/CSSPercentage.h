@@ -13,6 +13,8 @@
 
 namespace facebook::react {
 
+struct CSSCalc;
+
 /**
  * Representation of CSS <percentage> data type
  * https://www.w3.org/TR/css-values-4/#percentages
@@ -21,10 +23,16 @@ struct CSSPercentage {
   float value{};
 
   constexpr bool operator==(const CSSPercentage &rhs) const = default;
+
+  static constexpr std::optional<CSSPercentage> fromCalc(const CSSCalc &calc);
 };
 
 template <>
 struct CSSDataTypeParser<CSSPercentage> {
+  static constexpr auto consumeFunctionBlock(
+      const CSSFunctionBlock &func,
+      CSSValueParser &parser) -> std::optional<CSSPercentage>;
+
   static constexpr auto consumePreservedToken(const CSSPreservedToken &token) -> std::optional<CSSPercentage>
   {
     if (token.type() == CSSTokenType::Percentage) {

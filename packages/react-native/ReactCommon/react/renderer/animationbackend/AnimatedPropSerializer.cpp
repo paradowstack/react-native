@@ -463,7 +463,7 @@ void packBoxShadow(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
   auto shadowArray = folly::dynamic::array();
   for (const auto& shadow : boxShadows) {
     folly::dynamic shadowObj = folly::dynamic::object();
-    shadowObj["offsetX"] = shadow.offsetX;
+    shadowObj["offsetX"] = shadow.offsetX.asFloat();
     shadowObj["offsetY"] = shadow.offsetY;
     shadowObj["blurRadius"] = shadow.blurRadius;
     shadowObj["spreadDistance"] = shadow.spreadDistance;
