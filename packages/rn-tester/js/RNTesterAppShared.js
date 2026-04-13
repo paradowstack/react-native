@@ -272,7 +272,7 @@ const RNTesterApp = ({
     screen === Screens.COMPONENTS ? examplesList.components : examplesList.apis;
 
   // Hide chrome if we don't have much screen space and are showing UI for tests
-  const shouldHideChrome = isScreenTiny && hadDeepLink;
+  const shouldHideChrome = true;
 
   return (
     <RNTesterThemeContext.Provider value={theme}>

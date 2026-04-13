@@ -21,6 +21,9 @@
 
 namespace facebook::react {
 
+struct LayoutMetrics;
+struct LayoutContext;
+
 /*
  * Represents the most generic props object.
  */
@@ -69,7 +72,10 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
 
   virtual ComponentName getDiffPropsImplementationTarget() const;
 
-  virtual folly::dynamic getDiffProps(const Props *prevProps) const
+  virtual folly::dynamic getDiffProps(
+      const Props *prevProps,
+      const LayoutMetrics *layoutMetrics = nullptr,
+      const LayoutContext *layoutContext = nullptr) const
   {
     return folly::dynamic::object();
   }

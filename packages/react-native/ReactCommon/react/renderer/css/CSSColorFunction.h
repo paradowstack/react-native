@@ -18,6 +18,7 @@
 #include <react/renderer/css/CSSNumber.h>
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSValueParser.h>
+#include <react/renderer/css/CSSCalc.h>
 #include <react/utils/PackTraits.h>
 #include <react/utils/fnv1a.h>
 

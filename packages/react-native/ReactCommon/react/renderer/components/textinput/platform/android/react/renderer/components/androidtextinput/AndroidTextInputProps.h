@@ -131,7 +131,10 @@ class AndroidTextInputProps final : public BaseTextInputProps {
 #endif
 
   ComponentName getDiffPropsImplementationTarget() const override;
-  folly::dynamic getDiffProps(const Props *prevProps) const override;
+  folly::dynamic getDiffProps(
+      const Props *prevProps,
+      const LayoutMetrics *layoutMetrics = nullptr,
+      const LayoutContext *layoutContext = nullptr) const override;
 };
 
 } // namespace facebook::react

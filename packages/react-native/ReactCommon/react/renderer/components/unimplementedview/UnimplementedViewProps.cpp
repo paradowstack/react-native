@@ -20,14 +20,17 @@ ComponentName UnimplementedViewProps::getComponentName() const {
 #ifdef RN_SERIALIZABLE_STATE
 
 folly::dynamic UnimplementedViewProps::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = UnimplementedViewProps();
 
   const UnimplementedViewProps* oldProps = prevProps == nullptr
       ? &defaultProps
       : static_cast<const UnimplementedViewProps*>(prevProps);
 
-  folly::dynamic result = ViewProps::getDiffProps(oldProps);
+  folly::dynamic result =
+      ViewProps::getDiffProps(oldProps, layoutMetrics, layoutContext);
 
   if (componentName_ != oldProps->componentName_) {
     result["name"] = componentName_;

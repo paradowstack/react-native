@@ -20,6 +20,7 @@ enum class UnitType {
   Undefined,
   Point,
   Percent,
+  CalcId
 };
 
 struct ValueUnit {
@@ -28,6 +29,7 @@ struct ValueUnit {
 
   constexpr ValueUnit() = default;
   constexpr ValueUnit(float v, UnitType u) : value(v), unit(u) {}
+  constexpr ValueUnit(uint32_t v) : value(std::bit_cast<float>(v)), unit(UnitType::CalcId) {}
 
   constexpr bool operator==(const ValueUnit &other) const = default;
 
@@ -39,6 +41,7 @@ struct ValueUnit {
       case UnitType::Percent:
         return value * referenceLength * 0.01f;
       case UnitType::Undefined:
+      case UnitType::CalcId:
       default:
         return 0.0f;
     }
@@ -47,6 +50,11 @@ struct ValueUnit {
   constexpr operator bool() const
   {
     return unit != UnitType::Undefined;
+  }
+
+  constexpr uint32_t calcId() const
+  {
+    return unit == UnitType::CalcId ? std::bit_cast<uint32_t>(value) : 0;
   }
 
 #ifdef RN_SERIALIZABLE_STATE

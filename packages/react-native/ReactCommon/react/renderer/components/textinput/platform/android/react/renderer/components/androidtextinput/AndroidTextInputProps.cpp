@@ -362,14 +362,17 @@ ComponentName AndroidTextInputProps::getDiffPropsImplementationTarget() const {
 }
 
 folly::dynamic AndroidTextInputProps::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = AndroidTextInputProps();
 
   const AndroidTextInputProps* oldProps = prevProps == nullptr
       ? &defaultProps
       : static_cast<const AndroidTextInputProps*>(prevProps);
 
-  folly::dynamic result = ViewProps::getDiffProps(oldProps);
+  folly::dynamic result =
+      ViewProps::getDiffProps(oldProps, layoutMetrics, layoutContext);
 
   // Base text input paragraph props
   if (paragraphAttributes.maximumNumberOfLines !=

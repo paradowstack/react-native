@@ -9,6 +9,8 @@
 
 #include <algorithm>
 
+#include <folly/dynamic.h>
+#include <folly/json.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/accessibilityPropsConversions.h>
 #include <react/renderer/components/view/conversions.h>
@@ -18,6 +20,74 @@
 #include <react/renderer/graphics/TransformUtils.h>
 
 namespace facebook::react {
+
+Float resolve(
+    const BaseViewProps& props,
+    const FloatDynamic& value,
+    const LayoutContext& layoutContext) {
+  if (value.isDynamic()) {
+    auto it = props.calcMap->find(value.asDynamicId());
+    if (it != props.calcMap->end()) {
+      return it->second.resolve(
+          0.0f,
+          layoutContext.viewportSize.width,
+          layoutContext.viewportSize.height);
+    }
+  }
+  return value.asFloat();
+}
+
+folly::dynamic toDynamic(
+    const BaseViewProps& props,
+    const FloatDynamic& value,
+    const LayoutContext& layoutContext) {
+  return resolve(props, value, layoutContext);
+}
+
+folly::dynamic toDynamic(
+    const BaseViewProps& props,
+    const ValueUnit& value,
+    const LayoutContext& layoutContext) {
+  if (value.unit == UnitType::CalcId) {
+    auto it = props.calcMap->find(value.calcId());
+    if (it != props.calcMap->end()) {
+      return it->second.resolve(
+          0.0f,
+          layoutContext.viewportSize.width,
+          layoutContext.viewportSize.height);
+    }
+  }
+  if (value.unit == UnitType::Percent) {
+    return std::to_string(value.value) + "%";
+  }
+
+  return value.value;
+}
+
+#define RESOLVE_CALC_PROPERTY(fieldName)                                  \
+  if (propsMap.count(#fieldName)) {                                       \
+    auto& entry = propsMap[#fieldName];                                   \
+    if (entry.isString()) {                                               \
+      entry = toDynamic(*viewProps, viewProps->fieldName, layoutContext); \
+    }                                                                     \
+  }
+
+#define RESOLVE_CALC_ARRAY_FIELD(arrayName, fieldName)                      \
+  if (propsMap.count(#arrayName)) {                                         \
+    auto& arr = propsMap[#arrayName];                                       \
+    if (arr.isArray()) {                                                    \
+      const auto& vec = viewProps->arrayName;                               \
+      for (size_t i = 0; i < arr.size() && i < vec.size(); ++i) {           \
+        if (arr[i].isObject() && arr[i].count(#fieldName)) {                \
+          auto& entry = arr[i][#fieldName];                                 \
+          if (entry.isString()) {                                           \
+            entry = toDynamic(*viewProps, vec[i].fieldName, layoutContext); \
+          }                                                                 \
+        }                                                                   \
+      }                                                                     \
+    }                                                                       \
+  }
+
 
 HostPlatformViewProps::HostPlatformViewProps(
     const PropsParserContext& context,
@@ -513,7 +583,9 @@ ComponentName HostPlatformViewProps::getDiffPropsImplementationTarget() const {
 }
 
 folly::dynamic HostPlatformViewProps::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   folly::dynamic result = folly::dynamic::object();
 
   static const auto defaultProps = HostPlatformViewProps();
@@ -524,6 +596,15 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
 
   if (this == oldProps) {
     return result;
+  }
+
+  LayoutMetrics lm{};
+  LayoutContext lc{};
+  if (layoutMetrics != nullptr) {
+    lm = *layoutMetrics;
+  }
+  if (layoutContext != nullptr) {
+    lc = *layoutContext;
   }
 
   if (elevation != oldProps->elevation) {
@@ -568,10 +649,6 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
     result["outlineColor"] = *outlineColor;
   }
 
-  if (outlineOffset != oldProps->outlineOffset) {
-    result["outlineOffset"] = outlineOffset;
-  }
-
   if (outlineStyle != oldProps->outlineStyle) {
     switch (outlineStyle) {
       case OutlineStyle::Solid:
@@ -586,20 +663,35 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
     }
   }
 
-  if (outlineWidth != oldProps->outlineWidth) {
-    result["outlineWidth"] = outlineWidth;
+  {
+    auto newResolvedOutlineOffset = resolve(*this, outlineOffset, lc);
+    auto oldResolvedOutlineOffset = resolve(*oldProps, outlineOffset, lc);
+    if (newResolvedOutlineOffset != oldResolvedOutlineOffset) {
+      result["outlineOffset"] = newResolvedOutlineOffset;
+    }
+  }
+  {
+    auto newResolvedOutlineWidth = resolve(*this, outlineWidth, lc);
+    auto oldResolvedOutlineWidth = resolve(*oldProps, outlineWidth, lc);
+    if (newResolvedOutlineWidth != oldResolvedOutlineWidth) {
+      result["outlineWidth"] = newResolvedOutlineWidth;
+    }
   }
 
   if (shadowColor != oldProps->shadowColor) {
     result["shadowColor"] = *shadowColor;
   }
 
-  if (shadowOpacity != oldProps->shadowOpacity) {
-    result["shadowOpacity"] = shadowOpacity;
+  auto newResolvedShadowOpacity = resolve(*this, shadowOpacity, lc);
+  auto oldResolvedShadowOpacity = resolve(*oldProps, shadowOpacity, lc);
+  if (newResolvedShadowOpacity != oldResolvedShadowOpacity) {
+    result["shadowOpacity"] = newResolvedShadowOpacity;
   }
 
-  if (shadowRadius != oldProps->shadowRadius) {
-    result["shadowRadius"] = shadowRadius;
+  auto newResolvedShadowRadius = resolve(*this, shadowRadius, lc);
+  auto oldResolvedShadowRadius = resolve(*oldProps, shadowRadius, lc);
+  if (newResolvedShadowRadius != oldResolvedShadowRadius) {
+    result["shadowRadius"] = newResolvedShadowRadius;
   }
 
   if (shouldRasterize != oldProps->shouldRasterize) {
@@ -1049,6 +1141,118 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
   }
 
   return result;
+}
+
+static void normalizeBorderWidthStringPropsForAndroidMounting(
+    folly::dynamic& propsMap,
+    const LayoutMetrics& layoutMetrics) {
+  const auto& bw = layoutMetrics.borderWidth;
+  const bool rtl =
+      layoutMetrics.layoutDirection == LayoutDirection::RightToLeft;
+  const float startWidth = rtl ? bw.right : bw.left;
+  const float endWidth = rtl ? bw.left : bw.right;
+
+  auto replaceIfString = [&](const char* key, double value) {
+    if (propsMap.count(key)) {
+      auto& entry = propsMap[key];
+      if (entry.isString()) {
+        entry = value;
+      }
+    }
+  };
+
+  replaceIfString("borderWidth", bw.left);
+  replaceIfString("borderLeftWidth", bw.left);
+  replaceIfString("borderRightWidth", bw.right);
+  replaceIfString("borderTopWidth", bw.top);
+  replaceIfString("borderBottomWidth", bw.bottom);
+  replaceIfString("borderStartWidth", startWidth);
+  replaceIfString("borderEndWidth", endWidth);
+  replaceIfString("borderHorizontalWidth", (bw.left + bw.right) / 2.0);
+  replaceIfString("borderVerticalWidth", (bw.top + bw.bottom) / 2.0);
+}
+
+static float cornerRadiiAverage(const CornerRadii& cr) {
+  return (cr.horizontal + cr.vertical) * 0.5f;
+}
+
+static void normalizeBorderRadiusStringPropsForAndroidMounting(
+    folly::dynamic& propsMap,
+    const HostPlatformViewProps* viewProps,
+    const LayoutMetrics& layoutMetrics,
+    const LayoutContext& layoutContext) {
+  const auto& br = viewProps->borderRadii;
+  const auto borderMetrics = viewProps->resolveBorderMetrics(layoutMetrics);
+  const auto& R = borderMetrics.borderRadii;
+  const bool rtl =
+      layoutMetrics.layoutDirection == LayoutDirection::RightToLeft;
+
+  const auto& topLeading = rtl ? R.topRight : R.topLeft;
+  const auto& topTrailing = rtl ? R.topLeft : R.topRight;
+  const auto& bottomLeading = rtl ? R.bottomRight : R.bottomLeft;
+  const auto& bottomTrailing = rtl ? R.bottomLeft : R.bottomRight;
+
+  auto replace = [&](const char* key,
+                     const std::optional<ValueUnit>& vu,
+                     const CornerRadii& fallback) {
+    if (!propsMap.count(key)) {
+      return;
+    }
+    auto& entry = propsMap[key];
+    if (!entry.isString()) {
+      return;
+    }
+    if (vu.has_value()) {
+      entry = toDynamic(*viewProps, vu.value(), layoutContext);
+      const auto& v = vu.value();
+      if (v.unit == UnitType::Point) {
+        entry = static_cast<double>(v.value);
+        return;
+      }
+      if (v.unit == UnitType::Percent) {
+        entry = std::to_string(v.value) + "%";
+        return;
+      }
+    }
+    entry = static_cast<double>(cornerRadiiAverage(fallback));
+  };
+
+  replace("borderRadius", br.all, R.topLeft);
+  replace("borderTopLeftRadius", br.topLeft, R.topLeft);
+  replace("borderTopRightRadius", br.topRight, R.topRight);
+  replace("borderBottomRightRadius", br.bottomRight, R.bottomRight);
+  replace("borderBottomLeftRadius", br.bottomLeft, R.bottomLeft);
+  replace("borderTopStartRadius", br.topStart, topLeading);
+  replace("borderTopEndRadius", br.topEnd, topTrailing);
+  replace("borderBottomStartRadius", br.bottomStart, bottomLeading);
+  replace("borderBottomEndRadius", br.bottomEnd, bottomTrailing);
+  replace("borderEndEndRadius", br.endEnd, bottomTrailing);
+  replace("borderEndStartRadius", br.endStart, topTrailing);
+  replace("borderStartEndRadius", br.startEnd, bottomLeading);
+  replace("borderStartStartRadius", br.startStart, topLeading);
+}
+
+void HostPlatformViewProps::normalizeOutlinePropsForAndroidMounting(
+    folly::dynamic& propsMap,
+    const Props& props,
+    const LayoutMetrics& layoutMetrics,
+    const LayoutContext& layoutContext) {
+  auto before = folly::toJson(propsMap);
+  const auto* viewProps = dynamic_cast<const HostPlatformViewProps*>(&props);
+  if (viewProps == nullptr) {
+    return;
+  }
+  RESOLVE_CALC_PROPERTY(opacity);
+  RESOLVE_CALC_PROPERTY(outlineWidth);
+  RESOLVE_CALC_PROPERTY(outlineOffset);
+
+  RESOLVE_CALC_ARRAY_FIELD(boxShadow, offsetX);
+  RESOLVE_CALC_ARRAY_FIELD(boxShadow, offsetY);
+
+  auto after = folly::toJson(propsMap);
+  normalizeBorderWidthStringPropsForAndroidMounting(propsMap, layoutMetrics);
+  normalizeBorderRadiusStringPropsForAndroidMounting(
+      propsMap, viewProps, layoutMetrics, layoutContext);
 }
 
 #endif

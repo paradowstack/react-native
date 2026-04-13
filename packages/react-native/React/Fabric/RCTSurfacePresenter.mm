@@ -361,6 +361,16 @@ using namespace facebook::react;
 
 #pragma mark - RCTMountingManagerDelegate
 
+- (facebook::react::LayoutContext)mountingManager:(RCTMountingManager *)mountingManager
+                        layoutContextForRootTag:(facebook::react::SurfaceId)rootTag
+{
+  RCTFabricSurface *surface = [self surfaceForRootTag:(ReactTag)rootTag];
+  if (surface == nil) {
+    return facebook::react::LayoutContext{};
+  }
+  return surface.surfaceHandler.getLayoutContext();
+}
+
 - (void)mountingManager:(RCTMountingManager *)mountingManager willMountComponentsWithRootTag:(ReactTag)rootTag
 {
   RCTAssertMainQueue();

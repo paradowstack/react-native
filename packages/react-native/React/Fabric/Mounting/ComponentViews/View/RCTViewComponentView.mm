@@ -27,6 +27,8 @@
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
+#import <react/renderer/components/view/primitives.h>
+#import <react/renderer/core/LayoutContext.h>
 #import <react/renderer/graphics/BlendMode.h>
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -363,11 +365,14 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
     needsInvalidateLayer = YES;
   }
 
+  auto newOutlineWidth = newViewProps.resolveOutlineWidth(_layoutMetrics, _layoutContext);
+  auto oldOutlineWidth = oldViewProps.resolveOutlineWidth(_layoutMetrics, _layoutContext);
+  auto newOutlineOffset = newViewProps.resolveOutlineOffset(_layoutMetrics, _layoutContext);
+  auto oldOutlineOffset = oldViewProps.resolveOutlineOffset(_layoutMetrics, _layoutContext);
   // `outline`
   if (oldViewProps.outlineStyle != newViewProps.outlineStyle ||
       oldViewProps.outlineColor != newViewProps.outlineColor ||
-      oldViewProps.outlineOffset != newViewProps.outlineOffset ||
-      oldViewProps.outlineWidth != newViewProps.outlineWidth) {
+      oldOutlineOffset != newOutlineOffset || newOutlineWidth != oldOutlineWidth) {
     needsInvalidateLayer = YES;
   }
 
@@ -594,6 +599,19 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   _props = std::static_pointer_cast<const ViewProps>(props);
 }
 
+- (void)updateLayoutContext:(const LayoutContext &)layoutContext
+{
+  [super updateLayoutContext:layoutContext];
+  if (_layoutContext == layoutContext) {
+    return;
+  }
+  _layoutContext = layoutContext;
+  const auto &viewProps = static_cast<const ViewProps &>(*_props);
+  if (viewProps.outlineWidth.isDynamic()) {
+    _needsInvalidateLayer = YES;
+  }
+}
+
 - (void)updateEventEmitter:(const EventEmitter::Shared &)eventEmitter
 {
   assert(std::dynamic_pointer_cast<const ViewEventEmitter>(eventEmitter));
@@ -706,6 +724,7 @@ const CGFloat BACKGROUND_COLOR_ZPOSITION = -1024.0f;
   _removeClippedSubviews = NO;
   _reactSubviews = [NSMutableArray new];
   _layoutMetrics = {};
+  _layoutContext = {};
 }
 
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(NSSet<NSString *> *_Nullable)props
@@ -879,8 +898,9 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics);
   BOOL nonZeroBorderWidth = !(borderMetrics.borderWidths.isUniform() && borderMetrics.borderWidths.left == 0);
   BOOL clipToPaddingBox = ReactNativeFeatureFlags::enableIOSViewClipToPaddingBox();
+  Float resolvedOutlineWidth = _props->resolveOutlineWidth(_layoutMetrics, _layoutContext);
   return _props->getClipsContentToBounds() &&
-      ((!_props->boxShadow.empty() || (clipToPaddingBox && nonZeroBorderWidth)) || _props->outlineWidth != 0);
+      ((!_props->boxShadow.empty() || (clipToPaddingBox && nonZeroBorderWidth)) || resolvedOutlineWidth != 0);
 }
 
 // The view that is used as the receiver for all styling (borders, background,
@@ -1097,32 +1117,42 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   // outline
   [_outlineLayer removeFromSuperlayer];
   _outlineLayer = nil;
-  if (_props->outlineWidth != 0) {
-    if (!_outlineLayer) {
-      CALayer *outlineLayer = [CALayer new];
-      outlineLayer.magnificationFilter = kCAFilterNearest;
-      outlineLayer.zPosition = BACKGROUND_COLOR_ZPOSITION + 2;
+  {
+    Float resolvedOutlineWidth = _props->resolveOutlineWidth(_layoutMetrics, _layoutContext);
+    Float resolvedOutlineOffset = _props->resolveOutlineOffset(_layoutMetrics, _layoutContext);
+    if (resolvedOutlineWidth != 0) {
+      if (!_outlineLayer) {
+        CALayer *outlineLayer = [CALayer new];
+        outlineLayer.magnificationFilter = kCAFilterNearest;
+        outlineLayer.zPosition = BACKGROUND_COLOR_ZPOSITION + 2;
 
-      [layer addSublayer:outlineLayer];
-      _outlineLayer = outlineLayer;
-    }
-    _outlineLayer.frame = CGRectInset(
-        layer.bounds, -_props->outlineOffset - _props->outlineWidth, -_props->outlineOffset - _props->outlineWidth);
+        [layer addSublayer:outlineLayer];
+        _outlineLayer = outlineLayer;
+      }
+      _outlineLayer.frame = CGRectInset(
+          layer.bounds,
+          -resolvedOutlineOffset - resolvedOutlineWidth,
+          -resolvedOutlineOffset - resolvedOutlineWidth);
 
-    if (borderMetrics.borderRadii.isUniform() && borderMetrics.borderRadii.topLeft.horizontal == 0) {
-      UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
-      _outlineLayer.borderWidth = _props->outlineWidth;
-      _outlineLayer.borderColor = outlineColor.CGColor;
-    } else {
-      UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
+      if (borderMetrics.borderRadii.isUniform() && borderMetrics.borderRadii.topLeft.horizontal == 0) {
+        UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
+        _outlineLayer.borderWidth = resolvedOutlineWidth;
+        _outlineLayer.borderColor = outlineColor.CGColor;
+      } else {
+        UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
 
-      RCTAddContourEffectToLayer(
-          _outlineLayer,
-          RCTCreateOutlineCornerRadiiFromBorderRadii(
-              borderMetrics.borderRadii, _props->outlineWidth, _props->outlineOffset),
-          RCTBorderColors{outlineColor, outlineColor, outlineColor, outlineColor},
-          UIEdgeInsets{_props->outlineWidth, _props->outlineWidth, _props->outlineWidth, _props->outlineWidth},
-          RCTBorderStyleFromOutlineStyle(_props->outlineStyle));
+        RCTAddContourEffectToLayer(
+            _outlineLayer,
+            RCTCreateOutlineCornerRadiiFromBorderRadii(
+                borderMetrics.borderRadii, resolvedOutlineWidth, resolvedOutlineOffset),
+            RCTBorderColors{outlineColor, outlineColor, outlineColor, outlineColor},
+            UIEdgeInsets{
+                resolvedOutlineWidth,
+                resolvedOutlineWidth,
+                resolvedOutlineWidth,
+                resolvedOutlineWidth},
+            RCTBorderStyleFromOutlineStyle(_props->outlineStyle));
+      }
     }
   }
 

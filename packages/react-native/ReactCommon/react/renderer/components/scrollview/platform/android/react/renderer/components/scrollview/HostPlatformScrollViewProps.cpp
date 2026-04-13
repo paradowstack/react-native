@@ -148,13 +148,16 @@ ComponentName HostPlatformScrollViewProps::getDiffPropsImplementationTarget()
 }
 
 folly::dynamic HostPlatformScrollViewProps::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = HostPlatformScrollViewProps();
   const HostPlatformScrollViewProps* oldProps = prevProps == nullptr
       ? &defaultProps
       : static_cast<const HostPlatformScrollViewProps*>(prevProps);
 
-  folly::dynamic result = ViewProps::getDiffProps(oldProps);
+  folly::dynamic result =
+      ViewProps::getDiffProps(oldProps, layoutMetrics, layoutContext);
 
   if (alwaysBounceHorizontal != oldProps->alwaysBounceHorizontal) {
     result["alwaysBounceHorizontal"] = alwaysBounceHorizontal;

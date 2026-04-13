@@ -11,6 +11,7 @@
 #include <react/debug/flags.h>
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/root/RootProps.h>
 #include <react/renderer/components/view/LayoutConformanceShadowNode.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
@@ -85,6 +86,9 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
         &yogaNode_,
         YogaLayoutableShadowNode::yogaNodeBaselineCallbackConnector);
   }
+  if (auto rootProps = std::dynamic_pointer_cast<const RootProps>(props_)) {
+    threadLocalLayoutContext = rootProps->layoutContext;
+  }
 
   updateYogaProps();
   updateYogaChildren();
@@ -140,6 +144,10 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     yogaTreeHasBeenConfigured_ =
         static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
             .yogaTreeHasBeenConfigured_;
+  }
+
+  if (auto rootProps = std::dynamic_pointer_cast<const RootProps>(props_)) {
+    threadLocalLayoutContext = rootProps->layoutContext;
   }
 
   if (fragment.props) {
@@ -380,6 +388,21 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 void YogaLayoutableShadowNode::updateYogaProps(
     const CalcExpressions& previousCalcExpressions) {
   ensureUnsealed();
+
+	auto& viewProps = const_cast<ViewProps&>(static_cast<const ViewProps&>(*props_));
+	
+	if (viewProps.boxShadow.size() == 1) {
+		auto vw = threadLocalLayoutContext.viewportSize.width;
+		auto vh = threadLocalLayoutContext.viewportSize.height;
+    if (viewProps.calcExpressions.contains(facebook::react::fnv1a("boxShadow.blurRadius"))) {
+      auto cssCalc = viewProps.calcExpressions.at(facebook::react::fnv1a("boxShadow.blurRadius"));
+      viewProps.boxShadow.front().blurRadius = cssCalc.resolve(0.0f, vw, vh);
+    }
+    if (viewProps.calcExpressions.contains(facebook::react::fnv1a("boxShadow.spreadDistance"))) {
+      auto cssCalc = viewProps.calcExpressions.at(facebook::react::fnv1a("boxShadow.spreadDistance"));
+      viewProps.boxShadow.front().spreadDistance = cssCalc.resolve(0.0f, vw, vh);
+    }
+	}
 
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);

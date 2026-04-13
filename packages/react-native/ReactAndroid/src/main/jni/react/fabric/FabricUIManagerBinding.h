@@ -16,6 +16,7 @@
 #include <react/jni/JRuntimeExecutor.h>
 #include <react/jni/JRuntimeScheduler.h>
 #include <react/jni/ReadableNativeMap.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/scheduler/SchedulerDelegate.h>
 #include <react/renderer/scheduler/SurfaceHandler.h>
 #include <react/renderer/uimanager/LayoutAnimationStatusDelegate.h>
@@ -145,6 +146,9 @@ class FabricUIManagerBinding : public jni::HybridClass<FabricUIManagerBinding>,
   std::shared_ptr<Scheduler> scheduler_;
 
   std::shared_ptr<FabricMountingManager> getMountingManager(const char *locationHint);
+
+  /** Same source as iOS `SurfaceHandler::getLayoutContext()` for prop resolution (e.g. calc). */
+  LayoutContext getLayoutContextForSurface(SurfaceId surfaceId);
 
   // LayoutAnimations
   void onAnimationStarted() override;

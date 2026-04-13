@@ -10,6 +10,7 @@
 #import <React/RCTAssert.h>
 #import <React/RCTLog.h>
 #import <React/RCTUtils.h>
+#import <react/renderer/core/LayoutContext.h>
 
 #import "RCTConversions.h"
 
@@ -72,6 +73,11 @@ using namespace facebook::react;
 
 - (void)updateState:(const facebook::react::State::Shared &)state
            oldState:(const facebook::react::State::Shared &)oldState
+{
+  // Default implementation does nothing.
+}
+
+- (void)updateLayoutContext:(const LayoutContext &)layoutContext
 {
   // Default implementation does nothing.
 }

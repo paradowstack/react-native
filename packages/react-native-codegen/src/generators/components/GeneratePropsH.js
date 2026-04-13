@@ -54,6 +54,9 @@ ${imports}
 
 namespace facebook::react {
 
+struct LayoutMetrics;
+struct LayoutContext;
+
 ${componentClasses}
 
 } // namespace facebook::react
@@ -93,7 +96,10 @@ class ${className} final${extendClasses} {
   #ifdef RN_SERIALIZABLE_STATE
   ComponentName getDiffPropsImplementationTarget() const override;
 
-  folly::dynamic getDiffProps(const Props* prevProps) const override;
+  folly::dynamic getDiffProps(
+      const Props* prevProps,
+      const LayoutMetrics* layoutMetrics = nullptr,
+      const LayoutContext* layoutContext = nullptr) const override;
   #endif
 
   ${includeGetDebugPropsImplementation ? getDebugPropsString : ''}

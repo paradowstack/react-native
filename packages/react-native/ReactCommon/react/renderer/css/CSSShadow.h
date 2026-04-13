@@ -10,6 +10,7 @@
 #include <optional>
 #include <tuple>
 
+#include <react/renderer/css/CSSCalc.h>
 #include <react/renderer/css/CSSColor.h>
 #include <react/renderer/css/CSSDataType.h>
 #include <react/renderer/css/CSSKeyword.h>
@@ -52,9 +53,9 @@ struct CSSDataTypeParser<CSSShadow> {
     bool inset{false};
     std::optional<std::tuple<CSSLength, CSSLength, CSSLength, CSSLength>> lengths{};
 
-    for (auto nextValue = parser.parseNextValue<CSSLength, CSSColor, CSSInsetShadowKeyword>();
+    for (auto nextValue = parser.parseNextValue<CSSLength, CSSColor, CSSInsetShadowKeyword, CSSCalc>();
          !std::holds_alternative<std::monostate>(nextValue);
-         nextValue = parser.parseNextValue<CSSLength, CSSColor, CSSInsetShadowKeyword>(CSSDelimiter::Whitespace)) {
+         nextValue = parser.parseNextValue<CSSLength, CSSColor, CSSInsetShadowKeyword, CSSCalc>(CSSDelimiter::Whitespace)) {
       if (std::holds_alternative<CSSLength>(nextValue)) {
         if (lengths.has_value()) {
           return {};
