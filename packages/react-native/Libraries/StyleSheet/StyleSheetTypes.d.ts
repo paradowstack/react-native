@@ -588,7 +588,7 @@ export interface TextStyleAndroid extends ViewStyle {
 export interface TextStyle extends TextStyleIOS, TextStyleAndroid, ViewStyle {
   color?: ColorValue | undefined;
   fontFamily?: string | undefined;
-  fontSize?: number | string | undefined;
+  fontSize?: number | undefined;
   fontStyle?: 'normal' | 'italic' | undefined;
   /**
    * Specifies font weight. The values 'normal' and 'bold' are supported

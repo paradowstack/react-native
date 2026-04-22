@@ -158,27 +158,28 @@ SharedDebugStringConvertibleList BaseParagraphProps::getDebugProps() const {
 }
 #endif
 
-void BaseParagraphProps::resolveCalcInPlace(const DynamicResolveContext& context) {
+void BaseParagraphProps::resolveProperties(const DynamicResolver& resolver) {
   if (!needsToResolveStyleValues) {
     return;
   }
-  BaseViewProps::resolveCalcInPlace(context);
+  BaseViewProps::resolveProperties(resolver);
 
-  textAttributes.fontSize = calcExpressions.resolve(textAttributes.fontSize, context);
+  paragraphAttributes.resolveProperties(resolver);
+  textAttributes.resolveProperties(resolver);
+}
+
+void BaseParagraphProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  BaseViewProps::collectLiveResolvableIds(ids);
+  paragraphAttributes.collectLiveResolvableIds(ids);
+  textAttributes.collectLiveResolvableIds(ids);
 }
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic BaseParagraphProps::getResolvedProps(
-    const DynamicResolveContext& context) const {
-        return ViewProps::getResolvedProps(context);
+    const DynamicResolver& resolver) const {
+  return ViewProps::getResolvedProps(context);
 }
 #endif
 
-void BaseParagraphProps::collectLiveCalcIds(
-    std::unordered_set<uint32_t>& ids) const {
-    BaseViewProps::collectLiveCalcIds(ids);
-    if (textAttributes.fontSize.isDynamic()) {
-      ids.insert(textAttributes.fontSize.asDynamicId());
-    }
-}
 } // namespace facebook::react

@@ -31,8 +31,10 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   // Font
   fontFamily = !textAttributes.fontFamily.empty() ? textAttributes.fontFamily
                                                   : fontFamily;
-  fontSize =
-	!std::isnan(textAttributes.fontSize.asFloat()) && !textAttributes.fontSize.isDynamic() ? textAttributes.fontSize.asFloat() : fontSize.asFloat();
+  fontSize = !std::isnan(textAttributes.fontSize) &&
+          !textAttributes.fontSize.isDynamic()
+      ? textAttributes.fontSize
+      : fontSize;
   fontSizeMultiplier = !std::isnan(textAttributes.fontSizeMultiplier)
       ? textAttributes.fontSizeMultiplier
       : fontSizeMultiplier;
@@ -171,7 +173,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.textEffects) &&
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
       floatEquality(opacity, rhs.opacity) &&
-      floatEquality(fontSize.asFloat(), rhs.fontSize.asFloat()) &&
+      floatEquality(fontSize, rhs.fontSize) &&
       floatEquality(fontSizeMultiplier, rhs.fontSizeMultiplier) &&
       floatEquality(letterSpacing, rhs.letterSpacing) &&
       floatEquality(lineHeight, rhs.lineHeight) &&
@@ -207,7 +209,7 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
       // Font
       debugStringConvertibleItem(
           "fontFamily", fontFamily, textAttributes.fontFamily),
-      debugStringConvertibleItem("fontSize", fontSize.asFloat(), textAttributes.fontSize.asFloat()),
+      debugStringConvertibleItem("fontSize", fontSize, textAttributes.fontSize),
       debugStringConvertibleItem(
           "fontSizeMultiplier",
           fontSizeMultiplier,
@@ -288,5 +290,36 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
   };
 }
 #endif
+
+void TextAttributes::resolveProperties(const DynamicResolver& resolver) {
+  fontSize = resolver.resolve(fontSize);
+  fontSizeMultiplier = resolver.resolve(fontSizeMultiplier);
+  maxFontSizeMultiplier = resolver.resolve(maxFontSizeMultiplier);
+  letterSpacing = resolver.resolve(letterSpacing);
+  lineHeight = resolver.resolve(lineHeight);
+  textShadowRadius = resolver.resolve(textShadowRadius);
+}
+
+void TextAttributes::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  if (fontSize.isDynamic()) {
+    ids.insert(fontSize.asDynamicId());
+  }
+  if (fontSizeMultiplier.isDynamic()) {
+    ids.insert(fontSizeMultiplier.asDynamicId());
+  }
+  if (maxFontSizeMultiplier.isDynamic()) {
+    ids.insert(maxFontSizeMultiplier.asDynamicId());
+  }
+  if (letterSpacing.isDynamic()) {
+    ids.insert(letterSpacing.asDynamicId());
+  }
+  if (lineHeight.isDynamic()) {
+    ids.insert(lineHeight.asDynamicId());
+  }
+  if (textShadowRadius.isDynamic()) {
+    ids.insert(textShadowRadius.asDynamicId());
+  }
+}
 
 } // namespace facebook::react
