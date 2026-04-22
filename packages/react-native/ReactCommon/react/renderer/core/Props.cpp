@@ -35,9 +35,9 @@ void Props::initialize(
   calcExpressions = sourceProps.calcExpressions;
 
   context.contextContainer.insert_or_assign(
-      CalcExpressionsKey,
-      std::shared_ptr<CalcExpressions>(
-          &calcExpressions, [](CalcExpressions*) {}));
+      DynamicPropertiesMapKey,
+      std::shared_ptr<DynamicPropertiesMap>(
+          &calcExpressions, [](DynamicPropertiesMap*) {}));
 
 #ifdef RN_SERIALIZABLE_STATE
   if (!ReactNativeFeatureFlags::enableExclusivePropsUpdateAndroid()) {
@@ -62,9 +62,10 @@ bool Props::hasResolvableStyleValues() const {
   return needsToResolveStyleValues;
 }
 
-void Props::resolveCalcInPlace(const DynamicResolveContext& context) {}
+void Props::resolveProperties(const DynamicResolver& resolver) {}
 
-void Props::collectLiveCalcIds(std::unordered_set<uint32_t>& /*ids*/) const {
+void Props::collectLiveResolvableIds(
+    std::unordered_set<uint32_t>& /*ids*/) const {
   // Base class has no calc-capable fields.
 }
 
@@ -73,7 +74,7 @@ void Props::sweepCalcExpressions() {
     return;
   }
   std::unordered_set<uint32_t> liveIds;
-  collectLiveCalcIds(liveIds);
+  collectLiveResolvableIds(liveIds);
   std::erase_if(calcExpressions, [&](const auto& entry) {
     return !liveIds.contains(entry.first);
   });

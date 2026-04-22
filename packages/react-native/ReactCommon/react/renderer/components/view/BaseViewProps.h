@@ -130,46 +130,14 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   Transform resolveTransform(const LayoutMetrics& layoutMetrics) const;
   bool getClipsContentToBounds() const;
 
-  /**
-   * Resolve a FloatDynamic value, looking up calc() expressions in calcMap
-   * when the value is dynamic. Returns the concrete float result.
-   */
-  Float resolveCalc(
-      const FloatDynamic& value,
-      const DynamicResolveContext& context) const;
-  Float resolveCalc(
-      const FloatDynamic& value,
-      const LayoutContext& layoutContext) const;
-
-  /**
-   * Resolve a ValueUnit value, looking up calc() expressions in calcMap
-   * when the unit is CalcId. For Point/Percent units, resolves using
-   * percentRef. Returns the concrete float result.
-   */
-  Float resolveCalc(
-      const ValueUnit& value,
-      float percentRef,
-      const DynamicResolveContext& context) const;
-  Float resolveCalc(
-      const ValueUnit& value,
-      float percentRef,
-      const LayoutContext& layoutContext) const;
-
-  /**
-   * Resolve all calc() expressions in FloatDynamic fields in-place,
-   * converting CalcId values to concrete Floats. After this call, all
-   * FloatDynamic fields will have type Float and calcMap is cleared.
-   * Called from progressCalc() on a mutable Props copy.
-   */
-  void resolveCalcInPlace(const DynamicResolveContext& context) override;
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic getResolvedProps(
-      const DynamicResolveContext& context) const override;
+      const DynamicResolver& resolver) const override;
 #endif
-
- protected:
-  void collectLiveCalcIds(std::unordered_set<uint32_t>& ids) const override;
 
  public:
   static Transform resolveTransform(

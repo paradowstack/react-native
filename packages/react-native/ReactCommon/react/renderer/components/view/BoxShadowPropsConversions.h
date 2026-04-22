@@ -75,8 +75,8 @@ inline void parseProcessedBoxShadow(
     // boxShadow.offsetY = (Float)offsetY->second;
 
     auto mapIt =
-        context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-            CalcExpressionsKey);
+        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
+            DynamicPropertiesMapKey);
 
     auto offsetX = rawBoxShadowMap.find("offsetX");
     if (offsetX != rawBoxShadowMap.end()) {
@@ -314,9 +314,9 @@ inline std::optional<FloatDynamic> toFloatDynamic(
         return FloatDynamic{(Float)cssCalc.px};
       }
       if (cssCalc.isComplex()) {
-        if (auto mapIt =
-                context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-                    CalcExpressionsKey)) {
+        if (auto mapIt = context.contextContainer
+                             .find<std::shared_ptr<DynamicPropertiesMap>>(
+                                 DynamicPropertiesMapKey)) {
           auto& map = *mapIt;
           auto index = map->allocateId();
           map->insert({index, cssCalc});

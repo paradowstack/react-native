@@ -10,6 +10,7 @@
 #include <optional>
 
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/DynamicPropertiesMap.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/RawPropsKey.h>
@@ -99,9 +100,9 @@ void fromRawValue(
 
 template <typename T>
 void fromRawValue(
-  const PropsParserContext& context, 
-  const RawValue& rawValue, 
-  T& result) {
+    const PropsParserContext& context,
+    const RawValue& rawValue,
+    T& result) {
   result = (T)rawValue;
 }
 
@@ -209,8 +210,8 @@ inline void fromRawValue(
       result = FloatDynamic{(Float)cssCalc.px};
     } else if (cssCalc.isComplex()) {
       auto mapIt =
-          context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-              CalcExpressionsKey);
+          context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
+              DynamicPropertiesMapKey);
       if (mapIt) {
         auto& map = *mapIt;
         auto index = map->allocateId();

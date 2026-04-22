@@ -386,9 +386,8 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 }
 
 void YogaLayoutableShadowNode::updateYogaProps(
-    const CalcExpressions& previousCalcExpressions) {
+    const DynamicPropertiesMap& previousCalcExpressions) {
   ensureUnsealed();
-
 
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);
