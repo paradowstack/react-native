@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
 #include <react/renderer/components/view/primitives.h>
-#include <react/renderer/core/DynamicPropertiesHolder.h>
 #include <react/renderer/core/PropsMacros.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>

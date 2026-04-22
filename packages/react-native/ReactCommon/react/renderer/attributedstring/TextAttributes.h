@@ -13,8 +13,8 @@
 
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityPrimitives.h>
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
 #include <react/renderer/components/view/primitives.h>
-#include <react/renderer/core/DynamicPropertiesHolder.h>
 #include <react/renderer/core/LayoutPrimitives.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -29,7 +29,8 @@ class TextAttributes;
 
 using SharedTextAttributes = std::shared_ptr<const TextAttributes>;
 
-class TextAttributes : public DebugStringConvertible, public DynamicPropertiesHolder {
+class TextAttributes : public DebugStringConvertible,
+                       public DynamicPropertiesHolder {
  public:
   /*
    * Returns TextAttribute object which has actual default attribute values
