@@ -129,7 +129,7 @@ inline bool areTextAttributesEquivalentLayoutWise(const TextAttributes &lhs, con
              rhs.allowFontScaling,
              rhs.dynamicTypeRamp,
              rhs.alignment) &&
-      floatEquality(lhs.fontSize, rhs.fontSize) && floatEquality(lhs.fontSizeMultiplier, rhs.fontSizeMultiplier) &&
+      floatEquality(lhs.fontSize.asFloat(), rhs.fontSize.asFloat()) && floatEquality(lhs.fontSizeMultiplier, rhs.fontSizeMultiplier) &&
       floatEquality(lhs.letterSpacing, rhs.letterSpacing) && floatEquality(lhs.lineHeight, rhs.lineHeight);
 }
 
@@ -139,7 +139,7 @@ inline size_t textAttributesHashLayoutWise(const TextAttributes &textAttributes)
   // `areTextAttributesEquivalentLayoutWise` mentions.
   return facebook::react::hash_combine(
       textAttributes.fontFamily,
-      textAttributes.fontSize,
+      textAttributes.fontSize.asFloat(),
       textAttributes.fontSizeMultiplier,
       textAttributes.fontWeight,
       textAttributes.fontStyle,

@@ -13,6 +13,7 @@
 
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityPrimitives.h>
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutPrimitives.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -45,7 +46,7 @@ class TextAttributes : public DebugStringConvertible {
 
   // Font
   std::string fontFamily{""};
-  Float fontSize{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic fontSize{std::numeric_limits<Float>::quiet_NaN()};
   Float fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<FontWeight> fontWeight{};
   std::optional<FontStyle> fontStyle{};
@@ -114,7 +115,7 @@ struct hash<facebook::react::TextAttributes> {
         textAttributes.backgroundColor,
         textAttributes.opacity,
         textAttributes.fontFamily,
-        textAttributes.fontSize,
+        textAttributes.fontSize.asFloat(),
         textAttributes.maxFontSizeMultiplier,
         textAttributes.fontSizeMultiplier,
         textAttributes.fontWeight,

@@ -812,7 +812,7 @@ void BaseViewProps::resolveCalcInPlace(const DynamicResolveContext& context) {
     }
   }
 
-  needsToResolveStyleValues = false;
+	sweepCalcExpressions();
 
 #ifdef RN_SERIALIZABLE_STATE
   rawProps = getResolvedProps(context);

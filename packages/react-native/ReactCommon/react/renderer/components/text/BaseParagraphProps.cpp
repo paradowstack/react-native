@@ -163,6 +163,8 @@ void BaseParagraphProps::resolveCalcInPlace(const DynamicResolveContext& context
     return;
   }
   BaseViewProps::resolveCalcInPlace(context);
+
+  textAttributes.fontSize = calcExpressions.resolve(textAttributes.fontSize, context);
 }
 
 #ifdef RN_SERIALIZABLE_STATE

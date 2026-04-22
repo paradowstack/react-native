@@ -9,6 +9,7 @@
 
 #include <cxxreact/TraceSection.h>
 #include <react/renderer/components/view/conversions.h>
+#include <react/renderer/core/ShadowNode.h>
 
 namespace facebook::react {
 

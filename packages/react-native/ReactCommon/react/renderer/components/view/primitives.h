@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <react/renderer/core/DynamicResolveContext.h>
 #include <react/renderer/css/CSSCalc.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/RectangleCorners.h>
@@ -253,6 +254,69 @@ struct BorderMetrics {
 
 using FloatDynamicId = uint32_t;
 
+enum class FloatDynamicType : bool {
+	Float,
+	Dynamic,
+};
+
+struct FloatDynamic {
+	Float value{0.0f};
+	FloatDynamicType type{FloatDynamicType::Float};
+
+	constexpr FloatDynamic() = default;
+	constexpr explicit FloatDynamic(Float val)
+			: value(val), type(FloatDynamicType::Float) {}
+	constexpr explicit FloatDynamic(FloatDynamicId calcId)
+			: value(static_cast<Float>(calcId)), type(FloatDynamicType::Dynamic) {}
+	constexpr FloatDynamic& operator=(Float val) {
+		value = val;
+		type = FloatDynamicType::Float;
+		return *this;
+	}
+
+	constexpr bool isDynamic() const {
+		return type == FloatDynamicType::Dynamic;
+	}
+	constexpr Float asFloat() const {
+		return value;
+	}
+	constexpr FloatDynamicId asDynamicId() const {
+		return static_cast<FloatDynamicId>(value);
+	}
+
+#ifdef RN_SERIALIZABLE_STATE
+	operator folly::dynamic() const {
+		return value;
+	}
+#endif
+
+  constexpr operator Float() const {
+    if (isDynamic()) {
+      throw std::runtime_error("Cannot convert dynamic Float to Float directly");
+    }
+    return asFloat();
+  }
+
+	constexpr bool operator!=(float v) const {
+		return !isDynamic() && this->value != v;
+	}
+
+	constexpr bool operator!=(double v) const {
+		return !isDynamic() && this->value != v;
+	}
+
+	constexpr bool operator==(const FloatDynamic& rhs) const {
+		if (type != rhs.type) {
+			return false;
+		}
+		if (isDynamic()) {
+			return false;
+		}
+		return value == rhs.value;
+	}
+};
+
+
 struct CalcExpressions : std::unordered_map<FloatDynamicId, CSSCalc> {
   using Base = std::unordered_map<FloatDynamicId, CSSCalc>;
   using Base::Base;
@@ -263,67 +327,38 @@ struct CalcExpressions : std::unordered_map<FloatDynamicId, CSSCalc> {
     return nextId++;
   }
 
+  Float resolve(const FloatDynamic& value, const DynamicResolveContext& context)
+      const {
+    if (value.isDynamic() && !empty()) {
+      auto it = find(value.asDynamicId());
+      if (it != end()) {
+        return it->second.resolve(
+            0.0f, context.viewportWidth(), context.viewportHeight());
+      }
+    }
+    return value.asFloat();
+  }
+
+  Float resolve(
+      const ValueUnit& value,
+      float percentRef,
+      const DynamicResolveContext& context) const {
+    if (value.isDynamic() && !empty()) {
+      auto it = find(value.asDynamicId());
+      if (it != end()) {
+        return it->second.resolve(
+            percentRef, context.viewportWidth(), context.viewportHeight());
+      }
+    }
+    return value.resolve(percentRef);
+  }
+
   bool operator==(const CalcExpressions& other) const {
     return static_cast<const Base&>(*this) == static_cast<const Base&>(other);
   }
 };
 
 const char CalcExpressionsKey[] = "CalcExpressions";
-
-enum class FloatDynamicType : bool {
-  Float,
-  Dynamic,
-};
-
-struct FloatDynamic {
-  Float value{0.0f};
-  FloatDynamicType type{FloatDynamicType::Float};
-
-  constexpr FloatDynamic() = default;
-  constexpr explicit FloatDynamic(Float val)
-      : value(val), type(FloatDynamicType::Float) {}
-  constexpr explicit FloatDynamic(FloatDynamicId calcId)
-      : value(static_cast<Float>(calcId)), type(FloatDynamicType::Dynamic) {}
-  constexpr FloatDynamic& operator=(Float val) {
-    value = val;
-    type = FloatDynamicType::Float;
-    return *this;
-  }
-
-  constexpr bool isDynamic() const {
-    return type == FloatDynamicType::Dynamic;
-  }
-  constexpr Float asFloat() const {
-    return value;
-  }
-  constexpr FloatDynamicId asDynamicId() const {
-    return static_cast<FloatDynamicId>(value);
-  }
-
-#ifdef RN_SERIALIZABLE_STATE
-  operator folly::dynamic() const {
-    return value;
-  }
-#endif
-
-  constexpr bool operator!=(float v) const {
-    return !isDynamic() && this->value != v;
-  }
-
-  constexpr bool operator!=(double v) const {
-    return !isDynamic() && this->value != v;
-  }
-
-  constexpr bool operator==(const FloatDynamic& rhs) const {
-    if (type != rhs.type) {
-      return false;
-    }
-    if (isDynamic()) {
-      return asDynamicId() == rhs.asDynamicId();
-    }
-    return value == rhs.value;
-  }
-};
 
 inline std::string toString(FloatDynamic value) {
   if (value.isDynamic()) {
