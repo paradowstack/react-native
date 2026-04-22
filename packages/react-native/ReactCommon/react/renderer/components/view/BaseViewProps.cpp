@@ -594,10 +594,10 @@ BorderMetrics BaseViewProps::resolveBorderMetrics(
       bool{layoutMetrics.layoutDirection == LayoutDirection::RightToLeft};
   const auto resolveContext =
       DynamicResolveContext(layoutMetrics, layoutContext);
-
+  const auto resolver = DynamicResolver(calcExpressions, resolveContext);
   auto resolved = borderRadii.resolve(isRTL, ValueUnit{0.0f, UnitType::Point});
   auto resolveRadius = [&](const ValueUnit& vu, float ref) -> float {
-    return resolveCalc(vu, ref, resolveContext);
+    return resolver.resolve(vu, ref);
   };
   const auto& size = layoutMetrics.frame.size;
   BorderRadii radii = {
@@ -665,82 +665,6 @@ bool BaseViewProps::getClipsContentToBounds() const {
   return yogaStyle.overflow() != yoga::Overflow::Visible;
 }
 
-Float BaseViewProps::resolveCalc(
-    const FloatDynamic& value,
-    const DynamicResolveContext& context) const {
-  if (value.isDynamic() && !calcExpressions.empty()) {
-    auto it = calcExpressions.find(value.asDynamicId());
-    if (it != calcExpressions.end()) {
-      return it->second.resolve(
-          0.0f, context.viewportWidth(), context.viewportHeight());
-    }
-  }
-  return value.asFloat();
-}
-
-Float BaseViewProps::resolveCalc(
-    const FloatDynamic& value,
-    const LayoutContext& layoutContext) const {
-  return resolveCalc(value, DynamicResolveContext({}, layoutContext));
-}
-
-Float BaseViewProps::resolveCalc(
-    const ValueUnit& value,
-    float percentRef,
-    const DynamicResolveContext& context) const {
-  if (value.unit == UnitType::Dynamic && !calcExpressions.empty()) {
-    auto it = calcExpressions.find(value.asDynamicId());
-    if (it != calcExpressions.end()) {
-      return it->second.resolve(
-          percentRef, context.viewportWidth(), context.viewportHeight());
-    }
-  }
-  return value.resolve(percentRef);
-}
-
-Float BaseViewProps::resolveCalc(
-    const ValueUnit& value,
-    float percentRef,
-    const LayoutContext& layoutContext) const {
-  return resolveCalc(
-      value, percentRef, DynamicResolveContext({}, layoutContext));
-}
-
-Float resolve(
-    const BaseViewProps& props,
-    const FloatDynamic& value,
-    const LayoutContext& layoutContext) {
-  return props.resolveCalc(value, layoutContext);
-}
-
-folly::dynamic toDynamic(
-    const BaseViewProps& props,
-    const Float& value,
-    const LayoutContext& layoutContext) {
-  return value;
-}
-
-folly::dynamic toDynamic(
-    const BaseViewProps& props,
-    const FloatDynamic& value,
-    const LayoutContext& layoutContext) {
-  return resolve(props, value, layoutContext);
-}
-
-folly::dynamic toDynamic(
-    const BaseViewProps& props,
-    const ValueUnit& value,
-    const LayoutContext& layoutContext) {
-  if (value.unit == UnitType::Dynamic) {
-    return props.resolveCalc(value, 0.0f, layoutContext);
-  }
-  if (value.unit == UnitType::Percent) {
-    return std::to_string(value.value) + "%";
-  }
-
-  return value.value;
-}
-
 #define SET_CALC_PROPERTY_BASE(props, fieldName, value) \
   if (props.count(#fieldName)) {                        \
     auto& entry = props[#fieldName];                    \
@@ -752,33 +676,33 @@ folly::dynamic toDynamic(
 #define SET_CALC_PROPERTY(fieldName, value) \
   SET_CALC_PROPERTY_BASE(props, fieldName, value)
 
-#define SET_OPTIONAL_CALC_PROPERTY(fieldName, value)                       \
-  if (value) {                                                             \
-    SET_CALC_PROPERTY(fieldName, toDynamic(*this, *value, layoutContext)); \
+#define SET_OPTIONAL_CALC_PROPERTY(fieldName, value)        \
+  if (value) {                                              \
+    SET_CALC_PROPERTY(fieldName, resolver.resolve(*value)); \
   }
 
-#define SET_CALC_PROPERTY_ARRAY(arrayName, index, fieldName, value)          \
-  if (props.count(#arrayName)) {                                             \
-    auto& array = props[#arrayName];                                         \
-    if (array.isArray()) {                                                   \
-      if (array.size() > index) {                                            \
-        SET_CALC_PROPERTY_BASE(                                              \
-            array[index], fieldName, toDynamic(*this, value, layoutContext)) \
-      }                                                                      \
-    }                                                                        \
+#define SET_CALC_PROPERTY_ARRAY(arrayName, index, fieldName, value) \
+  if (props.count(#arrayName)) {                                    \
+    auto& array = props[#arrayName];                                \
+    if (array.isArray()) {                                          \
+      if (array.size() > index) {                                   \
+        SET_CALC_PROPERTY_BASE(                                     \
+            array[index], fieldName, resolver.resolve(value))       \
+      }                                                             \
+    }                                                               \
   }
 
-void BaseViewProps::resolveCalcInPlace(const DynamicResolveContext& context) {
+void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
   if (!needsToResolveStyleValues) {
     return;
   }
 
   //
   // Resolve FloatDynamic scalar fields
-  outlineOffset = FloatDynamic(resolveCalc(outlineOffset, context));
-  outlineWidth = FloatDynamic(resolveCalc(outlineWidth, context));
-  shadowOpacity = FloatDynamic(resolveCalc(shadowOpacity, context));
-  shadowRadius = FloatDynamic(resolveCalc(shadowRadius, context));
+  outlineOffset = resolver.resolve(outlineOffset);
+  outlineWidth = resolver.resolve(outlineWidth);
+  shadowOpacity = resolver.resolve(shadowOpacity);
+  shadowRadius = resolver.resolve(shadowRadius);
 #ifdef RN_SERIALIZABLE_STATE
   auto before = folly::toJson(rawProps);
   [[maybe_unused]] auto b = before;
@@ -787,32 +711,29 @@ void BaseViewProps::resolveCalcInPlace(const DynamicResolveContext& context) {
   // Resolve FloatDynamic fields in box shadows
   for (size_t i = 0; i < boxShadow.size(); i++) {
     auto& shadow = boxShadow[i];
-    shadow.offsetX = FloatDynamic(resolveCalc(shadow.offsetX, context));
-    shadow.offsetY = FloatDynamic(resolveCalc(shadow.offsetY, context));
-    shadow.blurRadius = FloatDynamic(resolveCalc(shadow.blurRadius, context));
-    shadow.spreadDistance =
-        FloatDynamic(resolveCalc(shadow.spreadDistance, context));
+    shadow.offsetX = resolver.resolve(shadow.offsetX);
+    shadow.offsetY = resolver.resolve(shadow.offsetY);
+    shadow.blurRadius = resolver.resolve(shadow.blurRadius);
+    shadow.spreadDistance = resolver.resolve(shadow.spreadDistance);
   }
 
   for (auto& filterFunction : filter) {
     if (auto* parameter =
             std::get_if<FloatDynamic>(&filterFunction.parameters)) {
-      *parameter = FloatDynamic(resolveCalc(*parameter, context));
+      *parameter = resolver.resolve(*parameter);
       continue;
     }
 
     if (auto* dropShadowParams =
             std::get_if<DropShadowParams>(&filterFunction.parameters)) {
-      dropShadowParams->offsetX =
-          FloatDynamic(resolveCalc(dropShadowParams->offsetX, context));
-      dropShadowParams->offsetY =
-          FloatDynamic(resolveCalc(dropShadowParams->offsetY, context));
-      dropShadowParams->standardDeviation = FloatDynamic(
-          resolveCalc(dropShadowParams->standardDeviation, context));
+      dropShadowParams->offsetX = resolver.resolve(dropShadowParams->offsetX);
+      dropShadowParams->offsetY = resolver.resolve(dropShadowParams->offsetY);
+      dropShadowParams->standardDeviation =
+          resolver.resolve(dropShadowParams->standardDeviation);
     }
   }
 
-	sweepCalcExpressions();
+  sweepCalcExpressions();
 
 #ifdef RN_SERIALIZABLE_STATE
   rawProps = getResolvedProps(context);
@@ -823,7 +744,7 @@ void BaseViewProps::resolveCalcInPlace(const DynamicResolveContext& context) {
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic BaseViewProps::getResolvedProps(
-    const DynamicResolveContext& context) const {
+    const DynamicResolver& resolver) const {
   auto props = this->rawProps;
   LayoutContext layoutContext = context.layoutContext;
   SET_CALC_PROPERTY(outlineOffset, outlineOffset);
@@ -964,9 +885,9 @@ SharedDebugStringConvertibleList BaseViewProps::getDebugProps() const {
 }
 #endif
 
-void BaseViewProps::collectLiveCalcIds(
-    std::unordered_set<uint32_t>& ids) const {
-  YogaStylableProps::collectLiveCalcIds(ids);
+void BaseViewProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  YogaStylableProps::collectLiveResolvableIds(ids);
 
   auto addFD = [&](const FloatDynamic& fd) {
     if (fd.isDynamic()) {

@@ -529,9 +529,9 @@ void YogaStylableProps::convertRawPropAliases(
       yoga::StyleLength::undefined());
 }
 
-void YogaStylableProps::collectLiveCalcIds(
-    std::unordered_set<uint32_t>& ids) const {
-  Props::collectLiveCalcIds(ids);
+void YogaStylableProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  Props::collectLiveResolvableIds(ids);
 
   for (auto dim : {yoga::Dimension::Width, yoga::Dimension::Height}) {
     if (auto id = yogaStyle.dimension(dim).callbackId())
@@ -571,7 +571,7 @@ void YogaStylableProps::collectLiveCalcIds(
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic YogaStylableProps::getResolvedProps(
-    const DynamicResolveContext& context) const {
+    const DynamicResolver& resolver) const {
   auto props = rawProps;
   if (yogaStyle.dimension(yoga::Dimension::Width).isDynamic()) {
     props["width"] =

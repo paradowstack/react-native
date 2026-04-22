@@ -316,50 +316,6 @@ struct FloatDynamic {
 	}
 };
 
-
-struct CalcExpressions : std::unordered_map<FloatDynamicId, CSSCalc> {
-  using Base = std::unordered_map<FloatDynamicId, CSSCalc>;
-  using Base::Base;
-
-  uint32_t nextId{1};
-
-  uint32_t allocateId() {
-    return nextId++;
-  }
-
-  Float resolve(const FloatDynamic& value, const DynamicResolveContext& context)
-      const {
-    if (value.isDynamic() && !empty()) {
-      auto it = find(value.asDynamicId());
-      if (it != end()) {
-        return it->second.resolve(
-            0.0f, context.viewportWidth(), context.viewportHeight());
-      }
-    }
-    return value.asFloat();
-  }
-
-  Float resolve(
-      const ValueUnit& value,
-      float percentRef,
-      const DynamicResolveContext& context) const {
-    if (value.isDynamic() && !empty()) {
-      auto it = find(value.asDynamicId());
-      if (it != end()) {
-        return it->second.resolve(
-            percentRef, context.viewportWidth(), context.viewportHeight());
-      }
-    }
-    return value.resolve(percentRef);
-  }
-
-  bool operator==(const CalcExpressions& other) const {
-    return static_cast<const Base&>(*this) == static_cast<const Base&>(other);
-  }
-};
-
-const char CalcExpressionsKey[] = "CalcExpressions";
-
 inline std::string toString(FloatDynamic value) {
   if (value.isDynamic()) {
     return "calc(id=" + std::to_string(value.asDynamicId()) + ")";
@@ -368,3 +324,16 @@ inline std::string toString(FloatDynamic value) {
 }
 
 } // namespace facebook::react
+
+namespace std {
+template <>
+struct hash<facebook::react::FloatDynamic> {
+  size_t operator()(
+      const facebook::react::FloatDynamic& value) const {
+    if (value.isDynamic()) {
+      return std::hash<uint32_t>()(value.asDynamicId());
+    }
+    return std::hash<float>()(value.asFloat());
+  }
+};
+}

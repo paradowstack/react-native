@@ -11,6 +11,7 @@
 #include <react/debug/react_native_expect.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/DynamicPropertiesMap.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
@@ -503,9 +504,9 @@ inline void fromRawValue(
           return;
         }
         if (cssCalc.isComplex()) {
-          auto mapIt =
-              context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-                  CalcExpressionsKey);
+          auto mapIt = context.contextContainer
+                           .find<std::shared_ptr<DynamicPropertiesMap>>(
+                               DynamicPropertiesMapKey);
           if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
@@ -554,9 +555,9 @@ inline void fromRawValue(
           return;
         }
         if (cssCalc.isComplex()) {
-          auto mapIt =
-              context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-                  CalcExpressionsKey);
+          auto mapIt = context.contextContainer
+                           .find<std::shared_ptr<DynamicPropertiesMap>>(
+                               DynamicPropertiesMapKey);
           if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
@@ -669,8 +670,8 @@ inline ValueUnit toValueUnit(
     auto cssCalc = std::get<CSSCalc>(calc);
     if (cssCalc.isComplex()) {
       auto mapIt =
-          context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-              CalcExpressionsKey);
+          context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
+              DynamicPropertiesMapKey);
       if (mapIt) {
         auto& map = *mapIt;
         auto index = map->allocateId();

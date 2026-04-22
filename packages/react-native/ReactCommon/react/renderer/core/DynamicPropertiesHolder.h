@@ -1,0 +1,26 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#pragma once
+
+#include <unordered_set>
+
+#include <react/renderer/core/DynamicPropertiesMap.h>
+#include <react/renderer/core/DynamicResolver.h>
+
+namespace facebook::react {
+
+class DynamicPropertiesHolder {
+ public:
+  virtual ~DynamicPropertiesHolder() = default;
+
+  virtual void resolveProperties(const DynamicResolver& resolver) = 0;
+  virtual void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const = 0;
+};
+
+} // namespace facebook::react

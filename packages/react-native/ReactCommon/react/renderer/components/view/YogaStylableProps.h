@@ -71,7 +71,7 @@ class YogaStylableProps : public Props {
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic getResolvedProps(
-      const DynamicResolveContext& context) const override;
+      const DynamicResolver& resolver) const override;
 #endif
 
  private:
@@ -81,7 +81,8 @@ class YogaStylableProps : public Props {
       const RawProps& rawProps);
 
  protected:
-  void collectLiveCalcIds(std::unordered_set<uint32_t>& ids) const override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 };
 
 } // namespace facebook::react
