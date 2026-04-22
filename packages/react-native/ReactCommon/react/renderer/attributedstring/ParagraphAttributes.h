@@ -10,8 +10,8 @@
 #include <limits>
 
 #include <react/renderer/attributedstring/primitives.h>
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
 #include <react/renderer/components/view/primitives.h>
-#include <react/renderer/core/DynamicPropertiesHolder.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Float.h>
 #include <react/utils/hash_combine.h>

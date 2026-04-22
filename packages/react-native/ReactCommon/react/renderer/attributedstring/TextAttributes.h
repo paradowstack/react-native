@@ -15,8 +15,8 @@
 #include <folly/dynamic.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityPrimitives.h>
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
 #include <react/renderer/components/view/primitives.h>
-#include <react/renderer/core/DynamicPropertiesHolder.h>
 #include <react/renderer/core/LayoutPrimitives.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
