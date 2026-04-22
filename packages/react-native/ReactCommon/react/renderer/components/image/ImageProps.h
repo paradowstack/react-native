@@ -29,15 +29,15 @@ class ImageProps final : public ViewProps {
   ImageSource defaultSource{};
   ImageSource loadingIndicatorSource{};
   ImageResizeMode resizeMode{ImageResizeMode::Stretch};
-  Float blurRadius{};
+  FloatDynamic blurRadius{};
   EdgeInsets capInsets{};
   SharedColor tintColor{};
   std::string internal_analyticTag{};
   std::string resizeMethod{"auto"};
-  Float resizeMultiplier{1.f};
+  FloatDynamic resizeMultiplier{1.f};
   bool shouldNotifyLoadEvents{};
   SharedColor overlayColor{};
-  Float fadeDuration{300.f};
+  FloatDynamic fadeDuration{300.f};
   bool progressiveRenderingEnabled{};
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -51,6 +51,11 @@ class ImageProps final : public ViewProps {
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;
 #endif
+
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
+
 };
 
 } // namespace facebook::react

@@ -162,7 +162,7 @@ void BaseParagraphProps::resolveProperties(const DynamicResolver& resolver) {
   if (!needsToResolveStyleValues) {
     return;
   }
-  BaseViewProps::resolveProperties(resolver);
+  ViewProps::resolveProperties(resolver);
 
   paragraphAttributes.resolveProperties(resolver);
   textAttributes.resolveProperties(resolver);
@@ -170,7 +170,8 @@ void BaseParagraphProps::resolveProperties(const DynamicResolver& resolver) {
 
 void BaseParagraphProps::collectLiveResolvableIds(
     std::unordered_set<DynamicPropertyId>& ids) const {
-  BaseViewProps::collectLiveResolvableIds(ids);
+  ViewProps::collectLiveResolvableIds(ids);
+
   paragraphAttributes.collectLiveResolvableIds(ids);
   textAttributes.collectLiveResolvableIds(ids);
 }

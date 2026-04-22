@@ -62,7 +62,7 @@ ImageProps::ImageProps(
                     rawProps,
                     "blurRadius",
                     sourceProps.blurRadius,
-                    {})),
+										{})),
       capInsets(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.capInsets
@@ -107,7 +107,7 @@ ImageProps::ImageProps(
                     rawProps,
                     "resizeMultiplier",
                     sourceProps.resizeMultiplier,
-                    1)),
+										FloatDynamic{1.0f})),
       shouldNotifyLoadEvents(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.shouldNotifyLoadEvents
@@ -315,6 +315,32 @@ SharedDebugStringConvertibleList ImageProps::getDebugProps() const {
           debugStringConvertibleItem(
               "tintColor", toString(tintColor), toString(imageProps.tintColor)),
       };
+}
+
+void ImageProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
+  }
+  ViewProps::resolveProperties(resolver);
+
+  blurRadius = resolver.resolve(blurRadius);
+  resizeMultiplier = resolver.resolve(resizeMultiplier);
+  fadeDuration = resolver.resolve(fadeDuration);
+}
+
+void ImageProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  ViewProps::collectLiveResolvableIds(ids);
+
+  if (blurRadius.isDynamic()) {
+    ids.insert(blurRadius.asDynamicId());
+  }
+  if (resizeMultiplier.isDynamic()) {
+    ids.insert(resizeMultiplier.asDynamicId());
+  }
+  if (fadeDuration.isDynamic()) {
+    ids.insert(fadeDuration.asDynamicId());
+  }
 }
 
 inline std::string toString(ImageResizeMode resizeMode) {
