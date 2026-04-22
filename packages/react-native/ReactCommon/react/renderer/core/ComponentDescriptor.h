@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <react/renderer/components/view/DynamicResolveContext.h>
 #include <react/renderer/core/EventDispatcher.h>
-#include <react/renderer/core/DynamicResolveContext.h>
 #include <react/renderer/core/InstanceHandle.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>

@@ -179,7 +179,7 @@ void BaseParagraphProps::collectLiveResolvableIds(
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic BaseParagraphProps::getResolvedProps(
     const DynamicResolver& resolver) const {
-  return ViewProps::getResolvedProps(context);
+  return ViewProps::getResolvedProps(resolver);
 }
 #endif
 

@@ -9,8 +9,8 @@
 #include <iostream>
 #include <optional>
 
+#include <react/renderer/components/view/DynamicPropertiesMap.h>
 #include <react/renderer/components/view/primitives.h>
-#include <react/renderer/core/DynamicPropertiesMap.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/RawPropsKey.h>

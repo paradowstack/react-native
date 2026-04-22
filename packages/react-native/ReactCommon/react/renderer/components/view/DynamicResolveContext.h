@@ -29,6 +29,12 @@ struct DynamicResolveContext {
         fontSize(fontSize),
         rootFontSize(rootFontSize) {}
 
+  Float frameWidth() const {
+    return layoutMetrics.frame.size.width;
+  }
+  Float frameHeight() const {
+    return layoutMetrics.frame.size.height;
+  }
   Float viewportWidth() const {
     return layoutContext.viewportSize.width;
   }
