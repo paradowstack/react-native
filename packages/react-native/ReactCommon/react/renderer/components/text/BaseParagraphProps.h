@@ -27,12 +27,15 @@ class BaseParagraphProps : public ViewProps, public BaseTextProps {
  public:
   BaseParagraphProps() = default;
   BaseParagraphProps(
-      const PropsParserContext &context,
-      const BaseParagraphProps &sourceProps,
-      const RawProps &rawProps);
+      const PropsParserContext& context,
+      const BaseParagraphProps& sourceProps,
+      const RawProps& rawProps);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
 #pragma mark - Props
 
@@ -55,16 +58,14 @@ class BaseParagraphProps : public ViewProps, public BaseTextProps {
   SharedDebugStringConvertibleList getDebugProps() const override;
 #endif
 
-  void resolveCalcInPlace(const DynamicResolveContext& context) override;
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic getResolvedProps(
-      const DynamicResolveContext& context) const override;
+      const DynamicResolver& resolver) const override;
 #endif
-
- protected:
-  void collectLiveCalcIds(std::unordered_set<uint32_t>& ids) const override;
-
 };
 
 } // namespace facebook::react

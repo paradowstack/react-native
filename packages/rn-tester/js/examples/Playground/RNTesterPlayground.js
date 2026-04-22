@@ -62,27 +62,29 @@ function Playground() {
           width: 300,
           height: 300,
 
-          experimental_backgroundImage:
-            'linear-gradient(' +
-              '45deg, ' +
-              'rgb(30, 29, 29)  30%,' +
-              'rgb(82, 55, 122) 100%)',
-          boxShadow: animatedBoxShadow,
-          outlineWidth: 'calc(2vw)',
-          transform: 'scale(calc(9/16))',
-          opacity: 0.88,
-          borderWidth: 'calc(1vw + 10px)',
-          borderLeftWidth: 'calc(3vw)',
-          borderEndWidth: 'calc(3vw)',
-          borderTopStartRadius: animationSmall1,
-          borderBottomEndRadius: animationSmall2,
-          borderTopEndRadius: 'calc(50% + 10px)',
+          // experimental_backgroundImage:
+          //   'linear-gradient(' +
+          //     '45deg, ' +
+          //     'rgb(30, 29, 29)  30%,' +
+          //     'rgb(82, 55, 122) 100%)',
+          // boxShadow: animatedBoxShadow,
+          // outlineWidth: 'calc(2vw)',
+          // transform: 'scale(calc(9/16))',
+          // opacity: 0.88,
+          // borderWidth: 'calc(1vw + 10px)',
+          // borderLeftWidth: 'calc(3vw)',
+          // borderEndWidth: 'calc(3vw)',
+          // borderTopStartRadius: animationSmall1,
+          // borderBottomEndRadius: animationSmall2,
+          // borderTopEndRadius: 'calc(50% + 10px)',
 
           backgroundColor: 'lightblue',
-          filter: [{dropShadow: 'calc(30px/2) calc(10vw) 4px #4444dd'}],
+          // filter: [{dropShadow: 'calc(30px/2) calc(10vw) 4px #4444dd'}],
         }}
       />
-      <Text style={{fontSize: 'calc(10vw)', color: 'black'}}>callstack</Text>
+      <Text style={{opacity: 'calc(0.2*2)', fontSizeMultiplier: 1.2, fontSize: 'calc(21vw)', letterSpacing: 'calc(1vw)', color: 'black',
+         textShadowColor: "red", textShadowRadius: 'calc(12px)', textShadowOffset: {width: 20, height: 0}
+      }}>callstack</Text>
     </View>
   );
 }

@@ -79,4 +79,23 @@ SharedDebugStringConvertibleList ParagraphAttributes::getDebugProps() const {
 }
 #endif
 
+void ParagraphAttributes::resolveProperties(const DynamicResolver& resolver) {
+  minimumFontSize = resolver.resolve(minimumFontSize);
+  maximumFontSize = resolver.resolve(maximumFontSize);
+  minimumFontScale = resolver.resolve(minimumFontScale);
+}
+
+void ParagraphAttributes::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  if (minimumFontSize.isDynamic()) {
+    ids.insert(minimumFontSize.asDynamicId());
+  }
+  if (maximumFontSize.isDynamic()) {
+    ids.insert(maximumFontSize.asDynamicId());
+  }
+  if (minimumFontScale.isDynamic()) {
+    ids.insert(minimumFontScale.asDynamicId());
+  }
+}
+
 } // namespace facebook::react

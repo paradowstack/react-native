@@ -10,6 +10,8 @@
 #include <limits>
 
 #include <react/renderer/attributedstring/primitives.h>
+#include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/DynamicPropertiesHolder.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Float.h>
 #include <react/utils/hash_combine.h>
@@ -25,7 +27,8 @@ using SharedParagraphAttributes = std::shared_ptr<const ParagraphAttributes>;
  * Two data structures, ParagraphAttributes and AttributedText, should be
  * enough to define visual representation of a piece of text on the screen.
  */
-class ParagraphAttributes : public DebugStringConvertible {
+class ParagraphAttributes : public DebugStringConvertible,
+                            public DynamicPropertiesHolder {
  public:
 #pragma mark - Fields
 
@@ -67,14 +70,14 @@ class ParagraphAttributes : public DebugStringConvertible {
    * In case of font size adjustment enabled, defines minimum and maximum
    * font sizes.
    */
-  Float minimumFontSize{std::numeric_limits<Float>::quiet_NaN()};
-  Float maximumFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic minimumFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic maximumFontSize{std::numeric_limits<Float>::quiet_NaN()};
 
   /*
    * Specifies the smallest possible scale a font can reach when
    * adjustsFontSizeToFit is enabled. (values 0.01-1.0).
    */
-  Float minimumFontScale{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic minimumFontScale{std::numeric_limits<Float>::quiet_NaN()};
 
   /*
    * The vertical alignment of the text, causing the glyphs to be vertically
@@ -82,13 +85,17 @@ class ParagraphAttributes : public DebugStringConvertible {
    */
   std::optional<TextAlignmentVertical> textAlignVertical{};
 
-  bool operator==(const ParagraphAttributes &rhs) const;
+  bool operator==(const ParagraphAttributes& rhs) const;
 
 #pragma mark - DebugStringConvertible
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;
 #endif
+
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 };
 
 } // namespace facebook::react
@@ -97,8 +104,8 @@ namespace std {
 
 template <>
 struct hash<facebook::react::ParagraphAttributes> {
-  size_t operator()(const facebook::react::ParagraphAttributes &attributes) const
-  {
+  size_t operator()(
+      const facebook::react::ParagraphAttributes& attributes) const {
     return facebook::react::hash_combine(
         attributes.maximumNumberOfLines,
         attributes.ellipsizeMode,

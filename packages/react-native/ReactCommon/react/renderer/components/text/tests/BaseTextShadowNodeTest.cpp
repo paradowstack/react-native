@@ -61,11 +61,11 @@ TEST(BaseTextShadowNodeTest, fragmentsWithDifferentAttributes) {
 
   const auto& fragments = output.getFragments();
   EXPECT_EQ(fragments.size(), 2);
-  EXPECT_EQ(fragments[0].textAttributes.fontSize.asFloat(), 12);
+  EXPECT_EQ(fragments[0].textAttributes.fontSize, 12);
   EXPECT_EQ(
       fragments[0].parentShadowView.tag,
       shadowNode->getChildren()[0]->getTag());
-  EXPECT_EQ(fragments[1].textAttributes.fontSize.asFloat(), 24);
+  EXPECT_EQ(fragments[1].textAttributes.fontSize, 24);
   EXPECT_EQ(
       fragments[1].parentShadowView.tag,
       shadowNode->getChildren()[1]->getTag());

@@ -14,6 +14,7 @@
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityPrimitives.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/DynamicPropertiesHolder.h>
 #include <react/renderer/core/LayoutPrimitives.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -28,7 +29,7 @@ class TextAttributes;
 
 using SharedTextAttributes = std::shared_ptr<const TextAttributes>;
 
-class TextAttributes : public DebugStringConvertible {
+class TextAttributes : public DebugStringConvertible, public DynamicPropertiesHolder {
  public:
   /*
    * Returns TextAttribute object which has actual default attribute values
@@ -47,18 +48,18 @@ class TextAttributes : public DebugStringConvertible {
   // Font
   std::string fontFamily{""};
   FloatDynamic fontSize{std::numeric_limits<Float>::quiet_NaN()};
-  Float fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<FontWeight> fontWeight{};
   std::optional<FontStyle> fontStyle{};
   std::optional<FontVariant> fontVariant{};
   std::optional<bool> allowFontScaling{};
-  Float maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
-  Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextTransform> textTransform{};
 
   // Paragraph Styles
-  Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic lineHeight{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextAlignment> alignment{};
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
@@ -72,7 +73,7 @@ class TextAttributes : public DebugStringConvertible {
   // Shadow
   // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.
   std::optional<Size> textShadowOffset{};
-  Float textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
+  FloatDynamic textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
   SharedColor textShadowColor{};
 
   // Special
@@ -93,13 +94,17 @@ class TextAttributes : public DebugStringConvertible {
 
 #pragma mark - Operators
 
-  bool operator==(const TextAttributes &rhs) const;
+  bool operator==(const TextAttributes& rhs) const;
 
 #pragma mark - DebugStringConvertible
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;
 #endif
+
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 };
 
 } // namespace facebook::react
@@ -108,14 +113,14 @@ namespace std {
 
 template <>
 struct hash<facebook::react::TextAttributes> {
-  size_t operator()(const facebook::react::TextAttributes &textAttributes) const
-  {
+  size_t operator()(
+      const facebook::react::TextAttributes& textAttributes) const {
     return facebook::react::hash_combine(
         textAttributes.foregroundColor,
         textAttributes.backgroundColor,
         textAttributes.opacity,
         textAttributes.fontFamily,
-        textAttributes.fontSize.asFloat(),
+        textAttributes.fontSize,
         textAttributes.maxFontSizeMultiplier,
         textAttributes.fontSizeMultiplier,
         textAttributes.fontWeight,
