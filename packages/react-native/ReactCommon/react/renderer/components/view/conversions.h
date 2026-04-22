@@ -16,7 +16,6 @@
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/css/CSSAngle.h>
-#include <react/renderer/css/CSSNumber.h>
 #include <react/renderer/css/CSSPercentage.h>
 #include <react/renderer/css/CSSRatio.h>
 #include <react/renderer/css/CSSTransform.h>
@@ -41,6 +40,13 @@
 #include <unordered_map>
 
 namespace facebook::react {
+
+// Yoga calc() value resolver — defined in YogaStylableProps.cpp,
+// called by Yoga during layout to resolve dynamic style values.
+YGValue yogaNodeCalcValueResolver(
+    YGNodeConstRef yogaNode,
+    YGValueDynamicID id,
+    YGValueDynamicContext context);
 
 /*
  * Yoga's `float` <-> React Native's `Float` (can be `double` or `float`)
@@ -455,7 +461,7 @@ inline void fromRawValue(
 }
 
 inline void fromRawValue(
-    const PropsParserContext& /*context*/,
+    const PropsParserContext& context,
     const RawValue& value,
     yoga::Style::SizeLength& result) {
   if (value.hasType<Float>()) {
@@ -476,7 +482,8 @@ inline void fromRawValue(
       result = yoga::StyleSizeLength::ofFitContent();
       return;
     } else {
-      auto parsed = parseCSSProperty<CSSNumber, CSSPercentage>(stringValue);
+      auto parsed =
+          parseCSSProperty<CSSCalc, CSSNumber, CSSPercentage>(stringValue);
       if (std::holds_alternative<CSSPercentage>(parsed)) {
         result = yoga::StyleSizeLength::percent(
             std::get<CSSPercentage>(parsed).value);
@@ -485,6 +492,29 @@ inline void fromRawValue(
         result =
             yoga::StyleSizeLength::points(std::get<CSSNumber>(parsed).value);
         return;
+      } else if (std::holds_alternative<CSSCalc>(parsed)) {
+        auto cssCalc = std::get<CSSCalc>(parsed);
+        if (cssCalc.isPointsOnly()) {
+          result = yoga::StyleSizeLength::points(cssCalc.px);
+          return;
+        }
+        if (cssCalc.isPercentOnly()) {
+          result = yoga::StyleSizeLength::percent(cssCalc.percent);
+          return;
+        }
+        if (cssCalc.isComplex()) {
+          auto mapIt =
+              context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
+                  CalcExpressionsKey);
+          if (mapIt) {
+            auto& map = *mapIt;
+            auto index = map->allocateId();
+            map->insert_or_assign(index, cssCalc);
+            result = yoga::StyleSizeLength::dynamic(
+                &yogaNodeCalcValueResolver, index);
+            return;
+          }
+        }
       }
     }
   }
@@ -504,7 +534,8 @@ inline void fromRawValue(
       result = yoga::StyleLength::ofAuto();
       return;
     } else {
-      auto parsed = parseCSSProperty<CSSNumber, CSSPercentage>(stringValue);
+      auto parsed =
+          parseCSSProperty<CSSCalc, CSSNumber, CSSPercentage>(stringValue);
       if (std::holds_alternative<CSSPercentage>(parsed)) {
         result =
             yoga::StyleLength::percent(std::get<CSSPercentage>(parsed).value);
@@ -512,6 +543,29 @@ inline void fromRawValue(
       } else if (std::holds_alternative<CSSNumber>(parsed)) {
         result = yoga::StyleLength::points(std::get<CSSNumber>(parsed).value);
         return;
+      } else if (std::holds_alternative<CSSCalc>(parsed)) {
+        auto cssCalc = std::get<CSSCalc>(parsed);
+        if (cssCalc.isPointsOnly()) {
+          result = yoga::StyleLength::points(cssCalc.px);
+          return;
+        }
+        if (cssCalc.isPercentOnly()) {
+          result = yoga::StyleLength::percent(cssCalc.percent);
+          return;
+        }
+        if (cssCalc.isComplex()) {
+          auto mapIt =
+              context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
+                  CalcExpressionsKey);
+          if (mapIt) {
+            auto& map = *mapIt;
+            auto index = map->allocateId();
+            map->insert_or_assign(index, cssCalc);
+            result =
+                yoga::StyleLength::dynamic(&yogaNodeCalcValueResolver, index);
+            return;
+          }
+        }
       }
     }
   }
@@ -603,7 +657,8 @@ inline ValueUnit toValueUnit(const RawValue& value) {
 
 inline ValueUnit toValueUnit(
     const RawValue& value,
-    const PropsParserContext& context) {
+    const PropsParserContext& context,
+    const std::string_view key = {}) {
   auto v = toValueUnit(value);
   if (v.unit != UnitType::Undefined) {
     return v;
@@ -614,12 +669,13 @@ inline ValueUnit toValueUnit(
     auto cssCalc = std::get<CSSCalc>(calc);
     if (cssCalc.isComplex()) {
       auto mapIt =
-          context.contextContainer.find<std::shared_ptr<CalcExpressions>>("a");
+          context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
+              CalcExpressionsKey);
       if (mapIt) {
-        const auto& map = *mapIt;
-        auto index = static_cast<FloatDynamicId>(map->size());
-        map->insert({index, cssCalc});
-        return {index};
+        auto& map = *mapIt;
+        auto index = map->allocateId();
+        map->insert_or_assign(index, cssCalc);
+        return ValueUnit{index};
       }
     }
   }
@@ -964,15 +1020,11 @@ inline void parseProcessedTransform(
                 .y = number,
                 .z = number});
       } else if (parameters.hasType<std::string>()) {
-        LOG(ERROR) << "AAAAAA";
         auto stringValue = (std::string)parameters;
-        LOG(ERROR) << "stringValue: " << stringValue;
         auto calc = parseCSSProperty<CSSCalc>((std::string)stringValue);
         if (std::holds_alternative<CSSCalc>(calc)) {
-          LOG(ERROR) << "BBBB";
           auto cssCalc = std::get<CSSCalc>(calc);
           if (cssCalc.isUnitless()) {
-            LOG(ERROR) << "CCCCCC " << cssCalc.px;
             auto number = ValueUnit(cssCalc.px, UnitType::Point);
             transformMatrix.operations.push_back(
                 TransformOperation{
@@ -1633,8 +1685,9 @@ inline void fromRawValue(
       } else if (sizeStr == "contain") {
         backgroundSizes.emplace_back(BackgroundSizeKeyword::Contain);
       }
-    } else if (rawBackgroundSizeValue
-                   .hasType<std::unordered_map<std::string, RawValue>>()) {
+    } else if (
+        rawBackgroundSizeValue
+            .hasType<std::unordered_map<std::string, RawValue>>()) {
       auto sizeMap = static_cast<std::unordered_map<std::string, RawValue>>(
           rawBackgroundSizeValue);
 

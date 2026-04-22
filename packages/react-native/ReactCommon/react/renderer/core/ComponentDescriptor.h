@@ -8,6 +8,7 @@
 #pragma once
 
 #include <react/renderer/core/EventDispatcher.h>
+#include <react/renderer/core/DynamicResolveContext.h>
 #include <react/renderer/core/InstanceHandle.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -103,6 +104,13 @@ class ComponentDescriptor {
    */
   virtual Props::Shared cloneProps(const PropsParserContext &context, const Props::Shared &props, RawProps rawProps)
       const = 0;
+
+
+  virtual Props::Shared cloneResolvedProps(
+    const PropsParserContext &context, 
+    const Props::Shared &props, 
+    RawProps rawProps,
+    DynamicResolveContext resolveContext) const = 0;
 
   /*
    * Create an initial State object that represents (and contains) an initial

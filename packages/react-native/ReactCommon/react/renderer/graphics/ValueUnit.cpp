@@ -20,8 +20,8 @@ folly::dynamic ValueUnit::toDynamic() const {
       return value;
     case UnitType::Percent:
       return react::toString(value, '%');
-    case UnitType::CalcId:
-      return calcId();
+    case UnitType::Dynamic:
+      return asDynamicId();
     default:
       return nullptr;
   }
@@ -34,7 +34,7 @@ std::string ValueUnit::toString() const {
     return react::toString(value, '%');
   } else if (unit == UnitType::Point) {
     return react::toString(value, '\0') + "px";
-  } else if (unit == UnitType::CalcId) {
+  } else if (unit == UnitType::Dynamic) {
     return "calc(id=" + std::to_string(value) + ")";
   } else {
     return "undefined";

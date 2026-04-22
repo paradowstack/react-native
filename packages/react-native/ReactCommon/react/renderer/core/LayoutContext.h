@@ -9,9 +9,13 @@
 
 #include <vector>
 
-#include <react/renderer/core/LayoutableShadowNode.h>
+#include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/Point.h>
+#include <react/renderer/graphics/Size.h>
 
 namespace facebook::react {
+
+class LayoutableShadowNode;
 
 /*
  * LayoutContext: Additional contextual information useful for particular

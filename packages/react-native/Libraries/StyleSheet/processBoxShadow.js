@@ -17,6 +17,7 @@ const COMMA_SPLIT_REGEX = /,(?![^()]*\))/;
 const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
 const LENGTH_PARSE_REGEX = /^([+-]?\d*\.?\d+)(px)?$/;
 const NEWLINE_REGEX = /\n/g;
+const CALC_FUNCTION_REGEX = /^calc\(.*\)$/;
 
 export type ParsedBoxShadow = {
   offsetX: number | string,
@@ -32,7 +33,11 @@ function toValueWithUnit(value: number | string): string | number {
     return value;
   }
   if (typeof value === 'string') {
-    return value.includes('calc') ? value : parseLength(value);
+    if (CALC_FUNCTION_REGEX.test(value)) {
+      return value;
+    }
+
+    return parseLength(value);
   }
 
   return value;
@@ -116,7 +121,6 @@ export default function processBoxShadow(
           parsedBoxShadow.inset = rawBoxShadow.inset;
       }
     }
-    console.log('parsedBoxShadow', parsedBoxShadow);
     result.push(parsedBoxShadow);
   }
   return result;

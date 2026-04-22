@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
 
@@ -17,8 +18,8 @@ struct BoxShadow {
 
   FloatDynamic offsetX{};
   FloatDynamic offsetY{};
-  Float blurRadius{};
-  Float spreadDistance{};
+  FloatDynamic blurRadius{};
+  FloatDynamic spreadDistance{};
   SharedColor color{};
   bool inset{};
 
@@ -27,8 +28,8 @@ struct BoxShadow {
     folly::dynamic result = folly::dynamic::object();
     result["offsetX"] = offsetX.asFloat();
     result["offsetY"] = offsetY.asFloat();
-    result["blurRadius"] = blurRadius;
-    result["spreadDistance"] = spreadDistance;
+    result["blurRadius"] = blurRadius.asFloat();
+    result["spreadDistance"] = spreadDistance.asFloat();
     result["color"] = *color;
     result["inset"] = inset;
     return result;

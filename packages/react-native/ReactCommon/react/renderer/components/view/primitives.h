@@ -12,13 +12,12 @@
 #include <react/renderer/graphics/RectangleCorners.h>
 #include <react/renderer/graphics/RectangleEdges.h>
 #include <react/renderer/graphics/ValueUnit.h>
+#include <algorithm>
 
 #include <array>
-#include <bit>
 #include <bitset>
 #include <cmath>
 #include <optional>
-#include <type_traits>
 #include <unordered_map>
 
 namespace facebook::react {
@@ -252,10 +251,24 @@ struct BorderMetrics {
   bool operator==(const BorderMetrics& rhs) const = default;
 };
 
-using FloatDynamicId =
-    std::conditional_t<sizeof(Float) == sizeof(uint32_t), uint32_t, uint64_t>;
+using FloatDynamicId = uint32_t;
 
-using CalcExpressions = std::unordered_map<FloatDynamicId, CSSCalc>;
+struct CalcExpressions : std::unordered_map<FloatDynamicId, CSSCalc> {
+  using Base = std::unordered_map<FloatDynamicId, CSSCalc>;
+  using Base::Base;
+
+  uint32_t nextId{1};
+
+  uint32_t allocateId() {
+    return nextId++;
+  }
+
+  bool operator==(const CalcExpressions& other) const {
+    return static_cast<const Base&>(*this) == static_cast<const Base&>(other);
+  }
+};
+
+const char CalcExpressionsKey[] = "CalcExpressions";
 
 enum class FloatDynamicType : bool {
   Float,
@@ -270,7 +283,7 @@ struct FloatDynamic {
   constexpr explicit FloatDynamic(Float val)
       : value(val), type(FloatDynamicType::Float) {}
   constexpr explicit FloatDynamic(FloatDynamicId calcId)
-      : value(std::bit_cast<Float>(calcId)), type(FloatDynamicType::Dynamic) {}
+      : value(static_cast<Float>(calcId)), type(FloatDynamicType::Dynamic) {}
   constexpr FloatDynamic& operator=(Float val) {
     value = val;
     type = FloatDynamicType::Float;
@@ -284,15 +297,7 @@ struct FloatDynamic {
     return value;
   }
   constexpr FloatDynamicId asDynamicId() const {
-    return std::bit_cast<FloatDynamicId>(value);
-  }
-
-  constexpr operator Float() const {
-    return asFloat();
-  }
-
-  constexpr operator FloatDynamicId() const {
-    return asDynamicId();
+    return static_cast<FloatDynamicId>(value);
   }
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -309,13 +314,6 @@ struct FloatDynamic {
     return !isDynamic() && this->value != v;
   }
 
-  constexpr Float operator-(Float val) const {
-    return val - asFloat();
-  }
-  constexpr Float operator+(Float val) const {
-    return val + asFloat();
-  }
-
   constexpr bool operator==(const FloatDynamic& rhs) const {
     if (type != rhs.type) {
       return false;
@@ -329,7 +327,7 @@ struct FloatDynamic {
 
 inline std::string toString(FloatDynamic value) {
   if (value.isDynamic()) {
-    return std::to_string(value.asDynamicId());
+    return "calc(id=" + std::to_string(value.asDynamicId()) + ")";
   }
   return std::to_string(value.asFloat());
 }

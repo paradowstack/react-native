@@ -13,6 +13,7 @@
 
 #include <react/renderer/components/root/RootShadowNode.h>
 #include <react/renderer/core/LayoutConstraints.h>
+#include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/core/ShadowNode.h>
 #include <react/renderer/mounting/MountingCoordinator.h>
@@ -161,7 +162,13 @@ class ShadowTree final {
 
   void mount(ShadowTreeRevision revision, bool mountSynchronously) const;
 
-  void emitLayoutEvents(std::vector<const LayoutableShadowNode *> &affectedLayoutableNodes) const;
+  struct PendingLayoutEvent {
+    SharedEventEmitter eventEmitter;
+    LayoutMetrics layoutMetrics;
+  };
+
+  void emitLayoutEvents(
+      std::vector<PendingLayoutEvent>& pendingLayoutEvents) const;
 
   void scheduleReactRevisionPromotion() const;
 

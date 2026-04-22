@@ -101,29 +101,33 @@ TEST(ConversionsTest, unprocessed_filter_string) {
 
   EXPECT_EQ(filters[0].type, FilterType::DropShadow);
   EXPECT_TRUE(std::holds_alternative<DropShadowParams>(filters[0].parameters));
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetX, 10);
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetY, -2);
   EXPECT_EQ(
-      std::get<DropShadowParams>(filters[0].parameters).standardDeviation, 0.5);
+      std::get<DropShadowParams>(filters[0].parameters).offsetX.asFloat(), 10);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters).offsetY.asFloat(), -2);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters)
+          .standardDeviation.asFloat(),
+      0.5);
   EXPECT_EQ(
       std::get<DropShadowParams>(filters[0].parameters).color,
       colorFromRGBA(255, 255, 255, 255));
 
   EXPECT_EQ(filters[1].type, FilterType::Blur);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[1].parameters));
-  EXPECT_EQ(std::get<Float>(filters[1].parameters), 5.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[1].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[1].parameters).asFloat(), 5.0f);
 
   EXPECT_EQ(filters[2].type, FilterType::HueRotate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[2].parameters));
-  EXPECT_EQ(std::get<Float>(filters[2].parameters), 90.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[2].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[2].parameters).asFloat(), 90.0f);
 
   EXPECT_EQ(filters[3].type, FilterType::Saturate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[3].parameters));
-  EXPECT_EQ(std::get<Float>(filters[3].parameters), 2.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[3].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[3].parameters).asFloat(), 2.0f);
 
   EXPECT_EQ(filters[4].type, FilterType::Brightness);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[4].parameters));
-  EXPECT_EQ(std::get<Float>(filters[4].parameters), 0.5f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[4].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[4].parameters).asFloat(), 0.5f);
 }
 
 TEST(ConversionsTest, unprocessed_filter_objects) {
@@ -146,38 +150,46 @@ TEST(ConversionsTest, unprocessed_filter_objects) {
 
   EXPECT_EQ(filters[0].type, FilterType::DropShadow);
   EXPECT_TRUE(std::holds_alternative<DropShadowParams>(filters[0].parameters));
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetX, 10);
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetY, -2);
   EXPECT_EQ(
-      std::get<DropShadowParams>(filters[0].parameters).standardDeviation, 0.5);
+      std::get<DropShadowParams>(filters[0].parameters).offsetX.asFloat(), 10);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters).offsetY.asFloat(), -2);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters)
+          .standardDeviation.asFloat(),
+      0.5);
   EXPECT_EQ(
       std::get<DropShadowParams>(filters[0].parameters).color, SharedColor{});
 
   EXPECT_EQ(filters[1].type, FilterType::DropShadow);
   EXPECT_TRUE(std::holds_alternative<DropShadowParams>(filters[1].parameters));
-  EXPECT_EQ(std::get<DropShadowParams>(filters[1].parameters).offsetX, 2);
-  EXPECT_EQ(std::get<DropShadowParams>(filters[1].parameters).offsetY, 0);
   EXPECT_EQ(
-      std::get<DropShadowParams>(filters[1].parameters).standardDeviation, 0.5);
+      std::get<DropShadowParams>(filters[1].parameters).offsetX.asFloat(), 2);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[1].parameters).offsetY.asFloat(), 0);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[1].parameters)
+          .standardDeviation.asFloat(),
+      0.5);
   EXPECT_EQ(
       std::get<DropShadowParams>(filters[1].parameters).color,
       colorFromRGBA(255, 255, 255, 255));
 
   EXPECT_EQ(filters[2].type, FilterType::Blur);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[2].parameters));
-  EXPECT_EQ(std::get<Float>(filters[2].parameters), 5.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[2].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[2].parameters).asFloat(), 5.0f);
 
   EXPECT_EQ(filters[3].type, FilterType::HueRotate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[3].parameters));
-  EXPECT_EQ(std::get<Float>(filters[3].parameters), 90.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[3].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[3].parameters).asFloat(), 90.0f);
 
   EXPECT_EQ(filters[4].type, FilterType::Saturate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[4].parameters));
-  EXPECT_EQ(std::get<Float>(filters[4].parameters), 2.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[4].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[4].parameters).asFloat(), 2.0f);
 
   EXPECT_EQ(filters[5].type, FilterType::Brightness);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[5].parameters));
-  EXPECT_EQ(std::get<Float>(filters[5].parameters), 0.5f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[5].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[5].parameters).asFloat(), 0.5f);
 }
 
 TEST(ConversionsTest, unprocessed_filter_objects_negative_shadow_blur) {
@@ -226,8 +238,8 @@ TEST(ConversionsTest, unprocessed_filter_objects_negative_hue_rotate) {
   EXPECT_EQ(filters.size(), 1);
 
   EXPECT_EQ(filters[0].type, FilterType::HueRotate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[0].parameters));
-  EXPECT_EQ(std::get<Float>(filters[0].parameters), -5.0f);
+  EXPECT_TRUE(std::holds_alternative<FloatDynamic>(filters[0].parameters));
+  EXPECT_EQ(std::get<FloatDynamic>(filters[0].parameters).asFloat(), -5.0f);
 }
 
 TEST(ConversionsTest, unprocessed_filter_objects_multiple_objects) {

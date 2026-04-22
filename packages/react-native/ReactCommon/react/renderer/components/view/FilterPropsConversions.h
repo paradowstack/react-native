@@ -22,6 +22,51 @@
 
 namespace facebook::react {
 
+inline std::optional<FloatDynamic> parseFilterFloatDynamic(
+    const PropsParserContext& context,
+    const RawValue& value) {
+  if (value.hasType<Float>()) {
+    return FloatDynamic{(Float)value};
+  }
+
+  if (!value.hasType<std::string>()) {
+    return {};
+  }
+
+  auto len = parseCSSProperty<CSSLength>((std::string)value);
+  if (std::holds_alternative<CSSLength>(len)) {
+    auto cssLen = std::get<CSSLength>(len);
+    if (cssLen.unit == CSSLengthUnit::Px) {
+      return FloatDynamic{(Float)cssLen.value};
+    }
+    return {};
+  }
+
+  auto calc = parseCSSProperty<CSSCalc>((std::string)value);
+  if (!std::holds_alternative<CSSCalc>(calc)) {
+    return {};
+  }
+
+  auto cssCalc = std::get<CSSCalc>(calc);
+  if (cssCalc.isUnitless() || cssCalc.isPointsOnly()) {
+    return FloatDynamic{(Float)cssCalc.px};
+  }
+  if (!cssCalc.isComplex()) {
+    return {};
+  }
+
+  auto mapIt = context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
+      CalcExpressionsKey);
+  if (!mapIt) {
+    return {};
+  }
+
+  auto& map = *mapIt;
+  auto index = map->allocateId();
+  map->insert_or_assign(index, cssCalc);
+  return FloatDynamic{index};
+}
+
 inline void
 parseProcessedFilter(const PropsParserContext &context, const RawValue &value, std::vector<FilterFunction> &result)
 {
@@ -63,12 +108,12 @@ parseProcessedFilter(const PropsParserContext &context, const RawValue &value, s
         return;
       }
 
-      react_native_expect(offsetX->second.hasType<Float>());
-      if (!offsetX->second.hasType<Float>()) {
+      auto parsedOffsetX = parseFilterFloatDynamic(context, offsetX->second);
+      if (!parsedOffsetX.has_value()) {
         result = {};
         return;
       }
-      dropShadowParams.offsetX = (Float)offsetX->second;
+      dropShadowParams.offsetX = *parsedOffsetX;
 
       auto offsetY = rawDropShadow.find("offsetY");
       react_native_expect(offsetY != rawDropShadow.end());
@@ -76,21 +121,22 @@ parseProcessedFilter(const PropsParserContext &context, const RawValue &value, s
         result = {};
         return;
       }
-      react_native_expect(offsetY->second.hasType<Float>());
-      if (!offsetY->second.hasType<Float>()) {
+      auto parsedOffsetY = parseFilterFloatDynamic(context, offsetY->second);
+      if (!parsedOffsetY.has_value()) {
         result = {};
         return;
       }
-      dropShadowParams.offsetY = (Float)offsetY->second;
+      dropShadowParams.offsetY = *parsedOffsetY;
 
       auto standardDeviation = rawDropShadow.find("standardDeviation");
       if (standardDeviation != rawDropShadow.end()) {
-        react_native_expect(standardDeviation->second.hasType<Float>());
-        if (!standardDeviation->second.hasType<Float>()) {
+        auto parsedStandardDeviation =
+            parseFilterFloatDynamic(context, standardDeviation->second);
+        if (!parsedStandardDeviation.has_value()) {
           result = {};
           return;
         }
-        dropShadowParams.standardDeviation = (Float)standardDeviation->second;
+        dropShadowParams.standardDeviation = *parsedStandardDeviation;
       }
 
       auto color = rawDropShadow.find("color");
@@ -100,7 +146,13 @@ parseProcessedFilter(const PropsParserContext &context, const RawValue &value, s
 
       filterFunction.parameters = dropShadowParams;
     } else {
-      filterFunction.parameters = (float)rawFilterFunction.begin()->second;
+      auto parsedAmount =
+          parseFilterFloatDynamic(context, rawFilterFunction.begin()->second);
+      if (!parsedAmount.has_value()) {
+        result = {};
+        return;
+      }
+      filterFunction.parameters = *parsedAmount;
     }
     filter.push_back(filterFunction);
   }
@@ -161,7 +213,7 @@ inline std::optional<FilterFunction> fromCSSFilter(const CSSFilterFunction &cssF
           }
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = filter.amount.value,
+              .parameters = FloatDynamic{filter.amount.value},
           };
         }
 
@@ -175,9 +227,10 @@ inline std::optional<FilterFunction> fromCSSFilter(const CSSFilterFunction &cssF
           return FilterFunction{
               .type = FilterType::DropShadow,
               .parameters = DropShadowParams{
-                  .offsetX = filter.offsetX.value,
-                  .offsetY = filter.offsetY.value,
-                  .standardDeviation = filter.standardDeviation.value,
+                  .offsetX = FloatDynamic{filter.offsetX.value},
+                  .offsetY = FloatDynamic{filter.offsetY.value},
+                  .standardDeviation =
+                      FloatDynamic{filter.standardDeviation.value},
                   .color = fromCSSColor(filter.color),
               }};
         }
@@ -189,14 +242,14 @@ inline std::optional<FilterFunction> fromCSSFilter(const CSSFilterFunction &cssF
             std::is_same_v<FilterT, CSSSepiaFilter>) {
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = filter.amount,
+              .parameters = FloatDynamic{filter.amount},
           };
         }
 
         if constexpr (std::is_same_v<FilterT, CSSHueRotateFilter>) {
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = filter.degrees,
+              .parameters = FloatDynamic{filter.degrees},
           };
         }
       },
@@ -243,7 +296,7 @@ inline std::optional<FilterFunction> parseDropShadow(const PropsParserContext &c
     return {};
   }
 
-  if (auto parsedOffsetX = coerceLength(offsetX->second)) {
+  if (auto parsedOffsetX = parseFilterFloatDynamic(context, offsetX->second)) {
     dropShadowParams.offsetX = *parsedOffsetX;
   } else {
     return {};
@@ -254,7 +307,7 @@ inline std::optional<FilterFunction> parseDropShadow(const PropsParserContext &c
     return {};
   }
 
-  if (auto parsedOffsetY = coerceLength(offsetY->second)) {
+  if (auto parsedOffsetY = parseFilterFloatDynamic(context, offsetY->second)) {
     dropShadowParams.offsetY = *parsedOffsetY;
   } else {
     return {};
@@ -262,8 +315,10 @@ inline std::optional<FilterFunction> parseDropShadow(const PropsParserContext &c
 
   auto standardDeviation = rawDropShadow.find("standardDeviation");
   if (standardDeviation != rawDropShadow.end()) {
-    if (auto parsedStandardDeviation = coerceLength(standardDeviation->second)) {
-      if (*parsedStandardDeviation < 0.0f) {
+    if (auto parsedStandardDeviation =
+            parseFilterFloatDynamic(context, standardDeviation->second)) {
+      if (!parsedStandardDeviation->isDynamic() &&
+          parsedStandardDeviation->asFloat() < 0.0f) {
         return {};
       }
       dropShadowParams.standardDeviation = *parsedStandardDeviation;
@@ -300,8 +355,9 @@ inline std::optional<FilterFunction> parseFilterRawValue(const PropsParserContex
   if (filterKey == "drop-shadow") {
     return parseDropShadow(context, rawFilter.begin()->second);
   } else if (filterKey == "blur") {
-    if (auto length = coerceLength(rawFilter.begin()->second)) {
-      if (*length < 0.0f) {
+    if (auto length =
+            parseFilterFloatDynamic(context, rawFilter.begin()->second)) {
+      if (!length->isDynamic() && length->asFloat() < 0.0f) {
         return {};
       }
       return FilterFunction{.type = FilterType::Blur, .parameters = *length};
@@ -309,7 +365,8 @@ inline std::optional<FilterFunction> parseFilterRawValue(const PropsParserContex
     return {};
   } else if (filterKey == "hue-rotate") {
     if (auto angle = coerceAngle(rawFilter.begin()->second)) {
-      return FilterFunction{.type = FilterType::HueRotate, .parameters = *angle};
+      return FilterFunction{
+          .type = FilterType::HueRotate, .parameters = FloatDynamic{*angle}};
     }
     return {};
   } else {
@@ -321,7 +378,8 @@ inline std::optional<FilterFunction> parseFilterRawValue(const PropsParserContex
       if (*amount < 0.0f) {
         return {};
       }
-      return FilterFunction{.type = *filterType, .parameters = *amount};
+      return FilterFunction{
+          .type = *filterType, .parameters = FloatDynamic{*amount}};
     }
     return {};
   }

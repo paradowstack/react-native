@@ -25,13 +25,11 @@ function processTransform(
   transform: Array<Object> | string,
 ): Array<Object> | Array<number> {
   if (typeof transform === 'string') {
-    console.log('Parsing transform string: ', transform);
     const regex = new RegExp(/(\w+)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g);
     const transformArray: Array<Object> = [];
     let matches;
 
     while ((matches = regex.exec(transform))) {
-      console.log('Parsing transform, found match: ', matches);
       const {key, value} = _getKeyAndValueFromCSSTransform(
         matches[1],
         matches[2],
@@ -136,7 +134,6 @@ const _getKeyAndValueFromCSSTransform: (
       return {key, value};
     case 'scale':
       const arg = typeof args === 'number' ? Number(args) : args;
-      console.log('Parsing scale transform, args: ', arg);
       return {key, value: arg};
     default:
       return {key, value: !isNaN(args) ? Number(args) : args};

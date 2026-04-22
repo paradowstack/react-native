@@ -6,7 +6,6 @@
  */
 
 #pragma once
-
 #include <iostream>
 #include <optional>
 
@@ -210,11 +209,12 @@ inline void fromRawValue(
       result = FloatDynamic{(Float)cssCalc.px};
     } else if (cssCalc.isComplex()) {
       auto mapIt =
-          context.contextContainer.find<std::shared_ptr<CalcExpressions>>("a");
+          context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
+              CalcExpressionsKey);
       if (mapIt) {
-        const auto& map = *mapIt;
-        auto index = static_cast<FloatDynamicId>(map->size());
-        map->insert({index, cssCalc});
+        auto& map = *mapIt;
+        auto index = map->allocateId();
+        map->insert_or_assign(index, cssCalc);
         result = FloatDynamic{index};
       }
     }

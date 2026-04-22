@@ -64,7 +64,7 @@ static CALayer *initBoxShadowLayer(const BoxShadow &shadow, CGSize layerSize)
   // Apple's blur is not quite what we want and seems to be a bit overbearing
   // with the radius. This is an eyeballed adjustment that has the blur looking
   // more like the web.
-  shadowLayer.shadowRadius = shadow.blurRadius / 2;
+  shadowLayer.shadowRadius = shadow.blurRadius.asFloat() / 2;
   shadowLayer.contentsScale = [UIScreen mainScreen].scale;
 
   return shadowLayer;
@@ -76,10 +76,10 @@ RCTGetOutsetBoxShadowLayer(const facebook::react::BoxShadow &shadow, RCTCornerRa
   CALayer *shadowLayer = initBoxShadowLayer(shadow, layerSize);
 
   const RCTCornerInsets shadowRectCornerInsets =
-      RCTGetCornerInsets(cornerRadiiForBoxShadow(cornerRadii, shadow.spreadDistance), UIEdgeInsetsZero);
+      RCTGetCornerInsets(cornerRadiiForBoxShadow(cornerRadii, shadow.spreadDistance.asFloat()), UIEdgeInsetsZero);
 
-  CGRect shadowRect = CGRectInset(shadowLayer.bounds, -shadow.spreadDistance, -shadow.spreadDistance);
-  shadowRect = CGRectOffset(shadowRect, shadow.offsetX, shadow.offsetY);
+  CGRect shadowRect = CGRectInset(shadowLayer.bounds, -shadow.spreadDistance.asFloat(), -shadow.spreadDistance.asFloat());
+  shadowRect = CGRectOffset(shadowRect, shadow.offsetX.asFloat(), shadow.offsetY.asFloat());
   CGPathRef shadowRectPath = RCTPathCreateWithRoundedRect(shadowRect, shadowRectCornerInsets, nil, NO);
   shadowLayer.shadowPath = shadowRectPath;
 
@@ -90,7 +90,7 @@ RCTGetOutsetBoxShadowLayer(const facebook::react::BoxShadow &shadow, RCTCornerRa
       RCTPathCreateWithRoundedRect(shadowLayer.bounds, RCTGetCornerInsets(cornerRadii, UIEdgeInsetsZero), nil, NO);
   CGPathAddPath(path, NULL, layerPath);
   CGPathRef paddedShadowRectPath = RCTPathCreateWithRoundedRect(
-      CGRectInset(shadowRect, -2 * (shadow.blurRadius + 1), -2 * (shadow.blurRadius + 1)),
+      CGRectInset(shadowRect, -2 * (shadow.blurRadius.asFloat() + 1), -2 * (shadow.blurRadius.asFloat() + 1)),
       shadowRectCornerInsets,
       nil,
       NO);
@@ -124,19 +124,19 @@ static CALayer *RCTGetInsetBoxShadowLayer(
     shadowRect = CGRectMake(0, 0, 0, 0);
   }
   CGPathRef shadowPath =
-      RCTPathCreateWithRoundedRect(CGRectInset(shadowRect, -shadow.blurRadius, -shadow.blurRadius), {}, nil, NO);
+      RCTPathCreateWithRoundedRect(CGRectInset(shadowRect, -shadow.blurRadius.asFloat(), -shadow.blurRadius.asFloat()), {}, nil, NO);
 
   CGPathRef layerPath = RCTPathCreateWithRoundedRect(shadowRect, RCTGetCornerInsets(cornerRadii, edgeInsets), nil, NO);
   CGPathAddPath(path, NULL, shadowPath);
 
-  CGRect clearRegionRect = CGRectOffset(shadowRect, shadow.offsetX, shadow.offsetY);
-  clearRegionRect = CGRectInset(clearRegionRect, shadow.spreadDistance, shadow.spreadDistance);
+  CGRect clearRegionRect = CGRectOffset(shadowRect, shadow.offsetX.asFloat(), shadow.offsetY.asFloat());
+  clearRegionRect = CGRectInset(clearRegionRect, shadow.spreadDistance.asFloat(), shadow.spreadDistance.asFloat());
   if (CGRectIsNull(clearRegionRect)) {
     clearRegionRect = CGRectMake(0, 0, 0, 0);
   }
   CGPathRef clearRegionPath = RCTPathCreateWithRoundedRect(
       clearRegionRect,
-      RCTGetCornerInsets(cornerRadiiForBoxShadow(cornerRadii, -shadow.spreadDistance), edgeInsets),
+      RCTGetCornerInsets(cornerRadiiForBoxShadow(cornerRadii, -shadow.spreadDistance.asFloat()), edgeInsets),
       nil,
       YES);
   CGPathAddPath(path, NULL, clearRegionPath);

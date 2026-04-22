@@ -364,20 +364,20 @@ jni::local_ref<jobject> getProps(
   }
   if (ReactNativeFeatureFlags::enableAccumulatedUpdatesInRawPropsAndroid()) {
     if (oldProps == nullptr) {
-      folly::dynamic props = newProps->rawProps;
-      ViewProps::normalizeOutlinePropsForAndroidMounting(
-          props, *newProps, newShadowView.layoutMetrics, layoutContextForRaw);
+      folly::dynamic props = newProps->getResolvedProps(DynamicResolveContext(
+          newShadowView.layoutMetrics, layoutContextForRaw));
       return ReadableNativeMap::newObjectCxxArgs(std::move(props));
     } else {
-      auto diff = diffDynamicProps(oldProps->rawProps, newProps->rawProps);
-      ViewProps::normalizeOutlinePropsForAndroidMounting(
-          diff, *newProps, newShadowView.layoutMetrics, layoutContextForRaw);
+      auto diff = diffDynamicProps(
+          oldProps->getResolvedProps(DynamicResolveContext(
+              oldShadowView.layoutMetrics, layoutContextForRaw)),
+          newProps->getResolvedProps(DynamicResolveContext(
+              newShadowView.layoutMetrics, layoutContextForRaw)));
       return ReadableNativeMap::newObjectCxxArgs(std::move(diff));
     }
   }
-  folly::dynamic raw = newProps->rawProps;
-  ViewProps::normalizeOutlinePropsForAndroidMounting(
-      raw, *newProps, newShadowView.layoutMetrics, layoutContextForRaw);
+  folly::dynamic raw = newProps->getResolvedProps(DynamicResolveContext(
+      newShadowView.layoutMetrics, layoutContextForRaw));
   return ReadableNativeMap::newObjectCxxArgs(std::move(raw));
 }
 
@@ -439,8 +439,10 @@ inline void writeCreateMountItem(
 
   auto componentName = getPlatformComponentName(mountItem.newChildShadowView);
 
-  jni::local_ref<jobject> props =
-      getProps(mountItem.oldChildShadowView, mountItem.newChildShadowView, layoutContext);
+  jni::local_ref<jobject> props = getProps(
+      mountItem.oldChildShadowView,
+      mountItem.newChildShadowView,
+      layoutContext);
 
   // Do not hold onto Java object from C
   // We DO want to hold onto C object from Java, since we don't know the
@@ -495,9 +497,11 @@ inline void writeUpdatePropsMountItem(
     const CppMountItem& mountItem,
     const std::optional<LayoutContext>& layoutContext) {
   buffer.writeInt(mountItem.newChildShadowView.tag);
-  buffer.writeObject(
-      getProps(mountItem.oldChildShadowView, mountItem.newChildShadowView, layoutContext)
-          .get());
+  buffer.writeObject(getProps(
+                         mountItem.oldChildShadowView,
+                         mountItem.newChildShadowView,
+                         layoutContext)
+                         .get());
 }
 
 inline void writeUpdateStateMountItem(

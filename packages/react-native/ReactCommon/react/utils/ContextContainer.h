@@ -44,6 +44,16 @@ class ContextContainer final {
   }
 
   /*
+   * Registers or updates an instance for a given `key`.
+   */
+	template <typename T>
+	void insert_or_assign(const std::string& key, const T& instance) const {
+		std::unique_lock lock(mutex_);
+
+		instances_.insert_or_assign(key, std::make_shared<T>(instance));
+	}
+
+  /*
    * Removes an instance stored for a given `key`.
    * Does nothing if the instance was not found.
    */
