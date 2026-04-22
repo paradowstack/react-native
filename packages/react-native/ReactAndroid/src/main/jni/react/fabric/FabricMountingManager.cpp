@@ -364,20 +364,24 @@ jni::local_ref<jobject> getProps(
   }
   if (ReactNativeFeatureFlags::enableAccumulatedUpdatesInRawPropsAndroid()) {
     if (oldProps == nullptr) {
-      folly::dynamic props = newProps->getResolvedProps(DynamicResolveContext(
-          newShadowView.layoutMetrics, layoutContextForRaw));
+      auto context = DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
+      auto resolver = DynamicResolver{newProps->calcExpressions, context};
+      folly::dynamic props = newProps->getResolvedProps(resolver);
       return ReadableNativeMap::newObjectCxxArgs(std::move(props));
     } else {
+      auto newContext = DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
+      auto newResolver = DynamicResolver{newProps->calcExpressions, newContext};
+      auto oldContext = DynamicResolveContext(oldShadowView.layoutMetrics, layoutContextForRaw);
+      auto oldResolver = DynamicResolver{oldProps->calcExpressions, oldContext};
       auto diff = diffDynamicProps(
-          oldProps->getResolvedProps(DynamicResolveContext(
-              oldShadowView.layoutMetrics, layoutContextForRaw)),
-          newProps->getResolvedProps(DynamicResolveContext(
-              newShadowView.layoutMetrics, layoutContextForRaw)));
+          oldProps->getResolvedProps(oldResolver),
+          newProps->getResolvedProps(newResolver));
       return ReadableNativeMap::newObjectCxxArgs(std::move(diff));
     }
   }
-  folly::dynamic raw = newProps->getResolvedProps(DynamicResolveContext(
-      newShadowView.layoutMetrics, layoutContextForRaw));
+  auto context = DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
+  auto resolver = DynamicResolver{newProps->calcExpressions, context};
+  folly::dynamic raw = newProps->getResolvedProps(resolver);
   return ReadableNativeMap::newObjectCxxArgs(std::move(raw));
 }
 

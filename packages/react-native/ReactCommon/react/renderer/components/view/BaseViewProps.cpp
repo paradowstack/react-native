@@ -13,11 +13,11 @@
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BackgroundImagePropsConversions.h>
 #include <react/renderer/components/view/BoxShadowPropsConversions.h>
+#include <react/renderer/components/view/DynamicResolveContext.h>
 #include <react/renderer/components/view/FilterPropsConversions.h>
 #include <react/renderer/components/view/conversions.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/components/view/propsConversions.h>
-#include <react/renderer/core/DynamicResolveContext.h>
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/debugStringConvertibleUtils.h>
@@ -676,9 +676,14 @@ bool BaseViewProps::getClipsContentToBounds() const {
 #define SET_CALC_PROPERTY(fieldName, value) \
   SET_CALC_PROPERTY_BASE(props, fieldName, value)
 
-#define SET_OPTIONAL_CALC_PROPERTY(fieldName, value)        \
-  if (value) {                                              \
-    SET_CALC_PROPERTY(fieldName, resolver.resolve(*value)); \
+#define SET_OPTIONAL_CALC_PROPERTY(fieldName, value) \
+  if (value) {                                       \
+    SET_CALC_PROPERTY(fieldName, *value);            \
+  }
+
+#define SET_RESOLVED_OPTIONAL_CALC_PROPERTY(fieldName, value) \
+  if (value) {                                                \
+    SET_CALC_PROPERTY(fieldName, resolver.resolve(*value));   \
   }
 
 #define SET_CALC_PROPERTY_ARRAY(arrayName, index, fieldName, value) \
@@ -736,7 +741,7 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
   sweepCalcExpressions();
 
 #ifdef RN_SERIALIZABLE_STATE
-  rawProps = getResolvedProps(context);
+  rawProps = getResolvedProps(resolver);
   auto after = folly::toJson(rawProps);
   [[maybe_unused]] auto a = after;
 #endif
@@ -746,7 +751,7 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
 folly::dynamic BaseViewProps::getResolvedProps(
     const DynamicResolver& resolver) const {
   auto props = this->rawProps;
-  LayoutContext layoutContext = context.layoutContext;
+
   SET_CALC_PROPERTY(outlineOffset, outlineOffset);
   SET_CALC_PROPERTY(outlineWidth, outlineWidth);
   SET_CALC_PROPERTY(shadowOpacity, shadowOpacity);
@@ -774,7 +779,7 @@ folly::dynamic BaseViewProps::getResolvedProps(
             if (entry.count(typeKey)) {
               auto& filterValue = entry[typeKey];
               if (filterValue.isString()) {
-                filterValue = toDynamic(*this, *parameter, layoutContext);
+                filterValue = resolver.resolve(*parameter);
               }
             }
           }
@@ -806,18 +811,15 @@ folly::dynamic BaseViewProps::getResolvedProps(
               SET_CALC_PROPERTY_BASE(
                   dropShadow,
                   offsetX,
-                  toDynamic(*this, dropShadowParams->offsetX, layoutContext))
+                  resolver.resolve(dropShadowParams->offsetX))
               SET_CALC_PROPERTY_BASE(
                   dropShadow,
                   offsetY,
-                  toDynamic(*this, dropShadowParams->offsetY, layoutContext))
+                  resolver.resolve(dropShadowParams->offsetY))
               SET_CALC_PROPERTY_BASE(
                   dropShadow,
                   standardDeviation,
-                  toDynamic(
-                      *this,
-                      dropShadowParams->standardDeviation,
-                      layoutContext))
+                  resolver.resolve(dropShadowParams->standardDeviation))
             }
           }
         }
@@ -825,7 +827,8 @@ folly::dynamic BaseViewProps::getResolvedProps(
     }
   }
 
-  auto borderWidths = getBorderWidths(layoutContext);
+  auto borderWidths = getBorderWidths(resolver.context.layoutContext);
+
   SET_OPTIONAL_CALC_PROPERTY(borderWidth, borderWidths.all);
   SET_OPTIONAL_CALC_PROPERTY(borderLeftWidth, borderWidths.left);
   SET_OPTIONAL_CALC_PROPERTY(borderRightWidth, borderWidths.right);
@@ -836,19 +839,28 @@ folly::dynamic BaseViewProps::getResolvedProps(
   SET_OPTIONAL_CALC_PROPERTY(borderHorizontalWidth, borderWidths.horizontal);
   SET_OPTIONAL_CALC_PROPERTY(borderVerticalWidth, borderWidths.vertical);
 
-  SET_OPTIONAL_CALC_PROPERTY(borderRadius, borderRadii.all);
-  SET_OPTIONAL_CALC_PROPERTY(borderTopLeftRadius, borderRadii.topLeft);
-  SET_OPTIONAL_CALC_PROPERTY(borderTopRightRadius, borderRadii.topRight);
-  SET_OPTIONAL_CALC_PROPERTY(borderBottomRightRadius, borderRadii.bottomRight);
-  SET_OPTIONAL_CALC_PROPERTY(borderBottomLeftRadius, borderRadii.bottomLeft);
-  SET_OPTIONAL_CALC_PROPERTY(borderTopStartRadius, borderRadii.topStart);
-  SET_OPTIONAL_CALC_PROPERTY(borderTopEndRadius, borderRadii.topEnd);
-  SET_OPTIONAL_CALC_PROPERTY(borderBottomStartRadius, borderRadii.bottomStart);
-  SET_OPTIONAL_CALC_PROPERTY(borderBottomEndRadius, borderRadii.bottomEnd);
-  SET_OPTIONAL_CALC_PROPERTY(borderEndEndRadius, borderRadii.endEnd);
-  SET_OPTIONAL_CALC_PROPERTY(borderEndStartRadius, borderRadii.endStart);
-  SET_OPTIONAL_CALC_PROPERTY(borderStartEndRadius, borderRadii.startEnd);
-  SET_OPTIONAL_CALC_PROPERTY(borderStartStartRadius, borderRadii.startStart);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderRadius, borderRadii.all);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderTopLeftRadius, borderRadii.topLeft);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderTopRightRadius, borderRadii.topRight);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderBottomRightRadius, borderRadii.bottomRight);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderBottomLeftRadius, borderRadii.bottomLeft);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderTopStartRadius, borderRadii.topStart);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderTopEndRadius, borderRadii.topEnd);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderBottomStartRadius, borderRadii.bottomStart);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderBottomEndRadius, borderRadii.bottomEnd);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderEndEndRadius, borderRadii.endEnd);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderEndStartRadius, borderRadii.endStart);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderStartEndRadius, borderRadii.startEnd);
+  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
+      borderStartStartRadius, borderRadii.startStart);
 
   return props;
 }

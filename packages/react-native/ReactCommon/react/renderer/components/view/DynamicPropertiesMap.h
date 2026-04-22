@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <react/renderer/components/view/DynamicResolveContext.h>
 #include <react/renderer/components/view/primitives.h>
-#include <react/renderer/core/DynamicResolveContext.h>
 #include <react/renderer/css/CSSCalc.h>
 
 namespace facebook::react {

@@ -9,8 +9,8 @@
 
 #include <unordered_set>
 
-#include <react/renderer/core/DynamicPropertiesMap.h>
-#include <react/renderer/core/DynamicResolver.h>
+#include <react/renderer/components/view/DynamicPropertiesMap.h>
+#include <react/renderer/components/view/DynamicResolver.h>
 
 namespace facebook::react {
 
