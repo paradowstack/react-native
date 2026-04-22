@@ -109,7 +109,7 @@ inline static CGFloat RCTEffectiveFontSizeMultiplierFromTextAttributes(const Tex
           [UIFontMetrics metricsForTextStyle:RCTUIFontTextStyleForDynamicTypeRamp(dynamicTypeRamp)];
       // Using a specific font size reduces rounding errors from -scaledValueForValue:
       CGFloat requestedSize =
-          isnan(textAttributes.fontSize) ? RCTBaseSizeForDynamicTypeRamp(dynamicTypeRamp) : textAttributes.fontSize;
+          isnan(textAttributes.fontSize.asFloat()) ? RCTBaseSizeForDynamicTypeRamp(dynamicTypeRamp) : textAttributes.fontSize.asFloat();
       fontSizeMultiplier = [fontMetrics scaledValueForValue:requestedSize] / requestedSize;
     }
     CGFloat maxFontSizeMultiplier =
@@ -126,7 +126,7 @@ inline static UIFont *RCTEffectiveFontFromTextAttributes(const TextAttributes &t
 
   RCTFontProperties fontProperties;
   fontProperties.family = fontFamily;
-  fontProperties.size = textAttributes.fontSize;
+  fontProperties.size = textAttributes.fontSize.asFloat();
   fontProperties.style = textAttributes.fontStyle.has_value()
       ? RCTFontStyleFromFontStyle(textAttributes.fontStyle.value())
       : RCTFontStyleUndefined;

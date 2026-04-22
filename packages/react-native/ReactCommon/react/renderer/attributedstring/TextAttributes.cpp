@@ -32,7 +32,7 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   fontFamily = !textAttributes.fontFamily.empty() ? textAttributes.fontFamily
                                                   : fontFamily;
   fontSize =
-      !std::isnan(textAttributes.fontSize) ? textAttributes.fontSize : fontSize;
+	!std::isnan(textAttributes.fontSize.asFloat()) && !textAttributes.fontSize.isDynamic() ? textAttributes.fontSize.asFloat() : fontSize.asFloat();
   fontSizeMultiplier = !std::isnan(textAttributes.fontSizeMultiplier)
       ? textAttributes.fontSizeMultiplier
       : fontSizeMultiplier;
@@ -171,7 +171,7 @@ bool TextAttributes::operator==(const TextAttributes& rhs) const {
              rhs.textEffects) &&
       floatEquality(maxFontSizeMultiplier, rhs.maxFontSizeMultiplier) &&
       floatEquality(opacity, rhs.opacity) &&
-      floatEquality(fontSize, rhs.fontSize) &&
+      floatEquality(fontSize.asFloat(), rhs.fontSize.asFloat()) &&
       floatEquality(fontSizeMultiplier, rhs.fontSizeMultiplier) &&
       floatEquality(letterSpacing, rhs.letterSpacing) &&
       floatEquality(lineHeight, rhs.lineHeight) &&
@@ -207,7 +207,7 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
       // Font
       debugStringConvertibleItem(
           "fontFamily", fontFamily, textAttributes.fontFamily),
-      debugStringConvertibleItem("fontSize", fontSize, textAttributes.fontSize),
+      debugStringConvertibleItem("fontSize", fontSize.asFloat(), textAttributes.fontSize.asFloat()),
       debugStringConvertibleItem(
           "fontSizeMultiplier",
           fontSizeMultiplier,
