@@ -32,6 +32,12 @@ void Props::initialize(
   nativeId = ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
       ? sourceProps.nativeId
       : convertRawProp(context, rawProps, "nativeID", sourceProps.nativeId, {});
+  calcExpressions = sourceProps.calcExpressions;
+
+  context.contextContainer.insert_or_assign(
+      CalcExpressionsKey,
+      std::shared_ptr<CalcExpressions>(
+          &calcExpressions, [](CalcExpressions*) {}));
 
 #ifdef RN_SERIALIZABLE_STATE
   if (!ReactNativeFeatureFlags::enableExclusivePropsUpdateAndroid()) {
@@ -50,6 +56,28 @@ void Props::setProp(
       fromRawValue(context, value, nativeId, {});
       return;
   }
+}
+
+bool Props::hasResolvableStyleValues() const {
+  return needsToResolveStyleValues;
+}
+
+void Props::resolveCalcInPlace(const DynamicResolveContext& context) {}
+
+void Props::collectLiveCalcIds(std::unordered_set<uint32_t>& /*ids*/) const {
+  // Base class has no calc-capable fields.
+}
+
+void Props::sweepCalcExpressions() {
+  if (calcExpressions.empty()) {
+    return;
+  }
+  std::unordered_set<uint32_t> liveIds;
+  collectLiveCalcIds(liveIds);
+  std::erase_if(calcExpressions, [&](const auto& entry) {
+    return !liveIds.contains(entry.first);
+  });
+  needsToResolveStyleValues = !calcExpressions.empty();
 }
 
 #ifdef RN_SERIALIZABLE_STATE

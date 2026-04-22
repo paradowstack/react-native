@@ -159,14 +159,25 @@ void packFilter(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
   for (const auto& f : filters) {
     folly::dynamic filterObj = folly::dynamic::object();
     std::string typeKey = toString(f.type);
-    if (std::holds_alternative<Float>(f.parameters)) {
-      filterObj[typeKey] = std::get<Float>(f.parameters);
+    if (std::holds_alternative<FloatDynamic>(f.parameters)) {
+      filterObj.insert(
+          typeKey,
+          folly::dynamic(
+              static_cast<double>(std::get<FloatDynamic>(f.parameters)
+                                      .asFloat())));
     } else if (std::holds_alternative<DropShadowParams>(f.parameters)) {
       const auto& dropShadowParams = std::get<DropShadowParams>(f.parameters);
       folly::dynamic shadowObj = folly::dynamic::object();
-      shadowObj["offsetX"] = dropShadowParams.offsetX;
-      shadowObj["offsetY"] = dropShadowParams.offsetY;
-      shadowObj["standardDeviation"] = dropShadowParams.standardDeviation;
+      shadowObj.insert(
+          "offsetX",
+          folly::dynamic(static_cast<double>(dropShadowParams.offsetX.asFloat())));
+      shadowObj.insert(
+          "offsetY",
+          folly::dynamic(static_cast<double>(dropShadowParams.offsetY.asFloat())));
+      shadowObj.insert(
+          "standardDeviation",
+          folly::dynamic(
+              static_cast<double>(dropShadowParams.standardDeviation.asFloat())));
       shadowObj["color"] = static_cast<int32_t>(*dropShadowParams.color);
       filterObj[typeKey] = shadowObj;
     }
@@ -464,9 +475,9 @@ void packBoxShadow(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
   for (const auto& shadow : boxShadows) {
     folly::dynamic shadowObj = folly::dynamic::object();
     shadowObj["offsetX"] = shadow.offsetX.asFloat();
-    shadowObj["offsetY"] = shadow.offsetY;
-    shadowObj["blurRadius"] = shadow.blurRadius;
-    shadowObj["spreadDistance"] = shadow.spreadDistance;
+    shadowObj["offsetY"] = shadow.offsetY.asFloat();
+    shadowObj["blurRadius"] = shadow.blurRadius.asFloat();
+		shadowObj["spreadDistance"] = shadow.spreadDistance.asFloat();
     shadowObj["inset"] = shadow.inset;
     if (shadow.color) {
       shadowObj["color"] = static_cast<int32_t>(*shadow.color);

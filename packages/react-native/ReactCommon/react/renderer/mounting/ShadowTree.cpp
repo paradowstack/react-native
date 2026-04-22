@@ -11,6 +11,7 @@
 #include <jsinspector-modern/tracing/PerformanceTracerSection.h>
 #include <react/debug/react_native_assert.h>
 #include <react/renderer/components/root/RootComponentDescriptor.h>
+#include <react/renderer/components/view/BaseViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
 #include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutPrimitives.h>
@@ -215,6 +216,77 @@ static std::shared_ptr<RootShadowNode> progressRootLayoutInfo(
   return shadowNode;
 }
 
+/*
+ * Generates (possibly) a new tree where all nodes with resolvable
+ * calc() expressions in their Props have those expressions resolved.
+ * Uses the same clone-on-write pattern as progressState().
+ * Returns nullptr if no nodes needed resolution.
+ */
+static std::shared_ptr<ShadowNode> progressCalc(
+    const ShadowNode& shadowNode,
+    const LayoutContext& layoutContext) {
+  auto areChildrenChanged = false;
+  auto newChildren = std::vector<std::shared_ptr<const ShadowNode>>{};
+
+  if (!shadowNode.getChildren().empty()) {
+    auto index = size_t{0};
+    for (const auto& childNode : shadowNode.getChildren()) {
+      auto newChildNode = progressCalc(*childNode, layoutContext);
+      if (newChildNode) {
+        if (!areChildrenChanged) {
+          newChildren = shadowNode.getChildren();
+        }
+        newChildren[index] = newChildNode;
+        areChildrenChanged = true;
+      }
+      index++;
+    }
+  }
+
+  auto needsCalcResolution = shadowNode.getProps()->hasResolvableStyleValues();
+
+  if (!areChildrenChanged && !needsCalcResolution) {
+    return nullptr;
+  }
+
+  Props::Shared resolvedProps = ShadowNodeFragment::propsPlaceholder();
+
+  if (needsCalcResolution) {
+    auto contextContainer = shadowNode.getContextContainer();
+    if (!contextContainer) {
+      contextContainer = std::make_shared<ContextContainer>();
+    }
+    PropsParserContext propsParserContext{
+        shadowNode.getSurfaceId(), *contextContainer};
+
+#ifdef RN_SERIALIZABLE_STATE
+    RawProps rawProps = (RawProps)shadowNode.getProps()->rawProps;
+#else
+    RawProps rawProps{};
+#endif
+
+    const auto* layoutable =
+        dynamic_cast<const LayoutableShadowNode*>(&shadowNode);
+    auto metrics =
+        layoutable ? layoutable->getLayoutMetrics() : EmptyLayoutMetrics;
+    auto resolveContext = DynamicResolveContext(metrics, layoutContext);
+    resolvedProps = shadowNode.getComponentDescriptor().cloneResolvedProps(
+        propsParserContext,
+        shadowNode.getProps(),
+        RawProps{rawProps},
+        resolveContext);
+  }
+
+  return shadowNode.clone({
+      .props = resolvedProps,
+      .children = areChildrenChanged
+          ? std::make_shared<
+                const std::vector<std::shared_ptr<const ShadowNode>>>(
+                std::move(newChildren))
+          : ShadowNodeFragment::childrenPlaceholder(),
+  });
+}
+
 ShadowTree::ShadowTree(
     SurfaceId surfaceId,
     const LayoutConstraints& layoutConstraints,
@@ -411,6 +483,34 @@ CommitStatus ShadowTree::tryCommit(
   telemetry.unsetAsThreadLocal();
   telemetry.didLayout(static_cast<int>(affectedLayoutableNodes.size()));
 
+  // Capture layout event data before progressCalc may clone nodes.
+  // emitLayoutEvents reads Props (onLayout), LayoutMetrics, and EventEmitter.
+  // None of these are modified by calc resolution, so we capture them now
+  // while raw pointers in affectedLayoutableNodes are still valid.
+  std::vector<PendingLayoutEvent> pendingLayoutEvents;
+  for (const auto* layoutableNode : affectedLayoutableNodes) {
+    if (auto viewProps =
+            dynamic_cast<const ViewProps*>(layoutableNode->getProps().get())) {
+      if (viewProps->onLayout) {
+        pendingLayoutEvents.push_back({
+            .eventEmitter = layoutableNode->getEventEmitter(),
+            .layoutMetrics = layoutableNode->getLayoutMetrics(),
+        });
+      }
+    }
+  }
+
+  // Resolve calc() expressions. This may clone nodes (invalidating
+  // affectedLayoutableNodes), but pendingLayoutEvents is safe to use.
+  {
+    auto layoutContext = newRootShadowNode->getConcreteProps().layoutContext;
+    auto resolvedTree = progressCalc(*newRootShadowNode, layoutContext);
+    if (resolvedTree) {
+      newRootShadowNode =
+          std::static_pointer_cast<RootShadowNode>(resolvedTree);
+    }
+  }
+
   {
     // Updating `currentRevision_` in unique manner if it hasn't changed.
     UniqueLock lock = uniqueRevisionLock(
@@ -452,7 +552,7 @@ CommitStatus ShadowTree::tryCommit(
     }
   }
 
-  emitLayoutEvents(affectedLayoutableNodes);
+  emitLayoutEvents(pendingLayoutEvents);
 
   if (isReactBranch) {
     scheduleReactRevisionPromotion();
@@ -562,21 +662,15 @@ void ShadowTree::commitEmptyTree() const {
 }
 
 void ShadowTree::emitLayoutEvents(
-    std::vector<const LayoutableShadowNode*>& affectedLayoutableNodes) const {
+    std::vector<PendingLayoutEvent>& pendingLayoutEvents) const {
   TraceSection s(
       "ShadowTree::emitLayoutEvents",
-      "affectedLayoutableNodes",
-      affectedLayoutableNodes.size());
+      "pendingLayoutEvents",
+      pendingLayoutEvents.size());
 
-  for (const auto* layoutableNode : affectedLayoutableNodes) {
-    if (auto viewProps =
-            dynamic_cast<const ViewProps*>(layoutableNode->getProps().get())) {
-      if (viewProps->onLayout) {
-        static_cast<const BaseViewEventEmitter&>(
-            *layoutableNode->getEventEmitter())
-            .onLayout(layoutableNode->getLayoutMetrics());
-      }
-    }
+  for (const auto& event : pendingLayoutEvents) {
+    static_cast<const BaseViewEventEmitter&>(*event.eventEmitter)
+        .onLayout(event.layoutMetrics);
   }
 }
 

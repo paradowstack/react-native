@@ -149,8 +149,70 @@ class ConcreteComponentDescriptor : public ComponentDescriptor {
         shadowNodeProps->setProp(context, RAW_PROPS_KEY_HASH(name), name.c_str(), RawValue(pair.second));
       }
     }
+    
+		shadowNodeProps->sweepCalcExpressions();
     return shadowNodeProps;
   };
+
+  Props::Shared cloneResolvedProps(
+    const PropsParserContext &context, 
+    const Props::Shared &props, 
+    RawProps rawProps,
+    DynamicResolveContext resolveContext) const override {
+      // Optimization:
+    // Quite often nodes are constructed with default/empty props: the base
+    // `props` object is `null` (there no base because it's not cloning) and the
+    // `rawProps` is empty. In this case, we can return the default props object
+    // of a concrete type entirely bypassing parsing.
+    if (!props && rawProps.isEmpty()) {
+      return ShadowNodeT::defaultSharedProps();
+    }
+
+    if constexpr (RawPropsFilterable<ShadowNodeT>) {
+      ShadowNodeT::filterRawProps(rawProps);
+    }
+
+    rawProps.parse(rawPropsParser_);
+
+    auto shadowNodeProps = ShadowNodeT::Props(context, rawProps, props);
+#ifdef RN_SERIALIZABLE_STATE
+    bool fallbackToDynamicRawPropsAccumulation = true;
+    if (ReactNativeFeatureFlags::enableExclusivePropsUpdateAndroid() &&
+        ReactNativeFeatureFlags::enableAccumulatedUpdatesInRawPropsAndroid()) {
+      // When exclusive props update is enabled, we only apply Props 1.5 processing
+      // (raw props merging) when Props 2.0 is not available.
+      if (ReactNativeFeatureFlags::enablePropsUpdateReconciliationAndroid()) {
+        // Cast to base Props reference to safely call virtual method
+        const auto &baseProps = static_cast<const Props &>(*shadowNodeProps);
+        if (strcmp(ShadowNodeT::Name(), baseProps.getDiffPropsImplementationTarget()) == 0) {
+          // Props 2.0 supported for this component, Props 1.5 processing can be skipped
+          fallbackToDynamicRawPropsAccumulation = false;
+        }
+      }
+    }
+    if (fallbackToDynamicRawPropsAccumulation) {
+      ShadowNodeT::initializeDynamicProps(shadowNodeProps, rawProps, props);
+    }
+#endif
+    // Use the new-style iterator
+    // Note that we just check if `Props` has this flag set, no matter
+    // the type of ShadowNode; it acts as the single global flag.
+    if (ReactNativeFeatureFlags::enableCppPropsIteratorSetter()) {
+#ifdef RN_SERIALIZABLE_STATE
+      const auto &dynamic =
+          fallbackToDynamicRawPropsAccumulation ? shadowNodeProps->rawProps : static_cast<folly::dynamic>(rawProps);
+#else
+      const auto &dynamic = static_cast<folly::dynamic>(rawProps);
+#endif
+      for (const auto &pair : dynamic.items()) {
+        const auto &name = pair.first.getString();
+        shadowNodeProps->setProp(context, RAW_PROPS_KEY_HASH(name), name.c_str(), RawValue(pair.second));
+      }
+    }
+		shadowNodeProps->sweepCalcExpressions();
+		shadowNodeProps->resolveCalcInPlace(resolveContext);
+    return shadowNodeProps;
+  }
 
   virtual State::Shared createInitialState(const Props::Shared &props, const ShadowNodeFamily::Shared &family)
       const override

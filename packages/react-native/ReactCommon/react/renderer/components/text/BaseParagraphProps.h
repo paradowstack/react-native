@@ -54,6 +54,17 @@ class BaseParagraphProps : public ViewProps, public BaseTextProps {
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;
 #endif
+
+  void resolveCalcInPlace(const DynamicResolveContext& context) override;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(
+      const DynamicResolveContext& context) const override;
+#endif
+
+ protected:
+  void collectLiveCalcIds(std::unordered_set<uint32_t>& ids) const override;
+
 };
 
 } // namespace facebook::react

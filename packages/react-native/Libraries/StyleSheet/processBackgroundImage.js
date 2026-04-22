@@ -89,7 +89,6 @@ export default function processBackgroundImage(
   }
 
   if (typeof backgroundImage === 'string') {
-    console.log('backgroundImage', backgroundImage);
     result = parseBackgroundImageCSSString(
       backgroundImage.replace(NEWLINE_REGEX, ' '),
     );
@@ -191,7 +190,6 @@ export default function processBackgroundImage(
     }
   }
 
-  console.log('result', result);
   return result;
 }
 

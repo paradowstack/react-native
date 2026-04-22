@@ -22,6 +22,7 @@ const FILTER_FUNCTION_REGEX =
 const ARGS_WITH_UNITS_REGEX = /([+-]?\d*(\.\d+)?)([a-zA-Z%]+)?/g;
 const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
 const LENGTH_PARSE_REGEX = /([+-]?\d*(\.\d+)?)([\w\W]+)?/g;
+const CALC_FUNCTION_REGEX = /^calc\(.*\)$/;
 
 type ParsedFilter =
   | {brightness: number}
@@ -123,10 +124,18 @@ export default function processFilter(
   return result;
 }
 
-function _getFilterAmount(filterName: string, filterArgs: unknown): ?number {
+function _getFilterAmount(
+  filterName: string,
+  filterArgs: unknown,
+): ?number | string {
+  console.log('filterName', filterName, 'filterArgs', filterArgs);
   let filterArgAsNumber: number;
   let unit: string;
   if (typeof filterArgs === 'string') {
+    if (CALC_FUNCTION_REGEX.test(filterArgs)) {
+      return filterArgs;
+    }
+
     // matches on args with units like "1.5 5% -80deg"
     ARGS_WITH_UNITS_REGEX.lastIndex = 0;
     const match = ARGS_WITH_UNITS_REGEX.exec(filterArgs);
@@ -311,7 +320,10 @@ function parseDropShadowString(rawDropShadow: string): ?DropShadowValue {
   return dropShadow;
 }
 
-function parseLength(length: string): ?number {
+function parseLength(length: string): ?number | string {
+  if (CALC_FUNCTION_REGEX.test(length)) {
+    return length;
+  }
   // matches on args with units like "1.5 5% -80deg"
   LENGTH_PARSE_REGEX.lastIndex = 0;
   const match = LENGTH_PARSE_REGEX.exec(length);

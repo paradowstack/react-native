@@ -75,49 +75,42 @@ inline void parseProcessedBoxShadow(
     // boxShadow.offsetY = (Float)offsetY->second;
 
     auto mapIt =
-        context.contextContainer.find<std::shared_ptr<CalcExpressions>>("a");
+        context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
+            CalcExpressionsKey);
 
     auto offsetX = rawBoxShadowMap.find("offsetX");
     if (offsetX != rawBoxShadowMap.end()) {
       // react_native_expect(offsetX->second.hasType<Float>());
       if (offsetX->second.hasType<Float>()) {
         boxShadow.offsetX = FloatDynamic{(Float)offsetX->second};
-        LOG(ERROR) << "offsetX Float";
         // result = {};
         // return;
       } else if (offsetX->second.hasType<std::string>()) {
-        LOG(ERROR) << "offsetX String";
         auto offsetXStr = (std::string)offsetX->second;
         CSSSyntaxParser parser(offsetXStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          LOG(ERROR) << "offsetX CSSCalc";
           if (cssCalc->isPointsOnly()) {
-            LOG(ERROR) << "offsetX CSSCalc PointsOnly";
             boxShadow.offsetX = FloatDynamic{cssCalc->px};
           } else if (mapIt) {
-            const auto& map = *mapIt;
-            auto index = static_cast<FloatDynamicId>(map->size());
+            auto& map = *mapIt;
+            auto index = map->allocateId();
             map->insert({index, *cssCalc});
             boxShadow.offsetX = FloatDynamic{index};
-            LOG(ERROR) << "offsetX CSSCalc CalcExpressions";
           } else {
             // We currently only support point values for blur radius, so if
             // it's not points then we should treat it as malformed
-            LOG(ERROR) << "offsetX CSSCalc Malformed";
             result = {};
             return;
           }
         } else {
           // If it's not a valid CSS calc value then we should treat it as
           // malformed
-          LOG(ERROR) << "offsetX CSSCalc Malformed";
           result = {};
           return;
         }
       } else {
-        LOG(ERROR) << "offsetX Malformed";
         result = {};
         return;
       }
@@ -128,42 +121,34 @@ inline void parseProcessedBoxShadow(
       // react_native_expect(offsetY->second.hasType<Float>());
       if (offsetY->second.hasType<Float>()) {
         boxShadow.offsetY = (Float)offsetY->second;
-        LOG(ERROR) << "offsetY Float";
         // result = {};
         // return;
       } else if (offsetY->second.hasType<std::string>()) {
-        LOG(ERROR) << "offsetY String";
         auto offsetYStr = (std::string)offsetY->second;
         CSSSyntaxParser parser(offsetYStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          LOG(ERROR) << "offsetY CSSCalc";
           if (cssCalc->isPointsOnly()) {
-            LOG(ERROR) << "offsetY CSSCalc PointsOnly";
             boxShadow.offsetY = cssCalc->px;
           } else if (mapIt) {
-            const auto& map = *mapIt;
-            auto index = static_cast<FloatDynamicId>(map->size());
+            auto& map = *mapIt;
+            auto index = map->allocateId();
             map->insert({index, *cssCalc});
             boxShadow.offsetY = FloatDynamic{index};
-            LOG(ERROR) << "offsetY CSSCalc CalcExpressions";
           } else {
             // We currently only support point values for blur radius, so if
             // it's not points then we should treat it as malformed
-            LOG(ERROR) << "offsetY CSSCalc Malformed";
             result = {};
             return;
           }
         } else {
           // If it's not a valid CSS calc value then we should treat it as
           // malformed
-          LOG(ERROR) << "offsetY CSSCalc Malformed";
           result = {};
           return;
         }
       } else {
-        LOG(ERROR) << "offsetY Malformed";
         result = {};
         return;
       }
@@ -174,42 +159,33 @@ inline void parseProcessedBoxShadow(
       // react_native_expect(blurRadius->second.hasType<Float>());
       if (blurRadius->second.hasType<Float>()) {
         boxShadow.blurRadius = (Float)blurRadius->second;
-        LOG(ERROR) << "blurRadius Float";
         // result = {};
         // return;
       } else if (blurRadius->second.hasType<std::string>()) {
-        LOG(ERROR) << "blurRadius String";
         auto blurRadiusStr = (std::string)blurRadius->second;
         CSSSyntaxParser parser(blurRadiusStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          LOG(ERROR) << "blurRadius CSSCalc";
           if (cssCalc->isPointsOnly()) {
-            LOG(ERROR) << "blurRadius CSSCalc PointsOnly";
             boxShadow.blurRadius = cssCalc->px;
           } else if (mapIt) {
-            const auto& map = *mapIt;
-            auto index = static_cast<FloatDynamicId>(map->size());
+            auto& map = *mapIt;
+            auto index = map->allocateId();
             map->insert({index, *cssCalc});
-            // boxShadow.blurRadius = FloatDynamic{index};
-            LOG(ERROR) << "blurRadius CSSCalc CalcExpressions";
           } else {
             // We currently only support point values for blur radius, so if
             // it's not points then we should treat it as malformed
-            LOG(ERROR) << "blurRadius CSSCalc Malformed";
             result = {};
             return;
           }
         } else {
           // If it's not a valid CSS calc value then we should treat it as
           // malformed
-          LOG(ERROR) << "blurRadius CSSCalc Malformed";
           result = {};
           return;
         }
       } else {
-        LOG(ERROR) << "blurRadius Malformed";
         result = {};
         return;
       }
@@ -220,42 +196,33 @@ inline void parseProcessedBoxShadow(
       // react_native_expect(spreadDistance->second.hasType<Float>());
       if (spreadDistance->second.hasType<Float>()) {
         boxShadow.spreadDistance = (Float)spreadDistance->second;
-        LOG(ERROR) << "spreadDistance Float";
         // result = {};
         // return;
       } else if (spreadDistance->second.hasType<std::string>()) {
-        LOG(ERROR) << "spreadDistance String";
         auto spreadDistanceStr = (std::string)spreadDistance->second;
         CSSSyntaxParser parser(spreadDistanceStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          LOG(ERROR) << "spreadDistance CSSCalc";
           if (cssCalc->isPointsOnly()) {
-            LOG(ERROR) << "spreadDistance CSSCalc PointsOnly";
             boxShadow.spreadDistance = cssCalc->px;
           } else if (mapIt) {
-            const auto& map = *mapIt;
-            auto index = static_cast<FloatDynamicId>(map->size());
+            auto& map = *mapIt;
+            auto index = map->allocateId();
             map->insert({index, *cssCalc});
-            // boxShadow.spreadDistance = FloatDynamic{index};
-            LOG(ERROR) << "spreadDistance CSSCalc CalcExpressions";
           } else {
             // We currently only support point values for blur radius, so if
             // it's not points then we should treat it as malformed
-            LOG(ERROR) << "spreadDistance CSSCalc Malformed";
             result = {};
             return;
           }
         } else {
           // If it's not a valid CSS calc value then we should treat it as
           // malformed
-          LOG(ERROR) << "spreadDistance CSSCalc Malformed";
           result = {};
           return;
         }
       } else {
-        LOG(ERROR) << "spreadDistance Malformed";
         result = {};
         return;
       }
@@ -298,8 +265,8 @@ inline std::optional<BoxShadow> fromCSSShadow(const CSSShadow& cssShadow) {
   return BoxShadow{
       .offsetX = FloatDynamic{cssShadow.offsetX.value},
       .offsetY = FloatDynamic{cssShadow.offsetY.value},
-      .blurRadius = cssShadow.blurRadius.value,
-      .spreadDistance = cssShadow.spreadDistance.value,
+      .blurRadius = FloatDynamic{cssShadow.blurRadius.value},
+      .spreadDistance = FloatDynamic{cssShadow.spreadDistance.value},
       .color = fromCSSColor(cssShadow.color),
       .inset = cssShadow.inset,
   };
@@ -342,20 +309,16 @@ inline std::optional<FloatDynamic> toFloatDynamic(
 
     auto calc = parseCSSProperty<CSSCalc>((std::string)value);
     if (std::holds_alternative<CSSCalc>(calc)) {
-      LOG(ERROR) << "calc SI";
       auto cssCalc = std::get<CSSCalc>(calc);
       if (cssCalc.isUnitless() || cssCalc.isPointsOnly()) {
-        LOG(ERROR) << "calc 1";
         return FloatDynamic{(Float)cssCalc.px};
       }
       if (cssCalc.isComplex()) {
-        LOG(ERROR) << "calc 2";
         if (auto mapIt =
                 context.contextContainer.find<std::shared_ptr<CalcExpressions>>(
-                    "a")) {
-          LOG(ERROR) << "calc 3";
-          const auto& map = *mapIt;
-          auto index = static_cast<FloatDynamicId>(map->size());
+                    CalcExpressionsKey)) {
+          auto& map = *mapIt;
+          auto index = map->allocateId();
           map->insert({index, cssCalc});
           return FloatDynamic{index};
         }
@@ -392,21 +355,18 @@ inline std::optional<BoxShadow> parseBoxShadowRawValue(
     return {};
   }
 
-  Float blurRadius = 0;
   auto rawBlurRadius = boxShadow.find("blurRadius");
-  if (rawBlurRadius != boxShadow.end()) {
-    if (auto blurRadiusValue = coerceLength(rawBlurRadius->second)) {
-      if (*blurRadiusValue < 0) {
-        return {};
-      }
-      blurRadius = *blurRadiusValue;
-    } else {
-      return {};
-    }
+  auto blurRadius = toFloatDynamic(context, rawBlurRadius->second);
+  if (!blurRadius.has_value()) {
+    return {};
   }
 
-  Float spreadDistance = 0;
   auto rawSpreadDistance = boxShadow.find("spreadDistance");
+  auto spreadDistance = toFloatDynamic(context, rawSpreadDistance->second);
+  if (!spreadDistance.has_value()) {
+    return {};
+  }
+
   if (rawSpreadDistance != boxShadow.end()) {
     if (auto spreadDistanceValue = coerceLength(rawSpreadDistance->second)) {
       spreadDistance = *spreadDistanceValue;
@@ -437,8 +397,8 @@ inline std::optional<BoxShadow> parseBoxShadowRawValue(
   return BoxShadow{
       .offsetX = *offsetX,
       .offsetY = *offsetY,
-      .blurRadius = blurRadius,
-      .spreadDistance = spreadDistance,
+      .blurRadius = *blurRadius,
+      .spreadDistance = *spreadDistance,
       .color = color,
       .inset = inset};
 }
@@ -475,12 +435,9 @@ inline void fromRawValue(
     const PropsParserContext& context,
     const RawValue& value,
     std::vector<BoxShadow>& result) {
-  LOG(ERROR) << "fromRawValue 0";
   if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
-    LOG(ERROR) << "fromRawValue 1";
     parseUnprocessedBoxShadow(context, value, result);
   } else {
-    LOG(ERROR) << "fromRawValue 2";
     parseProcessedBoxShadow(context, value, result);
   }
 }

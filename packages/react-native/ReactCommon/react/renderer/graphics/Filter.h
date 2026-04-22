@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
 
@@ -88,18 +89,18 @@ inline std::string toString(const FilterType &filterType)
 struct DropShadowParams {
   bool operator==(const DropShadowParams &other) const = default;
 
-  Float offsetX{};
-  Float offsetY{};
-  Float standardDeviation{};
+  FloatDynamic offsetX{};
+  FloatDynamic offsetY{};
+  FloatDynamic standardDeviation{};
   SharedColor color{};
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const
   {
     folly::dynamic result = folly::dynamic::object();
-    result["offsetX"] = offsetX;
-    result["offsetY"] = offsetY;
-    result["standardDeviation"] = standardDeviation;
+    result["offsetX"] = offsetX.asFloat();
+    result["offsetY"] = offsetY.asFloat();
+    result["standardDeviation"] = standardDeviation.asFloat();
     result["color"] = *color;
     return result;
   }
@@ -110,15 +111,15 @@ struct FilterFunction {
   bool operator==(const FilterFunction &other) const = default;
 
   FilterType type{};
-  std::variant<Float, DropShadowParams> parameters{};
+  std::variant<FloatDynamic, DropShadowParams> parameters{};
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const
   {
     folly::dynamic result = folly::dynamic::object();
     std::string typeKey = toString(type);
-    if (std::holds_alternative<Float>(parameters)) {
-      result[typeKey] = std::get<Float>(parameters);
+    if (std::holds_alternative<FloatDynamic>(parameters)) {
+      result[typeKey] = std::get<FloatDynamic>(parameters).asFloat();
     } else if (std::holds_alternative<DropShadowParams>(parameters)) {
       const auto &dropShadowParams = std::get<DropShadowParams>(parameters);
       result[typeKey] = dropShadowParams.toDynamic();

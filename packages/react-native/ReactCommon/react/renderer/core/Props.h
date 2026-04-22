@@ -7,6 +7,10 @@
 
 #pragma once
 
+#include <unordered_set>
+
+#include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/DynamicResolveContext.h>
 #include <react/renderer/core/PropsMacros.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
@@ -20,9 +24,6 @@
 #endif
 
 namespace facebook::react {
-
-struct LayoutMetrics;
-struct LayoutContext;
 
 /*
  * Represents the most generic props object.
@@ -60,7 +61,24 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
   void
   setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
 
+  bool hasResolvableStyleValues() const;
+  virtual void resolveCalcInPlace(const DynamicResolveContext& context);
+
+  /**
+   * Collect all live calc expression IDs from property fields.
+   * Subclasses override to register their calc-capable fields.
+   */
+  virtual void collectLiveCalcIds(std::unordered_set<uint32_t>& ids) const;
+
+  /**
+   * Remove orphaned calc expressions whose IDs are no longer referenced
+   * by any property field. Called once after full Props construction.
+   */
+  void sweepCalcExpressions();
+
   std::string nativeId;
+
+  CalcExpressions calcExpressions;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic rawProps = folly::dynamic::object();
@@ -77,6 +95,11 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
       const LayoutMetrics *layoutMetrics = nullptr,
       const LayoutContext *layoutContext = nullptr) const
   {
+    return folly::dynamic::object();
+  }
+
+  virtual folly::dynamic getResolvedProps(
+      const DynamicResolveContext& context) const {
     return folly::dynamic::object();
   }
 #endif
@@ -100,6 +123,8 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
        * folly::dynamic (android only)
        */
       const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+
+  bool needsToResolveStyleValues{false};
 };
 
 } // namespace facebook::react

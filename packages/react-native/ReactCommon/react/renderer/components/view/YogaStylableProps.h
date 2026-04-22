@@ -9,10 +9,8 @@
 
 #include <yoga/style/Style.h>
 
-#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
-#include <react/renderer/css/CSSCalc.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 
 namespace facebook::react {
@@ -21,13 +19,17 @@ class YogaStylableProps : public Props {
  public:
   YogaStylableProps() = default;
   YogaStylableProps(
-      const PropsParserContext &context,
-      const YogaStylableProps &sourceProps,
-      const RawProps &rawProps,
-      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const PropsParserContext& context,
+      const YogaStylableProps& sourceProps,
+      const RawProps& rawProps,
+      const std::function<bool(const std::string&)>& filterObjectKeys =
+          nullptr);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
 #pragma mark - Props
   yoga::Style yogaStyle{};
@@ -59,8 +61,6 @@ class YogaStylableProps : public Props {
   yoga::Style::Length paddingBlockStart;
   yoga::Style::Length paddingBlockEnd;
 
-  CalcExpressions calcExpressions;
-
 #if RN_DEBUG_STRING_CONVERTIBLE
 
 #pragma mark - DebugStringConvertible (Partial)
@@ -69,16 +69,19 @@ class YogaStylableProps : public Props {
 
 #endif
 
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(
+      const DynamicResolveContext& context) const override;
+#endif
+
  private:
   void convertRawPropAliases(
-      const PropsParserContext &context,
-      const YogaStylableProps &sourceProps,
-      const RawProps &rawProps);
-      
-  CalcExpressions buildCalcExpressions(
-      const PropsParserContext &context,
-      const RawProps &rawProps,
-      const CalcExpressions &defaultValue);
+      const PropsParserContext& context,
+      const YogaStylableProps& sourceProps,
+      const RawProps& rawProps);
+
+ protected:
+  void collectLiveCalcIds(std::unordered_set<uint32_t>& ids) const override;
 };
 
 } // namespace facebook::react

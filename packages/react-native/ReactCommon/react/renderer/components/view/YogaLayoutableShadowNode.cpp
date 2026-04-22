@@ -389,20 +389,6 @@ void YogaLayoutableShadowNode::updateYogaProps(
     const CalcExpressions& previousCalcExpressions) {
   ensureUnsealed();
 
-	auto& viewProps = const_cast<ViewProps&>(static_cast<const ViewProps&>(*props_));
-	
-	if (viewProps.boxShadow.size() == 1) {
-		auto vw = threadLocalLayoutContext.viewportSize.width;
-		auto vh = threadLocalLayoutContext.viewportSize.height;
-    if (viewProps.calcExpressions.contains(facebook::react::fnv1a("boxShadow.blurRadius"))) {
-      auto cssCalc = viewProps.calcExpressions.at(facebook::react::fnv1a("boxShadow.blurRadius"));
-      viewProps.boxShadow.front().blurRadius = cssCalc.resolve(0.0f, vw, vh);
-    }
-    if (viewProps.calcExpressions.contains(facebook::react::fnv1a("boxShadow.spreadDistance"))) {
-      auto cssCalc = viewProps.calcExpressions.at(facebook::react::fnv1a("boxShadow.spreadDistance"));
-      viewProps.boxShadow.front().spreadDistance = cssCalc.resolve(0.0f, vw, vh);
-    }
-	}
 
   auto& props = static_cast<const YogaStylableProps&>(*props_);
   auto styleResult = applyAliasedProps(props.yogaStyle, props);

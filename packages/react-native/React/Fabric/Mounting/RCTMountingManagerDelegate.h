@@ -9,6 +9,7 @@
 
 #import <React/RCTPrimitives.h>
 #import <react/renderer/core/LayoutContext.h>
+#import <react/renderer/runtimescheduler/RuntimeScheduler.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
