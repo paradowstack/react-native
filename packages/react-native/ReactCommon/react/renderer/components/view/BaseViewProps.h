@@ -53,7 +53,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 #pragma mark - Props
 
   // Color
-  Float opacity{1.0f};
+  FloatDynamic opacity{1.0f};
   SharedColor backgroundColor{};
 
   // Borders

@@ -251,4 +251,28 @@ SubmitBehavior BaseTextInputProps::getNonDefaultSubmitBehavior() const {
   return submitBehavior;
 }
 
+void BaseTextInputProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
+  }
+
+  ViewProps::resolveProperties(resolver);
+  BaseTextProps::resolveProperties(resolver);
+  paragraphAttributes.resolveProperties(resolver);
+}
+void BaseTextInputProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  ViewProps::collectLiveResolvableIds(ids);
+  BaseTextProps::collectLiveResolvableIds(ids);
+  paragraphAttributes.collectLiveResolvableIds(ids);
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic BaseTextInputProps::getResolvedProps(const DynamicResolver& resolver) const {
+  auto props = ViewProps::getResolvedProps(resolver);
+  props.update(BaseTextProps::getResolvedProps(resolver));
+  props.update(paragraphAttributes.getResolvedProps(resolver));
+  return props;
+}
+#endif
 } // namespace facebook::react

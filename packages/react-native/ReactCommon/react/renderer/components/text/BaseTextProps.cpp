@@ -345,6 +345,14 @@ SharedDebugStringConvertibleList BaseTextProps::getDebugProps() const {
 }
 #endif
 
+void BaseTextProps::resolveProperties(const DynamicResolver& resolver) {
+  textAttributes.resolveProperties(resolver);
+}
+void BaseTextProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  textAttributes.collectLiveResolvableIds(ids);
+}
+
 #ifdef RN_SERIALIZABLE_STATE
 
 static folly::dynamic toDynamic(const Size& size) {
@@ -352,6 +360,10 @@ static folly::dynamic toDynamic(const Size& size) {
   sizeResult["width"] = size.width;
   sizeResult["height"] = size.height;
   return sizeResult;
+}
+
+folly::dynamic BaseTextProps::getResolvedProps(const DynamicResolver& resolver) const {
+  return textAttributes.getResolvedProps(resolver);
 }
 
 void BaseTextProps::appendTextAttributesProps(

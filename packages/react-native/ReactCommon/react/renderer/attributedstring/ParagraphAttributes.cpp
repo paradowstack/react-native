@@ -98,4 +98,21 @@ void ParagraphAttributes::collectLiveResolvableIds(
   }
 }
 
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic ParagraphAttributes::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  folly::dynamic props = folly::dynamic::object();
+  if (minimumFontSize.isDynamic()) {
+    props["minimumFontSize"] = resolver.toDynamic(minimumFontSize);
+  }
+  if (maximumFontSize.isDynamic()) {
+    props["maximumFontSize"] = resolver.toDynamic(maximumFontSize);
+  }
+  if (minimumFontScale.isDynamic()) {
+    props["minimumFontScale"] = resolver.toDynamic(minimumFontScale);
+  }
+  return props;
+}
+#endif
+
 } // namespace facebook::react

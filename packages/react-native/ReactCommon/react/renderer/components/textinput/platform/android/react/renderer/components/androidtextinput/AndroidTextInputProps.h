@@ -88,7 +88,7 @@ class AndroidTextInputProps final : public BaseTextInputProps {
   bool showSoftInputOnFocus{false};
   bool autoCorrect{false};
   bool allowFontScaling{false};
-  Float maxFontSizeMultiplier{0.0};
+  ValueUnit maxFontSizeMultiplier{0.0f, UnitType::Point};
   std::string keyboardType{};
   std::string returnKeyType{};
   bool secureTextEntry{false};
@@ -97,15 +97,15 @@ class AndroidTextInputProps final : public BaseTextInputProps {
   bool caretHidden{false};
   bool contextMenuHidden{false};
   SharedColor textShadowColor{};
-  Float textShadowRadius{0.0};
+  ValueUnit textShadowRadius{0.0f, UnitType::Point};
   std::string textDecorationLine{};
   std::string fontStyle{};
   AndroidTextInputTextShadowOffsetStruct textShadowOffset{};
-  Float lineHeight{0.0};
+  ValueUnit lineHeight{0.0f, UnitType::Point};
   std::string textTransform{};
   SharedColor color{0};
-  Float letterSpacing{0.0};
-  Float fontSize{0.0};
+  ValueUnit letterSpacing{0.0f, UnitType::Point};
+  ValueUnit fontSize{0.0f, UnitType::Point};
   std::string textAlign{};
   bool includeFontPadding{false};
   std::string fontWeight{};
@@ -135,6 +135,11 @@ class AndroidTextInputProps final : public BaseTextInputProps {
       const Props *prevProps,
       const LayoutMetrics *layoutMetrics = nullptr,
       const LayoutContext *layoutContext = nullptr) const override;
+
+  void resolveProperties(const DynamicResolver &resolver) override;
+  void collectLiveResolvableIds(std::unordered_set<DynamicPropertyId> &ids) const override;
+
+  folly::dynamic getResolvedProps(const DynamicResolver &resolver) const override;
 };
 
 } // namespace facebook::react

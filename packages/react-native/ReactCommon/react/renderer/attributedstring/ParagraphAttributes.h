@@ -96,6 +96,11 @@ class ParagraphAttributes : public DebugStringConvertible,
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
       std::unordered_set<DynamicPropertyId>& ids) const override;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
+#endif
 };
 
 } // namespace facebook::react

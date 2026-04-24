@@ -574,7 +574,7 @@ folly::dynamic YogaStylableProps::getResolvedProps(
     const DynamicResolver& resolver) const {
   auto props = rawProps;
   if (yogaStyle.dimension(yoga::Dimension::Width).isDynamic()) {
-    props["width"] = resolver.resolve(yogaStyle.dimension(yoga::Dimension::Width), resolver.context.frameWidth());
+    props["width"] = resolver.toDynamic(yogaStyle.dimension(yoga::Dimension::Width), resolver.context.frameWidth());
   }
   return props;
 }

@@ -138,7 +138,8 @@ std::shared_ptr<ShadowNode> ShadowNode::clone(
   const auto& family = *family_;
   const auto& componentDescriptor = family.componentDescriptor_;
   if (family.nativeProps_DEPRECATED != nullptr) {
-    auto propsParserContext = PropsParserContext{family_->getSurfaceId(), {}};
+    auto contextContainer = family.componentDescriptor_.getContextContainer();
+    auto propsParserContext = PropsParserContext{family_->getSurfaceId(), *contextContainer};
     if (fragment.props == ShadowNodeFragment::propsPlaceholder()) {
       // Clone existing `props_` with `family.nativeProps_DEPRECATED` to apply
       // previously set props via `setNativeProps` API.

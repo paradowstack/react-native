@@ -29,7 +29,12 @@ class TextProps : public Props, public BaseTextProps {
   SharedDebugStringConvertibleList getDebugProps() const override;
 #endif
 
+  void resolveProperties(const DynamicResolver &resolver) override;
+  void collectLiveResolvableIds(std::unordered_set<DynamicPropertyId> &ids) const override;
+
 #ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(const DynamicResolver &resolver) const override;
+
   ComponentName getDiffPropsImplementationTarget() const override;
   folly::dynamic getDiffProps(
       const Props *prevProps,

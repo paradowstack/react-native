@@ -94,9 +94,9 @@ class Props : public virtual Sealable,
     return folly::dynamic::object();
   }
 
-  virtual folly::dynamic getResolvedProps(
-      const DynamicResolver& resolver) const {
-    return folly::dynamic::object();
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override {
+    return rawProps;
   }
 #endif
 

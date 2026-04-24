@@ -206,18 +206,14 @@ inline void fromRawValue(
   auto calc = parseCSSProperty<CSSCalc>((std::string)value);
   if (std::holds_alternative<CSSCalc>(calc)) {
     auto cssCalc = std::get<CSSCalc>(calc);
-    if (cssCalc.isUnitless() || cssCalc.isPointsOnly()) {
-      result = FloatDynamic{(Float)cssCalc.px};
-    } else if (cssCalc.isComplex()) {
-      auto mapIt =
-          context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-              DynamicPropertiesMapKey);
-      if (mapIt) {
-        auto& map = *mapIt;
-        auto index = map->allocateId();
-        map->insert_or_assign(index, cssCalc);
-        result = FloatDynamic{index};
-      }
+    auto mapIt =
+        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
+            DynamicPropertiesMapKey);
+    if (mapIt) {
+      auto& map = *mapIt;
+      auto index = map->allocateId();
+      map->insert_or_assign(index, cssCalc);
+      result = FloatDynamic{index};
     }
   }
 }

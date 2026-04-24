@@ -10,6 +10,7 @@
 #include <folly/json.h>
 #include <algorithm>
 
+#include <glog/logging.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/BackgroundImagePropsConversions.h>
 #include <react/renderer/components/view/BoxShadowPropsConversions.h>
@@ -70,7 +71,7 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "opacity",
                     sourceProps.opacity,
-                    (Float)1.0)),
+                    FloatDynamic{(Float)1.0})),
       backgroundColor(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.backgroundColor
@@ -702,20 +703,19 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
     return;
   }
 
-  //
-  // Resolve FloatDynamic scalar fields
+#ifdef RN_SERIALIZABLE_STATE
+  auto resolved = getResolvedProps(resolver);
+  rawProps.update(resolved);
+#endif
+
+  opacity = resolver.resolve(opacity);
   outlineOffset = resolver.resolve(outlineOffset);
   outlineWidth = resolver.resolve(outlineWidth);
   shadowOpacity = resolver.resolve(shadowOpacity);
   shadowRadius = resolver.resolve(shadowRadius);
-#ifdef RN_SERIALIZABLE_STATE
-  auto before = folly::toJson(rawProps);
-  [[maybe_unused]] auto b = before;
-#endif
 
   // Resolve FloatDynamic fields in box shadows
-  for (size_t i = 0; i < boxShadow.size(); i++) {
-    auto& shadow = boxShadow[i];
+  for (auto& shadow : boxShadow) {
     shadow.offsetX = resolver.resolve(shadow.offsetX);
     shadow.offsetY = resolver.resolve(shadow.offsetY);
     shadow.blurRadius = resolver.resolve(shadow.blurRadius);
@@ -738,129 +738,192 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
     }
   }
 
-  sweepCalcExpressions();
+  for (auto& position : backgroundPosition) {
+    if (position.top.has_value() && position.top.value().isDynamic()) {
+      position.top.value() = resolver.resolve(position.top.value());
+    }
+    if (position.left.has_value() && position.left.value().isDynamic()) {
+      position.left.value() = resolver.resolve(position.left.value());
+    }
+    if (position.right.has_value() && position.right.value().isDynamic()) {
+      position.right.value() = resolver.resolve(position.right.value());
+    }
+    if (position.bottom.has_value() && position.bottom.value().isDynamic()) {
+      position.bottom.value() = resolver.resolve(position.bottom.value());
+    }
+  }
 
-#ifdef RN_SERIALIZABLE_STATE
-  rawProps = getResolvedProps(resolver);
-  auto after = folly::toJson(rawProps);
-  [[maybe_unused]] auto a = after;
-#endif
+  for (auto& size : backgroundSize) {
+    if (auto lengthPercentage = std::get_if<BackgroundSizeLengthPercentage>(&size)) {
+      if (auto x = std::get_if<ValueUnit>(&lengthPercentage->x); x && x->isDynamic()) {
+        *x = resolver.resolve(*x);
+      }
+      if (auto y = std::get_if<ValueUnit>(&lengthPercentage->y); y && y->isDynamic()) {
+        *y = resolver.resolve(*y);
+      }
+    }
+  }
+
+  sweepCalcExpressions();
 }
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic BaseViewProps::getResolvedProps(
     const DynamicResolver& resolver) const {
-  auto props = this->rawProps;
+  folly::dynamic props = rawProps;
+  if (!needsToResolveStyleValues) {
+    return props;
+  }
 
-  SET_CALC_PROPERTY(outlineOffset, outlineOffset);
-  SET_CALC_PROPERTY(outlineWidth, outlineWidth);
-  SET_CALC_PROPERTY(shadowOpacity, shadowOpacity);
-  SET_CALC_PROPERTY(shadowRadius, shadowRadius);
+  [[maybe_unused]] auto before = folly::toJson(rawProps);
+  if (opacity.isDynamic()) {
+    props["opacity"] = resolver.toDynamic(opacity);
+  }
+  if (outlineOffset.isDynamic()) {
+    props["outlineOffset"] = resolver.toDynamic(outlineOffset);
+  }
+  if (outlineWidth.isDynamic()) {
+    props["outlineWidth"] = resolver.toDynamic(outlineWidth);
+  }
+  if (shadowOpacity.isDynamic()) {
+    props["shadowOpacity"] = resolver.toDynamic(shadowOpacity);
+  }
+  if (shadowRadius.isDynamic()) {
+    props["shadowRadius"] = resolver.toDynamic(shadowRadius);
+  }
 
   // Resolve FloatDynamic fields in box shadows
   for (size_t i = 0; i < boxShadow.size(); i++) {
     auto& shadow = boxShadow[i];
-    SET_CALC_PROPERTY_ARRAY(boxShadow, i, offsetX, shadow.offsetX)
-    SET_CALC_PROPERTY_ARRAY(boxShadow, i, offsetY, shadow.offsetY)
-    SET_CALC_PROPERTY_ARRAY(boxShadow, i, blurRadius, shadow.blurRadius)
-    SET_CALC_PROPERTY_ARRAY(boxShadow, i, spreadDistance, shadow.spreadDistance)
+    auto& shadowEntry = props["boxShadow"][i];
+    if (shadow.offsetX.isDynamic()) {
+      shadowEntry["offsetX"] = resolver.toDynamic(shadow.offsetX);
+    }
+    if (shadow.offsetY.isDynamic()) {
+      shadowEntry["offsetY"] = resolver.toDynamic(shadow.offsetY);
+    }
+    if (shadow.blurRadius.isDynamic()) {
+      shadowEntry["blurRadius"] = resolver.toDynamic(shadow.blurRadius);
+    }
+    if (shadow.spreadDistance.isDynamic()) {
+      shadowEntry["spreadDistance"] = resolver.toDynamic(shadow.spreadDistance);
+    }
+    props["boxShadow"][i] = shadowEntry;
   }
 
-  for (size_t i = 0; i < filter.size(); i++) {
-    auto& filterFunction = filter[i];
-    if (auto* parameter =
-            std::get_if<FloatDynamic>(&filterFunction.parameters)) {
-      if (props.count("filter")) {
-        auto& array = props["filter"];
-        if (array.isArray() && array.size() > i) {
+  auto findFilterEntry = [&](const std::string& typeKey) -> folly::dynamic* {
+    if (props.count("filter")) {
+      auto& array = props["filter"];
+      if (array.isArray()) {
+        for (size_t i = 0; i < array.size(); i++) {
           auto& entry = array[i];
           if (entry.isObject()) {
-            auto typeKey = toString(filterFunction.type);
             if (entry.count(typeKey)) {
-              auto& filterValue = entry[typeKey];
-              if (filterValue.isString()) {
-                filterValue = resolver.resolve(*parameter);
-              }
+              return &entry[typeKey];
             }
           }
         }
       }
+    }
+    return nullptr;
+  };
+
+  for (const auto & filterFunction : filter) {
+    auto entry = findFilterEntry(toString(filterFunction.type));
+    if (!entry) {
       continue;
     }
-
-    if (auto* dropShadowParams =
+    if (auto* parameter =
+            std::get_if<FloatDynamic>(&filterFunction.parameters)) {
+      if (parameter->isDynamic()) {
+        *entry = resolver.toDynamic(*parameter);
+      }
+    } else if (auto* dropShadowParams =
             std::get_if<DropShadowParams>(&filterFunction.parameters)) {
-      if (props.count("filter")) {
-        auto& array = props["filter"];
-        if (array.isArray() && array.size() > i) {
-          auto& entry = array[i];
-          if (!entry.isObject()) {
-            continue;
-          }
-
-          const char* dropShadowKey = nullptr;
-          if (entry.count("drop-shadow")) {
-            dropShadowKey = "drop-shadow";
-          } else if (entry.count("dropShadow")) {
-            dropShadowKey = "dropShadow";
-          }
-
-          if (dropShadowKey) {
-            auto& dropShadow = entry[dropShadowKey];
-            if (dropShadow.isObject()) {
-              SET_CALC_PROPERTY_BASE(
-                  dropShadow,
-                  offsetX,
-                  resolver.resolve(dropShadowParams->offsetX))
-              SET_CALC_PROPERTY_BASE(
-                  dropShadow,
-                  offsetY,
-                  resolver.resolve(dropShadowParams->offsetY))
-              SET_CALC_PROPERTY_BASE(
-                  dropShadow,
-                  standardDeviation,
-                  resolver.resolve(dropShadowParams->standardDeviation))
-            }
-          }
-        }
+      if (dropShadowParams->offsetX.isDynamic()) {
+        (*entry)["offsetX"] = resolver.toDynamic(dropShadowParams->offsetX);
+      }
+      if (dropShadowParams->offsetY.isDynamic()) {
+        (*entry)["offsetY"] = resolver.toDynamic(dropShadowParams->offsetY);
+      }
+      if (dropShadowParams->standardDeviation.isDynamic()) {
+        (*entry)["standardDeviation"] = resolver.toDynamic(dropShadowParams->standardDeviation);
       }
     }
   }
 
   auto borderWidths = getBorderWidths(resolver.context.layoutContext);
+  if (borderWidths.all.has_value()) {
+    props["borderWidth"] = borderWidths.all.value();
+  }
+  if (borderWidths.left.has_value()) {
+    props["borderLeftWidth"] = borderWidths.left.value();
+  }
+  if (borderWidths.right.has_value()) {
+    props["borderRightWidth"] = borderWidths.right.value();
+  }
+  if (borderWidths.top.has_value()) {
+    props["borderTopWidth"] = borderWidths.top.value();
+  }
+  if (borderWidths.bottom.has_value()) {
+    props["borderBottomWidth"] = borderWidths.bottom.value();
+  }
+  if (borderWidths.start.has_value()) {
+    props["borderStartWidth"] = borderWidths.start.value();
+  }
+  if (borderWidths.end.has_value()) {
+    props["borderEndWidth"] = borderWidths.end.value();
+  }
+  if (borderWidths.horizontal.has_value()) {
+    props["borderHorizontalWidth"] = borderWidths.horizontal.value();
+  }
+  if (borderWidths.vertical.has_value()) {
+    props["borderVerticalWidth"] = borderWidths.vertical.value();
+  }
 
-  SET_OPTIONAL_CALC_PROPERTY(borderWidth, borderWidths.all);
-  SET_OPTIONAL_CALC_PROPERTY(borderLeftWidth, borderWidths.left);
-  SET_OPTIONAL_CALC_PROPERTY(borderRightWidth, borderWidths.right);
-  SET_OPTIONAL_CALC_PROPERTY(borderTopWidth, borderWidths.top);
-  SET_OPTIONAL_CALC_PROPERTY(borderBottomWidth, borderWidths.bottom);
-  SET_OPTIONAL_CALC_PROPERTY(borderStartWidth, borderWidths.start);
-  SET_OPTIONAL_CALC_PROPERTY(borderEndWidth, borderWidths.end);
-  SET_OPTIONAL_CALC_PROPERTY(borderHorizontalWidth, borderWidths.horizontal);
-  SET_OPTIONAL_CALC_PROPERTY(borderVerticalWidth, borderWidths.vertical);
+  if (borderRadii.all.has_value() && borderRadii.all.value().isDynamic()) {
+    props["borderRadius"] = resolver.toDynamic(borderRadii.all.value());
+  }
+  if (borderRadii.topLeft.has_value() && borderRadii.topLeft.value().isDynamic()) {
+    props["borderTopLeftRadius"] = resolver.toDynamic(borderRadii.topLeft.value());
+  }
+  if (borderRadii.topRight.has_value() && borderRadii.topRight.value().isDynamic()) {
+    props["borderTopRightRadius"] = resolver.toDynamic(borderRadii.topRight.value());
+  }
+  if (borderRadii.bottomRight.has_value() && borderRadii.bottomRight.value().isDynamic()) {
+    props["borderBottomRightRadius"] = resolver.toDynamic(borderRadii.bottomRight.value());
+  }
+  if (borderRadii.bottomLeft.has_value() && borderRadii.bottomLeft.value().isDynamic()) {
+    props["borderBottomLeftRadius"] = resolver.toDynamic(borderRadii.bottomLeft.value());
+  }
+  if (borderRadii.topStart.has_value() && borderRadii.topStart.value().isDynamic()) {
+    props["borderTopStartRadius"] = resolver.toDynamic(borderRadii.topStart.value());
+  }
+  if (borderRadii.topEnd.has_value() && borderRadii.topEnd.value().isDynamic()) {
+    props["borderTopEndRadius"] = resolver.toDynamic(borderRadii.topEnd.value());
+  }
+  if (borderRadii.bottomStart.has_value() && borderRadii.bottomStart.value().isDynamic()) {
+    props["borderBottomStartRadius"] = resolver.toDynamic(borderRadii.bottomStart.value());
+  }
+  if (borderRadii.bottomEnd.has_value() && borderRadii.bottomEnd.value().isDynamic()) {
+    props["borderBottomEndRadius"] = resolver.toDynamic(borderRadii.bottomEnd.value());
+  }
+  if (borderRadii.endEnd.has_value() && borderRadii.endEnd.value().isDynamic()) {
+    props["borderEndEndRadius"] = resolver.toDynamic(borderRadii.endEnd.value());
+  }
+  if (borderRadii.endStart.has_value() && borderRadii.endStart.value().isDynamic()) {
+    props["borderEndStartRadius"] = resolver.toDynamic(borderRadii.endStart.value());
+  }
+  if (borderRadii.startEnd.has_value() && borderRadii.startEnd.value().isDynamic()) {
+    props["borderStartEndRadius"] = resolver.toDynamic(borderRadii.startEnd.value());
+  }
+  if (borderRadii.startStart.has_value() && borderRadii.startStart.value().isDynamic()) {
+    props["borderStartStartRadius"] = resolver.toDynamic(borderRadii.startStart.value());
+  }
+  [[maybe_unused]] auto after = folly::toJson(props);
 
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderRadius, borderRadii.all);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderTopLeftRadius, borderRadii.topLeft);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderTopRightRadius, borderRadii.topRight);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderBottomRightRadius, borderRadii.bottomRight);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderBottomLeftRadius, borderRadii.bottomLeft);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderTopStartRadius, borderRadii.topStart);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderTopEndRadius, borderRadii.topEnd);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderBottomStartRadius, borderRadii.bottomStart);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderBottomEndRadius, borderRadii.bottomEnd);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(borderEndEndRadius, borderRadii.endEnd);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderEndStartRadius, borderRadii.endStart);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderStartEndRadius, borderRadii.startEnd);
-  SET_RESOLVED_OPTIONAL_CALC_PROPERTY(
-      borderStartStartRadius, borderRadii.startStart);
+  LOG(ERROR) << "Before: " << before;
+  LOG(ERROR) << "After: " << after;
 
   return props;
 }
@@ -917,6 +980,7 @@ void BaseViewProps::collectLiveResolvableIds(
     }
   };
 
+  addFD(opacity);
   addFD(outlineOffset);
   addFD(outlineWidth);
   addFD(shadowOpacity);

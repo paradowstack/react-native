@@ -322,4 +322,30 @@ void TextAttributes::collectLiveResolvableIds(
   }
 }
 
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic TextAttributes::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  folly::dynamic props = folly::dynamic::object();
+  if (fontSize.isDynamic()) {
+    props["fontSize"] = resolver.toDynamic(fontSize);
+  }
+  if (fontSizeMultiplier.isDynamic()) {
+    props["fontSizeMultiplier"] = resolver.toDynamic(fontSizeMultiplier);
+  }
+  if (maxFontSizeMultiplier.isDynamic()) {
+    props["maxFontSizeMultiplier"] = resolver.toDynamic(maxFontSizeMultiplier);
+  }
+  if (letterSpacing.isDynamic()) {
+    props["letterSpacing"] = resolver.toDynamic(letterSpacing);
+  }
+  if (lineHeight.isDynamic()) {
+    props["lineHeight"] = resolver.toDynamic(lineHeight);
+  }
+  if (textShadowRadius.isDynamic()) {
+    props["textShadowRadius"] = resolver.toDynamic(textShadowRadius);
+  }
+  return props;
+}
+#endif
+
 } // namespace facebook::react

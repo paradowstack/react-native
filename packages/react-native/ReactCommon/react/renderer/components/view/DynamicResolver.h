@@ -8,8 +8,11 @@
 #pragma once
 
 #include <react/renderer/components/view/DynamicPropertiesMap.h>
-#include <yoga/style/StyleLength.h>
-#include <yoga/style/StyleSizeLength.h>
+
+namespace facebook::yoga {
+class StyleLength;
+class StyleSizeLength;
+} // namespace facebook::yoga
 
 namespace facebook::react {
 
@@ -17,48 +20,34 @@ struct DynamicResolver {
   const DynamicPropertiesMap& propertiesMap;
   const DynamicResolveContext& context;
 
-  Float resolve(const FloatDynamic& value) const {
-    if (value.isDynamic() && !propertiesMap.empty()) {
-      return FloatDynamic{resolve(value.asDynamicId())};
-    }
-    return value.value;
-  }
-
-  Float resolve(const ValueUnit& value, float percentRef = 0.0f) const {
-    if (value.isDynamic()) {
-      return ValueUnit{
-          (float)resolve(value.asDynamicId(), percentRef), UnitType::Point};
-    }
-    return value;
-  }
-
+  Float resolve(const FloatDynamic& value) const;
+  Float resolve(const ValueUnit& value, float percentRef = 0.0f) const;
   Float resolve(
       const facebook::yoga::StyleLength& length,
-      float percentRef = 0.0f) const {
-    if (length.isDynamic()) {
-      return resolve(length.callbackId(), percentRef);
-    }
-    return length.value().unwrap();
-  }
-
+      float percentRef = 0.0f) const;
   Float resolve(
       const facebook::yoga::StyleSizeLength& length,
-      float percentRef = 0.0f) const {
-    if (length.isDynamic()) {
-      return resolve(length.callbackId(), percentRef);
-    }
-    return length.value().unwrap();
-  }
+      float percentRef = 0.0f) const;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic(const FloatDynamic& value) const;
+  folly::dynamic toDynamic(const ValueUnit& value, float percentRef = 0.0f)
+      const;
+  folly::dynamic toDynamic(
+      const facebook::yoga::StyleLength& length,
+      float percentRef = 0.0f) const;
+  folly::dynamic toDynamic(
+      const facebook::yoga::StyleSizeLength& length,
+      float percentRef = 0.0f) const;
+#endif
 
  private:
-  Float resolve(DynamicPropertyId id, float referenceLength = 0.0f) const {
-    auto it = propertiesMap.find(id);
-    if (it != propertiesMap.end()) {
-      return it->second.resolve(
-          referenceLength, context.viewportWidth(), context.viewportHeight());
-    }
-    return {};
-  }
+  Float resolve(DynamicPropertyId id, float referenceLength = 0.0f) const;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic toDynamic(DynamicPropertyId id, float referenceLength = 0.0f)
+      const;
+#endif
 };
 
 } // namespace facebook::react

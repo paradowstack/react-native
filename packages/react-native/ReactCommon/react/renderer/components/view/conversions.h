@@ -639,19 +639,19 @@ inline ValueUnit toValueUnit(const RawValue& value) {
     return ValueUnit(std::get<CSSPercentage>(pct).value, UnitType::Percent);
   }
 
-  auto calc = parseCSSProperty<CSSCalc>((std::string)value);
-  if (std::holds_alternative<CSSCalc>(calc)) {
-    auto cssCalc = std::get<CSSCalc>(calc);
-    if (cssCalc.isPointsOnly()) {
-      return ValueUnit(cssCalc.px, UnitType::Point);
-    }
-    if (cssCalc.isPercentOnly()) {
-      return ValueUnit(cssCalc.percent, UnitType::Percent);
-    }
-    if (cssCalc.isUnitless()) {
-      return ValueUnit(cssCalc.unitless, UnitType::Undefined);
-    }
-  }
+  // auto calc = parseCSSProperty<CSSCalc>((std::string)value);
+  // if (std::holds_alternative<CSSCalc>(calc)) {
+  //   auto cssCalc = std::get<CSSCalc>(calc);
+  //   if (cssCalc.isPointsOnly()) {
+  //     return ValueUnit(cssCalc.px, UnitType::Point);
+  //   }
+  //   if (cssCalc.isPercentOnly()) {
+  //     return ValueUnit(cssCalc.percent, UnitType::Percent);
+  //   }
+  //   if (cssCalc.isUnitless()) {
+  //     return ValueUnit(cssCalc.unitless, UnitType::Undefined);
+  //   }
+  // }
 
   return {};
 }
@@ -668,7 +668,7 @@ inline ValueUnit toValueUnit(
   auto calc = parseCSSProperty<CSSCalc>((std::string)value);
   if (std::holds_alternative<CSSCalc>(calc)) {
     auto cssCalc = std::get<CSSCalc>(calc);
-    if (cssCalc.isComplex()) {
+    // if (cssCalc.isComplex()) {
       auto mapIt =
           context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
               DynamicPropertiesMapKey);
@@ -678,7 +678,7 @@ inline ValueUnit toValueUnit(
         map->insert_or_assign(index, cssCalc);
         return ValueUnit{index};
       }
-    }
+    // }
   }
 
   return {};

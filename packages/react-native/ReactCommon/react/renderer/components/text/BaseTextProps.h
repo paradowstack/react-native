@@ -18,7 +18,7 @@ namespace facebook::react {
  * `Props`-like class which is used as a base class for all Props classes
  * that can have text attributes (such as Text and Paragraph).
  */
-class BaseTextProps {
+class BaseTextProps : public DynamicPropertiesHolder {
  public:
   BaseTextProps() = default;
   BaseTextProps(const PropsParserContext &context, const BaseTextProps &sourceProps, const RawProps &rawProps);
@@ -36,7 +36,11 @@ class BaseTextProps {
   SharedDebugStringConvertibleList getDebugProps() const;
 #endif
 
+  void resolveProperties(const DynamicResolver &resolver) override;
+  void collectLiveResolvableIds(std::unordered_set<DynamicPropertyId> &ids) const override;
+
 #ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(const DynamicResolver &resolver) const override;
   void appendTextAttributesProps(folly::dynamic &result, const BaseTextProps *prevProps) const;
 #endif
 };

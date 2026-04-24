@@ -62,7 +62,7 @@ ImageProps::ImageProps(
                     rawProps,
                     "blurRadius",
                     sourceProps.blurRadius,
-										{})),
+                    {})),
       capInsets(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.capInsets
@@ -107,7 +107,7 @@ ImageProps::ImageProps(
                     rawProps,
                     "resizeMultiplier",
                     sourceProps.resizeMultiplier,
-										FloatDynamic{1.0f})),
+                    FloatDynamic{1.0f})),
       shouldNotifyLoadEvents(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.shouldNotifyLoadEvents
@@ -342,6 +342,23 @@ void ImageProps::collectLiveResolvableIds(
     ids.insert(fadeDuration.asDynamicId());
   }
 }
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic ImageProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  folly::dynamic props = folly::dynamic::object();
+  if (blurRadius.isDynamic()) {
+    props["blurRadius"] = resolver.toDynamic(blurRadius);
+  }
+  if (resizeMultiplier.isDynamic()) {
+    props["resizeMultiplier"] = resolver.toDynamic(resizeMultiplier);
+  }
+  if (fadeDuration.isDynamic()) {
+    props["fadeDuration"] = resolver.toDynamic(fadeDuration);
+  }
+  return props;
+}
+#endif
 
 inline std::string toString(ImageResizeMode resizeMode) {
   switch (resizeMode) {

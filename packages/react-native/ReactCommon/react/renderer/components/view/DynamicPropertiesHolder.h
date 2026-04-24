@@ -21,6 +21,11 @@ class DynamicPropertiesHolder {
   virtual void resolveProperties(const DynamicResolver& resolver) = 0;
   virtual void collectLiveResolvableIds(
       std::unordered_set<DynamicPropertyId>& ids) const = 0;
+
+#ifdef RN_SERIALIZABLE_STATE
+  virtual folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const = 0;
+#endif
 };
 
 } // namespace facebook::react

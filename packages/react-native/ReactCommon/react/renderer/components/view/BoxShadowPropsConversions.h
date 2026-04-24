@@ -118,33 +118,24 @@ inline void parseProcessedBoxShadow(
 
     auto offsetY = rawBoxShadowMap.find("offsetY");
     if (offsetY != rawBoxShadowMap.end()) {
-      // react_native_expect(offsetY->second.hasType<Float>());
       if (offsetY->second.hasType<Float>()) {
         boxShadow.offsetY = (Float)offsetY->second;
-        // result = {};
-        // return;
       } else if (offsetY->second.hasType<std::string>()) {
         auto offsetYStr = (std::string)offsetY->second;
         CSSSyntaxParser parser(offsetYStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          if (cssCalc->isPointsOnly()) {
-            boxShadow.offsetY = cssCalc->px;
-          } else if (mapIt) {
+          if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
             map->insert({index, *cssCalc});
             boxShadow.offsetY = FloatDynamic{index};
           } else {
-            // We currently only support point values for blur radius, so if
-            // it's not points then we should treat it as malformed
             result = {};
             return;
           }
         } else {
-          // If it's not a valid CSS calc value then we should treat it as
-          // malformed
           result = {};
           return;
         }
@@ -156,32 +147,24 @@ inline void parseProcessedBoxShadow(
 
     auto blurRadius = rawBoxShadowMap.find("blurRadius");
     if (blurRadius != rawBoxShadowMap.end()) {
-      // react_native_expect(blurRadius->second.hasType<Float>());
       if (blurRadius->second.hasType<Float>()) {
         boxShadow.blurRadius = (Float)blurRadius->second;
-        // result = {};
-        // return;
       } else if (blurRadius->second.hasType<std::string>()) {
         auto blurRadiusStr = (std::string)blurRadius->second;
         CSSSyntaxParser parser(blurRadiusStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          if (cssCalc->isPointsOnly()) {
-            boxShadow.blurRadius = cssCalc->px;
-          } else if (mapIt) {
+          if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
             map->insert({index, *cssCalc});
+            boxShadow.blurRadius = FloatDynamic{index};
           } else {
-            // We currently only support point values for blur radius, so if
-            // it's not points then we should treat it as malformed
             result = {};
             return;
           }
         } else {
-          // If it's not a valid CSS calc value then we should treat it as
-          // malformed
           result = {};
           return;
         }
@@ -193,32 +176,23 @@ inline void parseProcessedBoxShadow(
 
     auto spreadDistance = rawBoxShadowMap.find("spreadDistance");
     if (spreadDistance != rawBoxShadowMap.end()) {
-      // react_native_expect(spreadDistance->second.hasType<Float>());
       if (spreadDistance->second.hasType<Float>()) {
         boxShadow.spreadDistance = (Float)spreadDistance->second;
-        // result = {};
-        // return;
       } else if (spreadDistance->second.hasType<std::string>()) {
         auto spreadDistanceStr = (std::string)spreadDistance->second;
         CSSSyntaxParser parser(spreadDistanceStr);
         CSSValueParser valueParser(parser);
         auto parsedValue = valueParser.parseNextValue<CSSCalc>();
         if (auto cssCalc = std::get_if<CSSCalc>(&parsedValue)) {
-          if (cssCalc->isPointsOnly()) {
-            boxShadow.spreadDistance = cssCalc->px;
-          } else if (mapIt) {
+          if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
             map->insert({index, *cssCalc});
           } else {
-            // We currently only support point values for blur radius, so if
-            // it's not points then we should treat it as malformed
             result = {};
             return;
           }
         } else {
-          // If it's not a valid CSS calc value then we should treat it as
-          // malformed
           result = {};
           return;
         }

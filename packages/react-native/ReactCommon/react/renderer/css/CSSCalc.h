@@ -95,12 +95,12 @@ struct CSSCalc {
 
   constexpr bool isPointsOnly() const
   {
-    return percent == 0.0f && vw == 0.0f && vh == 0.0f && !unitless;
+    return px != 0.0f && percent == 0.0f && vw == 0.0f && vh == 0.0f && !unitless;
   }
 
   constexpr bool isPercentOnly() const
   {
-    return px == 0.0f && vw == 0.0f && vh == 0.0f && !unitless;
+    return percent != 0.0f && px == 0.0f && vw == 0.0f && vh == 0.0f && !unitless;
   }
 
   constexpr bool isZero() const
@@ -172,14 +172,6 @@ constexpr std::optional<CSSNumber> CSSNumber::fromCalc(const CSSCalc &calc)
 {
   if (calc.isUnitless()) {
     return CSSNumber{calc.px};
-  }
-  return std::nullopt;
-}
-
-constexpr std::optional<CSSPercentage> CSSPercentage::fromCalc(const CSSCalc &calc)
-{
-  if (calc.isPercentOnly()) {
-    return CSSPercentage{calc.percent};
   }
   return std::nullopt;
 }
@@ -404,14 +396,5 @@ constexpr auto CSSDataTypeParser<CSSNumber>::consumeFunctionBlock(
   return std::nullopt;
 }
 
-constexpr auto CSSDataTypeParser<CSSPercentage>::consumeFunctionBlock(
-    const CSSFunctionBlock &func,
-    CSSValueParser &parser) -> std::optional<CSSPercentage>
-{
-  if (auto calc = CSSDataTypeParser<CSSCalc>::consumeFunctionBlock(func, parser)) {
-    return CSSPercentage::fromCalc(*calc);
-  }
-  return std::nullopt;
-}
 } // namespace facebook::react
 

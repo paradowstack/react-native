@@ -33,39 +33,27 @@ inline std::optional<FloatDynamic> parseFilterFloatDynamic(
     return {};
   }
 
-  auto len = parseCSSProperty<CSSLength>((std::string)value);
+  auto len = parseCSSProperty<CSSCalc, CSSLength>((std::string)value);
+  if (std::holds_alternative<CSSCalc>(len)) {
+    auto cssCalc = std::get<CSSCalc>(len);
+    auto mapIt =
+        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
+            DynamicPropertiesMapKey);
+    if (mapIt) {
+      auto& map = *mapIt;
+      auto index = map->allocateId();
+      map->insert_or_assign(index, cssCalc);
+      return FloatDynamic{index};
+    }
+  }
   if (std::holds_alternative<CSSLength>(len)) {
     auto cssLen = std::get<CSSLength>(len);
     if (cssLen.unit == CSSLengthUnit::Px) {
       return FloatDynamic{(Float)cssLen.value};
     }
-    return {};
   }
 
-  auto calc = parseCSSProperty<CSSCalc>((std::string)value);
-  if (!std::holds_alternative<CSSCalc>(calc)) {
-    return {};
-  }
-
-  auto cssCalc = std::get<CSSCalc>(calc);
-  if (cssCalc.isUnitless() || cssCalc.isPointsOnly()) {
-    return FloatDynamic{(Float)cssCalc.px};
-  }
-  if (!cssCalc.isComplex()) {
-    return {};
-  }
-
-  auto mapIt =
-      context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-          DynamicPropertiesMapKey);
-  if (!mapIt) {
-    return {};
-  }
-
-  auto& map = *mapIt;
-  auto index = map->allocateId();
-  map->insert_or_assign(index, cssCalc);
-  return FloatDynamic{index};
+  return {};
 }
 
 inline void parseProcessedFilter(

@@ -54,6 +54,13 @@ struct ValueUnit {
     return unit == UnitType::Dynamic ? std::bit_cast<uint32_t>(value) : 0;
   }
 
+  constexpr float asFloat() const {
+    if (unit == UnitType::Dynamic) {
+      return std::numeric_limits<float>::quiet_NaN();
+    }
+    return value;
+  }
+
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;
 #endif

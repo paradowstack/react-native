@@ -33,7 +33,23 @@ SharedDebugStringConvertibleList TextProps::getDebugProps() const {
 }
 #endif
 
+
+void TextProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
+  }
+
+  BaseTextProps::resolveProperties(resolver);
+}
+void TextProps::collectLiveResolvableIds(
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  BaseTextProps::collectLiveResolvableIds(ids);
+}
+
 #ifdef RN_SERIALIZABLE_STATE
+folly::dynamic TextProps::getResolvedProps(const DynamicResolver& resolver) const {
+  return BaseTextProps::getResolvedProps(resolver);
+}
 
 ComponentName TextProps::getDiffPropsImplementationTarget() const {
   return "Text";
