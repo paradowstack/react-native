@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/Transform.h>
 #include <react/renderer/graphics/TransformUtils.h>
 #include <stdexcept>
@@ -14,12 +15,54 @@ namespace facebook::react {
 
 namespace {
 
+template <typename T>
+folly::dynamic numericValueToDynamic(const T& value) {
+  if (value.isUndefined() || value.isDynamic()) {
+    return nullptr;
+  }
+
+  if (value.isPercentage()) {
+    return std::to_string(value.asFloat()) + "%";
+  }
+
+  return value.asFloat();
+}
+
+template <typename T>
+std::string numericValueUnitToString(const T& value) {
+  if (value.isLength()) {
+    return "point";
+  }
+
+  if (value.isPercentage()) {
+    return "percent";
+  }
+
+  if (value.isNumber()) {
+    return "number";
+  }
+
+  if (value.isDynamic()) {
+    switch (value.domain()) {
+      case NumericValueDomain::Length:
+        return "point";
+      case NumericValueDomain::Number:
+        return "number";
+      case NumericValueDomain::LengthOrPercentage:
+        return "dynamic";
+    }
+  }
+
+  return "undefined";
+}
+
+template <typename T>
 void packBorderRadiusCorner(
     folly::dynamic& dyn,
     const std::string& propName,
-    const std::optional<ValueUnit>& cornerValue) {
+    const std::optional<T>& cornerValue) {
   if (cornerValue.has_value()) {
-    dyn.insert(propName, cornerValue.value().value);
+    dyn.insert(propName, numericValueToDynamic(cornerValue.value()));
   }
 }
 
@@ -44,7 +87,7 @@ void packBorderRadii(
   packBorderRadiusCorner(dyn, "borderEndEndRadius", borderRadii.endEnd);
 
   if (borderRadii.all.has_value()) {
-    dyn.insert("borderRadius", borderRadii.all.value().value);
+    dyn.insert("borderRadius", numericValueToDynamic(borderRadii.all.value()));
   }
 }
 
@@ -63,19 +106,6 @@ void packTransform(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
   dyn.insert("transform", transformArray);
 }
 
-std::string unitTypeToString(UnitType unit) {
-  switch (unit) {
-    case UnitType::Undefined:
-      return "undefined";
-    case UnitType::Point:
-      return "point";
-    case UnitType::Percent:
-      return "percent";
-    default:
-      throw std::runtime_error("Unknown unit type");
-  }
-}
-
 void packTransformOrigin(
     folly::dynamic& dyn,
     const AnimatedPropBase& animatedProp) {
@@ -83,8 +113,9 @@ void packTransformOrigin(
   auto originArray = folly::dynamic::array();
   for (const auto& xyValue : transformOrigin.xy) {
     folly::dynamic valueObj = folly::dynamic::object();
-    valueObj["value"] = xyValue.value;
-    valueObj["unit"] = unitTypeToString(xyValue.unit);
+    valueObj["value"] = xyValue.isDynamic() ? folly::dynamic(nullptr)
+                                            : folly::dynamic(xyValue.asFloat());
+    valueObj["unit"] = numericValueUnitToString(xyValue);
     originArray.push_back(valueObj);
   }
   originArray.push_back(transformOrigin.z);
@@ -157,27 +188,32 @@ void packFilter(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
   const auto& filters = get<std::vector<FilterFunction>>(animatedProp);
   auto filterArray = folly::dynamic::array();
   for (const auto& f : filters) {
+    using NumericParameter =
+        std::variant_alternative_t<0, decltype(f.parameters)>;
     folly::dynamic filterObj = folly::dynamic::object();
     std::string typeKey = toString(f.type);
-    if (std::holds_alternative<FloatDynamic>(f.parameters)) {
+    if (std::holds_alternative<NumericParameter>(f.parameters)) {
       filterObj.insert(
           typeKey,
           folly::dynamic(
-              static_cast<double>(std::get<FloatDynamic>(f.parameters)
-                                      .asFloat())));
+              static_cast<double>(
+                  std::get<NumericParameter>(f.parameters).asFloat())));
     } else if (std::holds_alternative<DropShadowParams>(f.parameters)) {
       const auto& dropShadowParams = std::get<DropShadowParams>(f.parameters);
       folly::dynamic shadowObj = folly::dynamic::object();
       shadowObj.insert(
           "offsetX",
-          folly::dynamic(static_cast<double>(dropShadowParams.offsetX.asFloat())));
+          folly::dynamic(
+              static_cast<double>(dropShadowParams.offsetX.asFloat())));
       shadowObj.insert(
           "offsetY",
-          folly::dynamic(static_cast<double>(dropShadowParams.offsetY.asFloat())));
+          folly::dynamic(
+              static_cast<double>(dropShadowParams.offsetY.asFloat())));
       shadowObj.insert(
           "standardDeviation",
           folly::dynamic(
-              static_cast<double>(dropShadowParams.standardDeviation.asFloat())));
+              static_cast<double>(
+                  dropShadowParams.standardDeviation.asFloat())));
       shadowObj["color"] = static_cast<int32_t>(*dropShadowParams.color);
       filterObj[typeKey] = shadowObj;
     }
@@ -477,7 +513,7 @@ void packBoxShadow(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
     shadowObj["offsetX"] = shadow.offsetX.asFloat();
     shadowObj["offsetY"] = shadow.offsetY.asFloat();
     shadowObj["blurRadius"] = shadow.blurRadius.asFloat();
-		shadowObj["spreadDistance"] = shadow.spreadDistance.asFloat();
+    shadowObj["spreadDistance"] = shadow.spreadDistance.asFloat();
     shadowObj["inset"] = shadow.inset;
     if (shadow.color) {
       shadowObj["color"] = static_cast<int32_t>(*shadow.color);

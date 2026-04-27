@@ -10,7 +10,6 @@
 #include <react/renderer/debug/flags.h>
 #include <react/renderer/graphics/ColorStop.h>
 #include <react/renderer/graphics/Float.h>
-#include <react/renderer/graphics/ValueUnit.h>
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 #include <sstream>
@@ -39,14 +38,14 @@ struct LinearGradient {
   GradientDirection direction;
   std::vector<ColorStop> colorStops;
 
-  bool operator==(const LinearGradient &other) const = default;
+  bool operator==(const LinearGradient& other) const = default;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;
 #endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream &ss) const;
+  void toString(std::stringstream& ss) const;
 #endif
 };
 

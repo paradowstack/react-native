@@ -22,7 +22,6 @@
 #include <react/renderer/core/graphicsConversions.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/debugStringConvertibleUtils.h>
-#include <react/renderer/graphics/ValueUnit.h>
 
 namespace facebook::react {
 
@@ -39,11 +38,11 @@ std::array<float, 3> getTranslateForTransformOrigin(
 
   for (size_t i = 0; i < transformOrigin.xy.size(); ++i) {
     auto& currentOrigin = transformOrigin.xy[i];
-    if (currentOrigin.unit == UnitType::Point) {
-      origin[i] = currentOrigin.value;
-    } else if (currentOrigin.unit == UnitType::Percent) {
-      origin[i] =
-          ((i == 0) ? viewWidth : viewHeight) * currentOrigin.value / 100.0f;
+    if (currentOrigin.isLength()) {
+      origin[i] = currentOrigin.asFloat();
+    } else if (currentOrigin.isPercentage()) {
+      origin[i] = ((i == 0) ? viewWidth : viewHeight) *
+          currentOrigin.asFloat() / 100.0f;
     }
   }
 
@@ -71,7 +70,7 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "opacity",
                     sourceProps.opacity,
-                    FloatDynamic{(Float)1.0})),
+                    NumberValue::number(1.0f))),
       backgroundColor(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.backgroundColor
@@ -138,7 +137,7 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "outlineOffset",
                     sourceProps.outlineOffset,
-                    {})),
+                    LengthValue::length(0.0f))),
       outlineStyle(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.outlineStyle
@@ -156,7 +155,7 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "outlineWidth",
                     sourceProps.outlineWidth,
-                    {})),
+                    LengthValue::length(0.0f))),
       shadowColor(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.shadowColor
@@ -183,7 +182,7 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "shadowOpacity",
                     sourceProps.shadowOpacity,
-                    {})),
+                    NumberValue::number(0.0f))),
       shadowRadius(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.shadowRadius
@@ -192,7 +191,7 @@ BaseViewProps::BaseViewProps(
                     rawProps,
                     "shadowRadius",
                     sourceProps.shadowRadius,
-                    {})),
+                    LengthValue::length(3.0f))),
       cursor(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.cursor
@@ -535,7 +534,7 @@ static BorderRadii ensureNoOverlap(const BorderRadii& radii, const Size& size) {
 }
 
 // static BorderRadii radiiPercentToPoint(
-//     const RectangleCorners<ValueUnit>& radii,
+//     const RectangleCorners<NumericValue>& radii,
 //     const Size& size) {
 //   return BorderRadii{
 //       .topLeft =
@@ -596,9 +595,11 @@ BorderMetrics BaseViewProps::resolveBorderMetrics(
   const auto resolveContext =
       DynamicResolveContext(layoutMetrics, layoutContext);
   const auto resolver = DynamicResolver(calcExpressions, resolveContext);
-  auto resolved = borderRadii.resolve(isRTL, ValueUnit{0.0f, UnitType::Point});
-  auto resolveRadius = [&](const ValueUnit& vu, float ref) -> float {
-    return resolver.resolve(vu, ref);
+  auto resolved =
+      borderRadii.resolve(isRTL, LengthPercentageValue::length(0.0f));
+  auto resolveRadius = [&](const LengthPercentageValue& value,
+                           float ref) -> float {
+    return resolver.resolveLengthOrPercentage(value, ref);
   };
   const auto& size = layoutMetrics.frame.size;
   BorderRadii radii = {
@@ -708,58 +709,76 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
   rawProps.update(resolved);
 #endif
 
-  opacity = resolver.resolve(opacity);
-  outlineOffset = resolver.resolve(outlineOffset);
-  outlineWidth = resolver.resolve(outlineWidth);
-  shadowOpacity = resolver.resolve(shadowOpacity);
-  shadowRadius = resolver.resolve(shadowRadius);
+  opacity = NumberValue::number(resolver.resolveNumber(opacity));
+  outlineOffset = LengthValue::length(resolver.resolveLength(outlineOffset));
+  outlineWidth = LengthValue::length(resolver.resolveLength(outlineWidth));
+  shadowOpacity = NumberValue::number(resolver.resolveNumber(shadowOpacity));
+  shadowRadius = LengthValue::length(resolver.resolveLength(shadowRadius));
 
-  // Resolve FloatDynamic fields in box shadows
+  // Resolve length-like values in box shadows.
   for (auto& shadow : boxShadow) {
-    shadow.offsetX = resolver.resolve(shadow.offsetX);
-    shadow.offsetY = resolver.resolve(shadow.offsetY);
-    shadow.blurRadius = resolver.resolve(shadow.blurRadius);
-    shadow.spreadDistance = resolver.resolve(shadow.spreadDistance);
+    shadow.offsetX =
+        LengthValue::length(resolver.resolveLength(shadow.offsetX));
+    shadow.offsetY =
+        LengthValue::length(resolver.resolveLength(shadow.offsetY));
+    shadow.blurRadius =
+        LengthValue::length(resolver.resolveLength(shadow.blurRadius));
+    shadow.spreadDistance =
+        LengthValue::length(resolver.resolveLength(shadow.spreadDistance));
   }
 
   for (auto& filterFunction : filter) {
     if (auto* parameter =
-            std::get_if<FloatDynamic>(&filterFunction.parameters)) {
-      *parameter = resolver.resolve(*parameter);
+            std::get_if<UntypedNumericValue>(&filterFunction.parameters)) {
+      auto resolvedValue = filterFunction.type == FilterType::Blur
+          ? UntypedNumericValue::length(resolver.resolveLength(*parameter))
+          : UntypedNumericValue::number(resolver.resolveNumber(*parameter));
+      *parameter = resolvedValue;
       continue;
     }
 
     if (auto* dropShadowParams =
             std::get_if<DropShadowParams>(&filterFunction.parameters)) {
-      dropShadowParams->offsetX = resolver.resolve(dropShadowParams->offsetX);
-      dropShadowParams->offsetY = resolver.resolve(dropShadowParams->offsetY);
-      dropShadowParams->standardDeviation =
-          resolver.resolve(dropShadowParams->standardDeviation);
+      dropShadowParams->offsetX = LengthValue::length(
+          resolver.resolveLength(dropShadowParams->offsetX));
+      dropShadowParams->offsetY = LengthValue::length(
+          resolver.resolveLength(dropShadowParams->offsetY));
+      dropShadowParams->standardDeviation = LengthValue::length(
+          resolver.resolveLength(dropShadowParams->standardDeviation));
     }
   }
 
   for (auto& position : backgroundPosition) {
     if (position.top.has_value() && position.top.value().isDynamic()) {
-      position.top.value() = resolver.resolve(position.top.value());
+      position.top.value() = UntypedNumericValue::length(
+          resolver.resolveLengthOrPercentage(position.top.value(), 0.0f));
     }
     if (position.left.has_value() && position.left.value().isDynamic()) {
-      position.left.value() = resolver.resolve(position.left.value());
+      position.left.value() = UntypedNumericValue::length(
+          resolver.resolveLengthOrPercentage(position.left.value(), 0.0f));
     }
     if (position.right.has_value() && position.right.value().isDynamic()) {
-      position.right.value() = resolver.resolve(position.right.value());
+      position.right.value() = UntypedNumericValue::length(
+          resolver.resolveLengthOrPercentage(position.right.value(), 0.0f));
     }
     if (position.bottom.has_value() && position.bottom.value().isDynamic()) {
-      position.bottom.value() = resolver.resolve(position.bottom.value());
+      position.bottom.value() = UntypedNumericValue::length(
+          resolver.resolveLengthOrPercentage(position.bottom.value(), 0.0f));
     }
   }
 
   for (auto& size : backgroundSize) {
-    if (auto lengthPercentage = std::get_if<BackgroundSizeLengthPercentage>(&size)) {
-      if (auto x = std::get_if<ValueUnit>(&lengthPercentage->x); x && x->isDynamic()) {
-        *x = resolver.resolve(*x);
+    if (auto lengthPercentage =
+            std::get_if<BackgroundSizeLengthPercentage>(&size)) {
+      if (auto x = std::get_if<UntypedNumericValue>(&lengthPercentage->x);
+          x && x->isDynamic()) {
+        *x = UntypedNumericValue::length(
+            resolver.resolveLengthOrPercentage(*x, 0.0f));
       }
-      if (auto y = std::get_if<ValueUnit>(&lengthPercentage->y); y && y->isDynamic()) {
-        *y = resolver.resolve(*y);
+      if (auto y = std::get_if<UntypedNumericValue>(&lengthPercentage->y);
+          y && y->isDynamic()) {
+        *y = UntypedNumericValue::length(
+            resolver.resolveLengthOrPercentage(*y, 0.0f));
       }
     }
   }
@@ -777,36 +796,37 @@ folly::dynamic BaseViewProps::getResolvedProps(
 
   [[maybe_unused]] auto before = folly::toJson(rawProps);
   if (opacity.isDynamic()) {
-    props["opacity"] = resolver.toDynamic(opacity);
+    props["opacity"] = resolver.toDynamicNumber(opacity);
   }
   if (outlineOffset.isDynamic()) {
-    props["outlineOffset"] = resolver.toDynamic(outlineOffset);
+    props["outlineOffset"] = resolver.toDynamicLength(outlineOffset);
   }
   if (outlineWidth.isDynamic()) {
-    props["outlineWidth"] = resolver.toDynamic(outlineWidth);
+    props["outlineWidth"] = resolver.toDynamicLength(outlineWidth);
   }
   if (shadowOpacity.isDynamic()) {
-    props["shadowOpacity"] = resolver.toDynamic(shadowOpacity);
+    props["shadowOpacity"] = resolver.toDynamicNumber(shadowOpacity);
   }
   if (shadowRadius.isDynamic()) {
-    props["shadowRadius"] = resolver.toDynamic(shadowRadius);
+    props["shadowRadius"] = resolver.toDynamicLength(shadowRadius);
   }
 
-  // Resolve FloatDynamic fields in box shadows
+  // Resolve length-like values in box shadows.
   for (size_t i = 0; i < boxShadow.size(); i++) {
     auto& shadow = boxShadow[i];
     auto& shadowEntry = props["boxShadow"][i];
     if (shadow.offsetX.isDynamic()) {
-      shadowEntry["offsetX"] = resolver.toDynamic(shadow.offsetX);
+      shadowEntry["offsetX"] = resolver.toDynamicLength(shadow.offsetX);
     }
     if (shadow.offsetY.isDynamic()) {
-      shadowEntry["offsetY"] = resolver.toDynamic(shadow.offsetY);
+      shadowEntry["offsetY"] = resolver.toDynamicLength(shadow.offsetY);
     }
     if (shadow.blurRadius.isDynamic()) {
-      shadowEntry["blurRadius"] = resolver.toDynamic(shadow.blurRadius);
+      shadowEntry["blurRadius"] = resolver.toDynamicLength(shadow.blurRadius);
     }
     if (shadow.spreadDistance.isDynamic()) {
-      shadowEntry["spreadDistance"] = resolver.toDynamic(shadow.spreadDistance);
+      shadowEntry["spreadDistance"] =
+          resolver.toDynamicLength(shadow.spreadDistance);
     }
     props["boxShadow"][i] = shadowEntry;
   }
@@ -828,26 +848,32 @@ folly::dynamic BaseViewProps::getResolvedProps(
     return nullptr;
   };
 
-  for (const auto & filterFunction : filter) {
+  for (const auto& filterFunction : filter) {
     auto entry = findFilterEntry(toString(filterFunction.type));
     if (!entry) {
       continue;
     }
     if (auto* parameter =
-            std::get_if<FloatDynamic>(&filterFunction.parameters)) {
+            std::get_if<UntypedNumericValue>(&filterFunction.parameters)) {
       if (parameter->isDynamic()) {
-        *entry = resolver.toDynamic(*parameter);
+        *entry = filterFunction.type == FilterType::Blur
+            ? resolver.toDynamicLength(*parameter)
+            : resolver.toDynamicNumber(*parameter);
       }
-    } else if (auto* dropShadowParams =
+    } else if (
+        auto* dropShadowParams =
             std::get_if<DropShadowParams>(&filterFunction.parameters)) {
       if (dropShadowParams->offsetX.isDynamic()) {
-        (*entry)["offsetX"] = resolver.toDynamic(dropShadowParams->offsetX);
+        (*entry)["offsetX"] =
+            resolver.toDynamicLength(dropShadowParams->offsetX);
       }
       if (dropShadowParams->offsetY.isDynamic()) {
-        (*entry)["offsetY"] = resolver.toDynamic(dropShadowParams->offsetY);
+        (*entry)["offsetY"] =
+            resolver.toDynamicLength(dropShadowParams->offsetY);
       }
       if (dropShadowParams->standardDeviation.isDynamic()) {
-        (*entry)["standardDeviation"] = resolver.toDynamic(dropShadowParams->standardDeviation);
+        (*entry)["standardDeviation"] =
+            resolver.toDynamicLength(dropShadowParams->standardDeviation);
       }
     }
   }
@@ -882,43 +908,68 @@ folly::dynamic BaseViewProps::getResolvedProps(
   }
 
   if (borderRadii.all.has_value() && borderRadii.all.value().isDynamic()) {
-    props["borderRadius"] = resolver.toDynamic(borderRadii.all.value());
+    props["borderRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.all.value());
   }
-  if (borderRadii.topLeft.has_value() && borderRadii.topLeft.value().isDynamic()) {
-    props["borderTopLeftRadius"] = resolver.toDynamic(borderRadii.topLeft.value());
+  if (borderRadii.topLeft.has_value() &&
+      borderRadii.topLeft.value().isDynamic()) {
+    props["borderTopLeftRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.topLeft.value());
   }
-  if (borderRadii.topRight.has_value() && borderRadii.topRight.value().isDynamic()) {
-    props["borderTopRightRadius"] = resolver.toDynamic(borderRadii.topRight.value());
+  if (borderRadii.topRight.has_value() &&
+      borderRadii.topRight.value().isDynamic()) {
+    props["borderTopRightRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.topRight.value());
   }
-  if (borderRadii.bottomRight.has_value() && borderRadii.bottomRight.value().isDynamic()) {
-    props["borderBottomRightRadius"] = resolver.toDynamic(borderRadii.bottomRight.value());
+  if (borderRadii.bottomRight.has_value() &&
+      borderRadii.bottomRight.value().isDynamic()) {
+    props["borderBottomRightRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.bottomRight.value());
   }
-  if (borderRadii.bottomLeft.has_value() && borderRadii.bottomLeft.value().isDynamic()) {
-    props["borderBottomLeftRadius"] = resolver.toDynamic(borderRadii.bottomLeft.value());
+  if (borderRadii.bottomLeft.has_value() &&
+      borderRadii.bottomLeft.value().isDynamic()) {
+    props["borderBottomLeftRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.bottomLeft.value());
   }
-  if (borderRadii.topStart.has_value() && borderRadii.topStart.value().isDynamic()) {
-    props["borderTopStartRadius"] = resolver.toDynamic(borderRadii.topStart.value());
+  if (borderRadii.topStart.has_value() &&
+      borderRadii.topStart.value().isDynamic()) {
+    props["borderTopStartRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.topStart.value());
   }
-  if (borderRadii.topEnd.has_value() && borderRadii.topEnd.value().isDynamic()) {
-    props["borderTopEndRadius"] = resolver.toDynamic(borderRadii.topEnd.value());
+  if (borderRadii.topEnd.has_value() &&
+      borderRadii.topEnd.value().isDynamic()) {
+    props["borderTopEndRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.topEnd.value());
   }
-  if (borderRadii.bottomStart.has_value() && borderRadii.bottomStart.value().isDynamic()) {
-    props["borderBottomStartRadius"] = resolver.toDynamic(borderRadii.bottomStart.value());
+  if (borderRadii.bottomStart.has_value() &&
+      borderRadii.bottomStart.value().isDynamic()) {
+    props["borderBottomStartRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.bottomStart.value());
   }
-  if (borderRadii.bottomEnd.has_value() && borderRadii.bottomEnd.value().isDynamic()) {
-    props["borderBottomEndRadius"] = resolver.toDynamic(borderRadii.bottomEnd.value());
+  if (borderRadii.bottomEnd.has_value() &&
+      borderRadii.bottomEnd.value().isDynamic()) {
+    props["borderBottomEndRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.bottomEnd.value());
   }
-  if (borderRadii.endEnd.has_value() && borderRadii.endEnd.value().isDynamic()) {
-    props["borderEndEndRadius"] = resolver.toDynamic(borderRadii.endEnd.value());
+  if (borderRadii.endEnd.has_value() &&
+      borderRadii.endEnd.value().isDynamic()) {
+    props["borderEndEndRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.endEnd.value());
   }
-  if (borderRadii.endStart.has_value() && borderRadii.endStart.value().isDynamic()) {
-    props["borderEndStartRadius"] = resolver.toDynamic(borderRadii.endStart.value());
+  if (borderRadii.endStart.has_value() &&
+      borderRadii.endStart.value().isDynamic()) {
+    props["borderEndStartRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.endStart.value());
   }
-  if (borderRadii.startEnd.has_value() && borderRadii.startEnd.value().isDynamic()) {
-    props["borderStartEndRadius"] = resolver.toDynamic(borderRadii.startEnd.value());
+  if (borderRadii.startEnd.has_value() &&
+      borderRadii.startEnd.value().isDynamic()) {
+    props["borderStartEndRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.startEnd.value());
   }
-  if (borderRadii.startStart.has_value() && borderRadii.startStart.value().isDynamic()) {
-    props["borderStartStartRadius"] = resolver.toDynamic(borderRadii.startStart.value());
+  if (borderRadii.startStart.has_value() &&
+      borderRadii.startStart.value().isDynamic()) {
+    props["borderStartStartRadius"] =
+        resolver.toDynamicLengthOrPercentage(borderRadii.startStart.value());
   }
   [[maybe_unused]] auto after = folly::toJson(props);
 
@@ -964,87 +1015,87 @@ void BaseViewProps::collectLiveResolvableIds(
     std::unordered_set<DynamicPropertyId>& ids) const {
   YogaStylableProps::collectLiveResolvableIds(ids);
 
-  auto addFD = [&](const FloatDynamic& fd) {
-    if (fd.isDynamic()) {
-      ids.insert(fd.asDynamicId());
+  auto addNV = [&](const auto& value) {
+    if (value.isDynamic()) {
+      ids.insert(value.asDynamicId());
     }
   };
-  auto addVU = [&](const std::optional<ValueUnit>& vu) {
-    if (vu && vu->isDynamic()) {
-      ids.insert(vu->asDynamicId());
+  auto addOptionalNV = [&](const auto& value) {
+    if (value && value->isDynamic()) {
+      ids.insert(value->asDynamicId());
     }
   };
-  auto addVUDirect = [&](const ValueUnit& vu) {
-    if (vu.isDynamic()) {
-      ids.insert(vu.asDynamicId());
+  auto addNVDirect = [&](const auto& value) {
+    if (value.isDynamic()) {
+      ids.insert(value.asDynamicId());
     }
   };
 
-  addFD(opacity);
-  addFD(outlineOffset);
-  addFD(outlineWidth);
-  addFD(shadowOpacity);
-  addFD(shadowRadius);
+  addNV(opacity);
+  addNV(outlineOffset);
+  addNV(outlineWidth);
+  addNV(shadowOpacity);
+  addNV(shadowRadius);
 
-  addVU(borderRadii.topLeft);
-  addVU(borderRadii.topRight);
-  addVU(borderRadii.bottomLeft);
-  addVU(borderRadii.bottomRight);
-  addVU(borderRadii.topStart);
-  addVU(borderRadii.topEnd);
-  addVU(borderRadii.bottomStart);
-  addVU(borderRadii.bottomEnd);
-  addVU(borderRadii.all);
-  addVU(borderRadii.endEnd);
-  addVU(borderRadii.endStart);
-  addVU(borderRadii.startEnd);
-  addVU(borderRadii.startStart);
+  addOptionalNV(borderRadii.topLeft);
+  addOptionalNV(borderRadii.topRight);
+  addOptionalNV(borderRadii.bottomLeft);
+  addOptionalNV(borderRadii.bottomRight);
+  addOptionalNV(borderRadii.topStart);
+  addOptionalNV(borderRadii.topEnd);
+  addOptionalNV(borderRadii.bottomStart);
+  addOptionalNV(borderRadii.bottomEnd);
+  addOptionalNV(borderRadii.all);
+  addOptionalNV(borderRadii.endEnd);
+  addOptionalNV(borderRadii.endStart);
+  addOptionalNV(borderRadii.startEnd);
+  addOptionalNV(borderRadii.startStart);
 
-  addVUDirect(transformOrigin.xy[0]);
-  addVUDirect(transformOrigin.xy[1]);
+  addNVDirect(transformOrigin.xy[0]);
+  addNVDirect(transformOrigin.xy[1]);
 
   for (const auto& op : transform.operations) {
-    addVUDirect(op.x);
-    addVUDirect(op.y);
-    addVUDirect(op.z);
+    addNVDirect(op.x);
+    addNVDirect(op.y);
+    addNVDirect(op.z);
   }
 
   for (const auto& bs : boxShadow) {
-    addFD(bs.offsetX);
-    addFD(bs.offsetY);
-    addFD(bs.blurRadius);
-    addFD(bs.spreadDistance);
+    addNV(bs.offsetX);
+    addNV(bs.offsetY);
+    addNV(bs.blurRadius);
+    addNV(bs.spreadDistance);
   }
 
   for (const auto& filterFunction : filter) {
     if (const auto* parameter =
-            std::get_if<FloatDynamic>(&filterFunction.parameters)) {
-      addFD(*parameter);
+            std::get_if<UntypedNumericValue>(&filterFunction.parameters)) {
+      addNV(*parameter);
       continue;
     }
 
     if (const auto* dropShadowParams =
             std::get_if<DropShadowParams>(&filterFunction.parameters)) {
-      addFD(dropShadowParams->offsetX);
-      addFD(dropShadowParams->offsetY);
-      addFD(dropShadowParams->standardDeviation);
+      addNV(dropShadowParams->offsetX);
+      addNV(dropShadowParams->offsetY);
+      addNV(dropShadowParams->standardDeviation);
     }
   }
 
   for (const auto& bp : backgroundPosition) {
-    addVU(bp.top);
-    addVU(bp.left);
-    addVU(bp.right);
-    addVU(bp.bottom);
+    addOptionalNV(bp.top);
+    addOptionalNV(bp.left);
+    addOptionalNV(bp.right);
+    addOptionalNV(bp.bottom);
   }
 
   for (const auto& bsVar : backgroundSize) {
     if (const auto* lp = std::get_if<BackgroundSizeLengthPercentage>(&bsVar)) {
-      if (const auto* vu = std::get_if<ValueUnit>(&lp->x)) {
-        addVUDirect(*vu);
+      if (const auto* value = std::get_if<UntypedNumericValue>(&lp->x)) {
+        addNVDirect(*value);
       }
-      if (const auto* vu = std::get_if<ValueUnit>(&lp->y)) {
-        addVUDirect(*vu);
+      if (const auto* value = std::get_if<UntypedNumericValue>(&lp->y)) {
+        addNVDirect(*value);
       }
     }
   }

@@ -7,32 +7,31 @@
 
 #pragma once
 
-#include <react/renderer/graphics/ValueUnit.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <variant>
 
 namespace facebook::react {
 
 struct BackgroundSizeLengthPercentage {
-  std::variant<std::monostate, ValueUnit> x;
-  std::variant<std::monostate, ValueUnit> y;
+  std::variant<std::monostate, UntypedNumericValue> x;
+  std::variant<std::monostate, UntypedNumericValue> y;
 
   BackgroundSizeLengthPercentage() : x(std::monostate{}), y(std::monostate{}) {}
 
-  bool isXAuto() const
-  {
+  bool isXAuto() const {
     return std::holds_alternative<std::monostate>(x);
   }
-  bool isYAuto() const
-  {
+  bool isYAuto() const {
     return std::holds_alternative<std::monostate>(y);
   }
 
-  bool operator==(const BackgroundSizeLengthPercentage &other) const = default;
+  bool operator==(const BackgroundSizeLengthPercentage& other) const = default;
 };
 
 enum class BackgroundSizeKeyword { Cover, Contain };
 
 // https://www.w3.org/TR/css-backgrounds-3/#background-size
-using BackgroundSize = std::variant<BackgroundSizeKeyword, BackgroundSizeLengthPercentage>;
+using BackgroundSize =
+    std::variant<BackgroundSizeKeyword, BackgroundSizeLengthPercentage>;
 
 } // namespace facebook::react

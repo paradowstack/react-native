@@ -23,6 +23,7 @@
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Filter.h>
 #include <react/renderer/graphics/Isolation.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/Transform.h>
 
 #include <optional>
@@ -53,7 +54,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 #pragma mark - Props
 
   // Color
-  FloatDynamic opacity{1.0f};
+  NumberValue opacity{NumberValue::number(1.0f)};
   SharedColor backgroundColor{};
 
   // Borders
@@ -64,15 +65,15 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   // Outline
   SharedColor outlineColor{};
-  FloatDynamic outlineOffset{};
+  LengthValue outlineOffset{LengthValue::length(0.0f)};
   OutlineStyle outlineStyle{OutlineStyle::Solid};
-  FloatDynamic outlineWidth{};
+  LengthValue outlineWidth{LengthValue::length(0.0f)};
 
   // Shadow
   SharedColor shadowColor{};
   Size shadowOffset{0, -3};
-  FloatDynamic shadowOpacity{};
-  FloatDynamic shadowRadius{3.0f};
+  NumberValue shadowOpacity{NumberValue::number(0.0f)};
+  LengthValue shadowRadius{LengthValue::length(3.0f)};
 
   Cursor cursor{};
 

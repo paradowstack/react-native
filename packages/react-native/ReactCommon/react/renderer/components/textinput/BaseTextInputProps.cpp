@@ -230,7 +230,7 @@ void BaseTextInputProps::setProp(
 TextAttributes BaseTextInputProps::getEffectiveTextAttributes(
     Float fontSizeMultiplier) const {
   auto result = TextAttributes::defaultTextAttributes();
-  result.fontSizeMultiplier = fontSizeMultiplier;
+  result.fontSizeMultiplier = NumberValue::number(fontSizeMultiplier);
   result.apply(textAttributes);
 
   /*
@@ -268,7 +268,8 @@ void BaseTextInputProps::collectLiveResolvableIds(
 }
 
 #ifdef RN_SERIALIZABLE_STATE
-folly::dynamic BaseTextInputProps::getResolvedProps(const DynamicResolver& resolver) const {
+folly::dynamic BaseTextInputProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
   auto props = ViewProps::getResolvedProps(resolver);
   props.update(BaseTextProps::getResolvedProps(resolver));
   props.update(paragraphAttributes.getResolvedProps(resolver));

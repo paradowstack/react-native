@@ -29,11 +29,11 @@ namespace facebook::react {
 
 /* static */ Transform Transform::Perspective(Float perspective) noexcept {
   auto transform = Transform{};
-  auto Zero = ValueUnit(0, UnitType::Point);
+  auto Zero = UntypedNumericValue::number(0.0f);
   transform.operations.push_back(
       TransformOperation{
           .type = TransformOperationType::Perspective,
-          .x = ValueUnit(perspective, UnitType::Point),
+          .x = UntypedNumericValue::length(perspective),
           .y = Zero,
           .z = Zero});
   transform.matrix[11] = -1 / perspective;
@@ -49,9 +49,9 @@ namespace facebook::react {
     transform.operations.push_back(
         TransformOperation{
             .type = TransformOperationType::Scale,
-            .x = ValueUnit(xprime, UnitType::Point),
-            .y = ValueUnit(yprime, UnitType::Point),
-            .z = ValueUnit(zprime, UnitType::Point)});
+            .x = UntypedNumericValue::number(xprime),
+            .y = UntypedNumericValue::number(yprime),
+            .z = UntypedNumericValue::number(zprime)});
     transform.matrix[0] = xprime;
     transform.matrix[5] = yprime;
     transform.matrix[10] = zprime;
@@ -69,9 +69,9 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
     transform.operations.push_back(
         TransformOperation{
             .type = TransformOperationType::Translate,
-            .x = ValueUnit(xprime, UnitType::Point),
-            .y = ValueUnit(yprime, UnitType::Point),
-            .z = ValueUnit(zprime, UnitType::Point)});
+            .x = UntypedNumericValue::length(xprime),
+            .y = UntypedNumericValue::length(yprime),
+            .z = UntypedNumericValue::length(zprime)});
     transform.matrix[12] = xprime;
     transform.matrix[13] = yprime;
     transform.matrix[14] = zprime;
@@ -86,9 +86,9 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
   transform.operations.push_back(
       TransformOperation{
           .type = TransformOperationType::Skew,
-          .x = ValueUnit(xprime, UnitType::Point),
-          .y = ValueUnit(yprime, UnitType::Point),
-          .z = ValueUnit(0, UnitType::Point)});
+          .x = UntypedNumericValue::number(xprime),
+          .y = UntypedNumericValue::number(yprime),
+          .z = UntypedNumericValue::number(0.0f)});
   transform.matrix[4] = std::tan(xprime);
   transform.matrix[1] = std::tan(yprime);
   return transform;
@@ -97,11 +97,11 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
 /* static */ Transform Transform::RotateX(Float radians) noexcept {
   auto transform = Transform{};
   if (!isZero(radians)) {
-    auto Zero = ValueUnit(0, UnitType::Point);
+    auto Zero = UntypedNumericValue::number(0.0f);
     transform.operations.push_back(
         TransformOperation{
             .type = TransformOperationType::Rotate,
-            .x = ValueUnit(radians, UnitType::Point),
+            .x = UntypedNumericValue::number(radians),
             .y = Zero,
             .z = Zero});
     transform.matrix[5] = std::cos(radians);
@@ -115,12 +115,12 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
 /* static */ Transform Transform::RotateY(Float radians) noexcept {
   auto transform = Transform{};
   if (!isZero(radians)) {
-    auto Zero = ValueUnit(0, UnitType::Point);
+    auto Zero = UntypedNumericValue::number(0.0f);
     transform.operations.push_back(
         TransformOperation{
             .type = TransformOperationType::Rotate,
             .x = Zero,
-            .y = ValueUnit(radians, UnitType::Point),
+            .y = UntypedNumericValue::number(radians),
             .z = Zero});
     transform.matrix[0] = std::cos(radians);
     transform.matrix[2] = -std::sin(radians);
@@ -133,13 +133,13 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
 /* static */ Transform Transform::RotateZ(Float radians) noexcept {
   auto transform = Transform{};
   if (!isZero(radians)) {
-    auto Zero = ValueUnit(0, UnitType::Point);
+    auto Zero = UntypedNumericValue::number(0.0f);
     transform.operations.push_back(
         TransformOperation{
             .type = TransformOperationType::Rotate,
             .x = Zero,
             .y = Zero,
-            .z = ValueUnit(radians, UnitType::Point)});
+            .z = UntypedNumericValue::number(radians)});
     transform.matrix[0] = std::cos(radians);
     transform.matrix[1] = std::sin(radians);
     transform.matrix[4] = -std::sin(radians);
@@ -207,49 +207,50 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
 
 /* static */ TransformOperation Transform::DefaultTransformOperation(
     TransformOperationType type) {
-  auto Zero = ValueUnit{0, UnitType::Point};
-  auto One = ValueUnit{1, UnitType::Point};
+  auto ZeroNumber = UntypedNumericValue::number(0.0f);
+  auto ZeroLength = UntypedNumericValue::length(0.0f);
+  auto One = UntypedNumericValue::number(1.0f);
   switch (type) {
     case TransformOperationType::Arbitrary:
       return TransformOperation{
           .type = TransformOperationType::Arbitrary,
-          .x = Zero,
-          .y = Zero,
-          .z = Zero};
+          .x = ZeroNumber,
+          .y = ZeroNumber,
+          .z = ZeroNumber};
     case TransformOperationType::Perspective:
       return TransformOperation{
           .type = TransformOperationType::Perspective,
-          .x = Zero,
-          .y = Zero,
-          .z = Zero};
+          .x = ZeroLength,
+          .y = ZeroNumber,
+          .z = ZeroNumber};
     case TransformOperationType::Scale:
       return TransformOperation{
           .type = TransformOperationType::Scale, .x = One, .y = One, .z = One};
     case TransformOperationType::Translate:
       return TransformOperation{
           .type = TransformOperationType::Translate,
-          .x = Zero,
-          .y = Zero,
-          .z = Zero};
+          .x = ZeroLength,
+          .y = ZeroLength,
+          .z = ZeroLength};
     case TransformOperationType::Rotate:
       return TransformOperation{
           .type = TransformOperationType::Rotate,
-          .x = Zero,
-          .y = Zero,
-          .z = Zero};
+          .x = ZeroNumber,
+          .y = ZeroNumber,
+          .z = ZeroNumber};
     case TransformOperationType::Skew:
       return TransformOperation{
           .type = TransformOperationType::Skew,
-          .x = Zero,
-          .y = Zero,
-          .z = Zero};
+          .x = ZeroNumber,
+          .y = ZeroNumber,
+          .z = ZeroNumber};
     default:
     case TransformOperationType::Identity:
       return TransformOperation{
           .type = TransformOperationType::Identity,
-          .x = Zero,
-          .y = Zero,
-          .z = Zero};
+          .x = ZeroNumber,
+          .y = ZeroNumber,
+          .z = ZeroNumber};
   }
 }
 
@@ -306,23 +307,20 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
         Transform::FromTransformOperation(
                  TransformOperation{
                      .type = type,
-                     .x = ValueUnit(
+                     .x = UntypedNumericValue::number(
                          lhsOp.x.resolve(size.width) +
-                             (rhsOp.x.resolve(size.width) -
-                              lhsOp.x.resolve(size.width)) *
-                                 animationProgress,
-                         UnitType::Point),
-                     .y = ValueUnit(
+                         (rhsOp.x.resolve(size.width) -
+                          lhsOp.x.resolve(size.width)) *
+                             animationProgress),
+                     .y = UntypedNumericValue::number(
                          lhsOp.y.resolve(size.height) +
-                             (rhsOp.y.resolve(size.height) -
-                              lhsOp.y.resolve(size.height)) *
-                                 animationProgress,
-                         UnitType::Point),
-                     .z = ValueUnit(
+                         (rhsOp.y.resolve(size.height) -
+                          lhsOp.y.resolve(size.height)) *
+                             animationProgress),
+                     .z = UntypedNumericValue::number(
                          lhsOp.z.resolve(0) +
-                             (rhsOp.z.resolve(0) - lhsOp.z.resolve(0)) *
-                                 animationProgress,
-                         UnitType::Point)},
+                         (rhsOp.z.resolve(0) - lhsOp.z.resolve(0)) *
+                             animationProgress)},
                  size);
   }
 

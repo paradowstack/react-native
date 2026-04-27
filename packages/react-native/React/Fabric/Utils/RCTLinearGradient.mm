@@ -9,7 +9,6 @@
 
 #import <React/RCTAnimationUtils.h>
 #import <React/RCTConversions.h>
-#include <react/renderer/graphics/ValueUnit.h>
 #import <react/utils/FloatComparison.h>
 #import "RCTGradientUtils.h"
 

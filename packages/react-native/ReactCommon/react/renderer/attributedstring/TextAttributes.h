@@ -22,6 +22,7 @@
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/Size.h>
 #include <react/utils/hash_combine.h>
 
@@ -56,19 +57,24 @@ class TextAttributes : public DebugStringConvertible,
 
   // Font
   std::string fontFamily{""};
-  FloatDynamic fontSize{std::numeric_limits<Float>::quiet_NaN()};
-  FloatDynamic fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
+  LengthValue fontSize{
+      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
+  NumberValue fontSizeMultiplier{
+      NumberValue::number(std::numeric_limits<Float>::quiet_NaN())};
   std::optional<FontWeight> fontWeight{};
   std::optional<FontStyle> fontStyle{};
   std::optional<FontVariant> fontVariant{};
   std::optional<bool> allowFontScaling{};
-  FloatDynamic maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
+  NumberValue maxFontSizeMultiplier{
+      NumberValue::number(std::numeric_limits<Float>::quiet_NaN())};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
-  FloatDynamic letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
+  LengthValue letterSpacing{
+      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
   std::optional<TextTransform> textTransform{};
 
   // Paragraph Styles
-  FloatDynamic lineHeight{std::numeric_limits<Float>::quiet_NaN()};
+  LengthValue lineHeight{
+      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
   std::optional<TextAlignment> alignment{};
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
@@ -82,7 +88,8 @@ class TextAttributes : public DebugStringConvertible,
   // Shadow
   // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.
   std::optional<Size> textShadowOffset{};
-  FloatDynamic textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
+  LengthValue textShadowRadius{
+      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
   SharedColor textShadowColor{};
 
   // Special

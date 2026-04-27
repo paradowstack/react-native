@@ -10,7 +10,7 @@
 #include <react/renderer/debug/flags.h>
 #include <react/renderer/graphics/ColorStop.h>
 #include <react/renderer/graphics/Float.h>
-#include <react/renderer/graphics/ValueUnit.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <optional>
 
 #if RN_DEBUG_STRING_CONVERTIBLE
@@ -29,13 +29,18 @@ namespace facebook::react {
 enum class RadialGradientShape { Circle, Ellipse };
 
 struct RadialGradientSize {
-  enum class SizeKeyword { ClosestSide, FarthestSide, ClosestCorner, FarthestCorner };
+  enum class SizeKeyword {
+    ClosestSide,
+    FarthestSide,
+    ClosestCorner,
+    FarthestCorner
+  };
 
   struct Dimensions {
-    ValueUnit x;
-    ValueUnit y;
+    UntypedNumericValue x;
+    UntypedNumericValue y;
 
-    bool operator==(const Dimensions &other) const = default;
+    bool operator==(const Dimensions& other) const = default;
 
 #ifdef RN_SERIALIZABLE_STATE
     folly::dynamic toDynamic() const;
@@ -44,7 +49,7 @@ struct RadialGradientSize {
 
   std::variant<SizeKeyword, Dimensions> value;
 
-  bool operator==(const RadialGradientSize &other) const = default;
+  bool operator==(const RadialGradientSize& other) const = default;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;
@@ -52,12 +57,12 @@ struct RadialGradientSize {
 };
 
 struct RadialGradientPosition {
-  std::optional<ValueUnit> top;
-  std::optional<ValueUnit> left;
-  std::optional<ValueUnit> right;
-  std::optional<ValueUnit> bottom;
+  std::optional<UntypedNumericValue> top;
+  std::optional<UntypedNumericValue> left;
+  std::optional<UntypedNumericValue> right;
+  std::optional<UntypedNumericValue> bottom;
 
-  bool operator==(const RadialGradientPosition &other) const = default;
+  bool operator==(const RadialGradientPosition& other) const = default;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;
@@ -70,14 +75,14 @@ struct RadialGradient {
   RadialGradientPosition position;
   std::vector<ColorStop> colorStops;
 
-  bool operator==(const RadialGradient &other) const = default;
+  bool operator==(const RadialGradient& other) const = default;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;
 #endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream &ss) const;
+  void toString(std::stringstream& ss) const;
 #endif
 };
 }; // namespace facebook::react

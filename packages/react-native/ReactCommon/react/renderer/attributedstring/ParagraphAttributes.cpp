@@ -80,9 +80,12 @@ SharedDebugStringConvertibleList ParagraphAttributes::getDebugProps() const {
 #endif
 
 void ParagraphAttributes::resolveProperties(const DynamicResolver& resolver) {
-  minimumFontSize = resolver.resolve(minimumFontSize);
-  maximumFontSize = resolver.resolve(maximumFontSize);
-  minimumFontScale = resolver.resolve(minimumFontScale);
+  minimumFontSize =
+      LengthValue::length(resolver.resolveLength(minimumFontSize));
+  maximumFontSize =
+      LengthValue::length(resolver.resolveLength(maximumFontSize));
+  minimumFontScale =
+      NumberValue::number(resolver.resolveNumber(minimumFontScale));
 }
 
 void ParagraphAttributes::collectLiveResolvableIds(
@@ -103,13 +106,13 @@ folly::dynamic ParagraphAttributes::getResolvedProps(
     const DynamicResolver& resolver) const {
   folly::dynamic props = folly::dynamic::object();
   if (minimumFontSize.isDynamic()) {
-    props["minimumFontSize"] = resolver.toDynamic(minimumFontSize);
+    props["minimumFontSize"] = resolver.toDynamicLength(minimumFontSize);
   }
   if (maximumFontSize.isDynamic()) {
-    props["maximumFontSize"] = resolver.toDynamic(maximumFontSize);
+    props["maximumFontSize"] = resolver.toDynamicLength(maximumFontSize);
   }
   if (minimumFontScale.isDynamic()) {
-    props["minimumFontScale"] = resolver.toDynamic(minimumFontScale);
+    props["minimumFontScale"] = resolver.toDynamicNumber(minimumFontScale);
   }
   return props;
 }

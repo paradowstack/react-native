@@ -285,7 +285,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // `opacity`
   if (oldViewProps.opacity != newViewProps.opacity &&
       ![_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
-    self.layer.opacity = (float)newViewProps.opacity;
+    self.layer.opacity = (float)newViewProps.opacity.asFloat();
     needsInvalidateLayer = YES;
   }
 
@@ -385,10 +385,10 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     needsInvalidateLayer = YES;
   }
 
-	auto newOutlineWidth = newViewProps.outlineWidth.value;
-  auto oldOutlineWidth = oldViewProps.outlineWidth.value;
-	auto newOutlineOffset = newViewProps.outlineOffset.value;
-	auto oldOutlineOffset = oldViewProps.outlineOffset.value;
+  auto newOutlineWidth = newViewProps.outlineWidth.asFloat();
+  auto oldOutlineWidth = oldViewProps.outlineWidth.asFloat();
+  auto newOutlineOffset = newViewProps.outlineOffset.asFloat();
+  auto oldOutlineOffset = oldViewProps.outlineOffset.asFloat();
   // `outline`
   if (oldViewProps.outlineStyle != newViewProps.outlineStyle ||
       oldViewProps.outlineColor != newViewProps.outlineColor ||
@@ -715,7 +715,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     self.layer.transform = RCTCATransform3DFromTransformMatrix(props.transform);
   }
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
-    self.layer.opacity = (float)props.opacity;
+    self.layer.opacity = (float)props.opacity.asFloat();
   }
 
   // Clean up box shadow layers to prevent cross-component contamination
@@ -918,7 +918,7 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
   BOOL nonZeroBorderWidth = !(borderMetrics.borderWidths.isUniform() && borderMetrics.borderWidths.left == 0);
   BOOL clipToPaddingBox = ReactNativeFeatureFlags::enableIOSViewClipToPaddingBox();
-	Float resolvedOutlineWidth = _props->outlineWidth.value;
+	Float resolvedOutlineWidth = _props->outlineWidth.asFloat();
   return _props->getClipsContentToBounds() &&
       ((!_props->boxShadow.empty() || (clipToPaddingBox && nonZeroBorderWidth)) || resolvedOutlineWidth != 0);
 }
@@ -1138,8 +1138,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   [_outlineLayer removeFromSuperlayer];
   _outlineLayer = nil;
   {
-		Float resolvedOutlineWidth = _props->outlineWidth.value;
-		Float resolvedOutlineOffset = _props->outlineOffset.value;
+		Float resolvedOutlineWidth = _props->outlineWidth.asFloat();
+		Float resolvedOutlineOffset = _props->outlineOffset.asFloat();
     if (resolvedOutlineWidth != 0) {
       if (!_outlineLayer) {
         CALayer *outlineLayer = [CALayer new];
@@ -1182,7 +1182,7 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   if (_swiftUIWrapper != nullptr) {
     [_swiftUIWrapper resetStyles];
   }
-  self.layer.opacity = (float)_props->opacity;
+  self.layer.opacity = (float)_props->opacity.asFloat();
   if (!_props->filter.empty()) {
     float multiplicativeBrightness = 1;
     bool hasBrightnessFilter = false;
@@ -1196,35 +1196,35 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
                                           y:@(dropShadowParams.offsetY.asFloat())
                                       color:shadowColor];
         }
-      } else if (std::holds_alternative<FloatDynamic>(primitive.parameters)) {
+      } else if (std::holds_alternative<UntypedNumericValue>(primitive.parameters)) {
         if (primitive.type == FilterType::Brightness) {
-          multiplicativeBrightness *= std::get<FloatDynamic>(primitive.parameters).asFloat();
+          multiplicativeBrightness *= std::get<UntypedNumericValue>(primitive.parameters).asFloat();
           hasBrightnessFilter = true;
         } else if (primitive.type == FilterType::Opacity) {
-          self.layer.opacity *= std::get<FloatDynamic>(primitive.parameters).asFloat();
+          self.layer.opacity *= std::get<UntypedNumericValue>(primitive.parameters).asFloat();
         } else if (primitive.type == FilterType::Blur) {
           if (_swiftUIWrapper != nullptr) {
-            Float blurRadius = std::get<FloatDynamic>(primitive.parameters).asFloat();
+            Float blurRadius = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateBlurRadius:@(blurRadius)];
           }
         } else if (primitive.type == FilterType::Grayscale) {
           if (_swiftUIWrapper != nullptr) {
-            Float grayscale = std::get<FloatDynamic>(primitive.parameters).asFloat();
+            Float grayscale = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateGrayscale:@(grayscale)];
           }
         } else if (primitive.type == FilterType::Saturate) {
           if (_swiftUIWrapper != nullptr) {
-            Float saturation = std::get<FloatDynamic>(primitive.parameters).asFloat();
+            Float saturation = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateSaturation:@(saturation)];
           }
         } else if (primitive.type == FilterType::Contrast) {
           if (_swiftUIWrapper != nullptr) {
-            Float contrast = std::get<FloatDynamic>(primitive.parameters).asFloat();
+            Float contrast = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateContrast:@(contrast)];
           }
         } else if (primitive.type == FilterType::HueRotate) {
           if (_swiftUIWrapper != nullptr) {
-            Float hueRotateDegrees = std::get<FloatDynamic>(primitive.parameters).asFloat();
+            Float hueRotateDegrees = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateHueRotate:@(hueRotateDegrees)];
           }
         }

@@ -154,9 +154,9 @@ using namespace facebook::react;
                                   resizingMode:UIImageResizingModeStretch];
   }
 
-  if (imageProps.blurRadius > __FLT_EPSILON__) {
+  if (imageProps.blurRadius.asFloat() > __FLT_EPSILON__) {
     // Blur on a background thread to avoid blocking interaction.
-    CGFloat blurRadius = imageProps.blurRadius;
+    CGFloat blurRadius = imageProps.blurRadius.asFloat();
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
       UIImage *blurredImage = RCTBlurredImageWithRadius(image, blurRadius);
       RCTExecuteOnMainQueue(^{

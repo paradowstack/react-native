@@ -23,19 +23,26 @@ namespace facebook::react {
  */
 static inline void interpolateViewProps(
     Float animationProgress,
-    const Props::Shared &oldPropsShared,
-    const Props::Shared &newPropsShared,
-    Props::Shared &interpolatedPropsShared,
-    const Size &size)
-{
-  const ViewProps *oldViewProps = static_cast<const ViewProps *>(oldPropsShared.get());
-  const ViewProps *newViewProps = static_cast<const ViewProps *>(newPropsShared.get());
-  ViewProps *interpolatedProps = const_cast<ViewProps *>(static_cast<const ViewProps *>(interpolatedPropsShared.get()));
+    const Props::Shared& oldPropsShared,
+    const Props::Shared& newPropsShared,
+    Props::Shared& interpolatedPropsShared,
+    const Size& size) {
+  const ViewProps* oldViewProps =
+      static_cast<const ViewProps*>(oldPropsShared.get());
+  const ViewProps* newViewProps =
+      static_cast<const ViewProps*>(newPropsShared.get());
+  ViewProps* interpolatedProps = const_cast<ViewProps*>(
+      static_cast<const ViewProps*>(interpolatedPropsShared.get()));
 
-  interpolatedProps->opacity =
-      oldViewProps->opacity + (newViewProps->opacity - oldViewProps->opacity) * animationProgress;
-  interpolatedProps->transform =
-      Transform::Interpolate(animationProgress, oldViewProps->transform, newViewProps->transform, size);
+  interpolatedProps->opacity = NumberValue::number(
+      oldViewProps->opacity.asFloat() +
+      (newViewProps->opacity.asFloat() - oldViewProps->opacity.asFloat()) *
+          animationProgress);
+  interpolatedProps->transform = Transform::Interpolate(
+      animationProgress,
+      oldViewProps->transform,
+      newViewProps->transform,
+      size);
 
   // Android uses RawProps, not props, to update props on the platform...
   // Since interpolated props don't interpolate at all using RawProps, we need
@@ -46,9 +53,11 @@ static inline void interpolateViewProps(
   // be const again.
 #ifdef ANDROID
   if (!interpolatedProps->rawProps.isNull()) {
-    interpolatedProps->rawProps["opacity"] = interpolatedProps->opacity;
+    interpolatedProps->rawProps["opacity"] =
+        interpolatedProps->opacity.asFloat();
 
-    interpolatedProps->rawProps["transform"] = (folly::dynamic)interpolatedProps->transform;
+    interpolatedProps->rawProps["transform"] =
+        (folly::dynamic)interpolatedProps->transform;
   }
 #endif
 }

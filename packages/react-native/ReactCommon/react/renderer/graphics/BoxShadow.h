@@ -7,19 +7,19 @@
 
 #pragma once
 
-#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/NumericValue.h>
 
 namespace facebook::react {
 
 struct BoxShadow {
   bool operator==(const BoxShadow& other) const = default;
 
-  FloatDynamic offsetX{};
-  FloatDynamic offsetY{};
-  FloatDynamic blurRadius{};
-  FloatDynamic spreadDistance{};
+  LengthValue offsetX{};
+  LengthValue offsetY{};
+  LengthValue blurRadius{};
+  LengthValue spreadDistance{};
   SharedColor color{};
   bool inset{};
 

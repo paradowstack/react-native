@@ -101,7 +101,7 @@ inline void cloneProp(
     const AnimatedPropBase& animatedProp) {
   switch (animatedProp.propName) {
     case OPACITY:
-      viewProps.opacity = get<Float>(animatedProp);
+      viewProps.opacity = NumberValue::number(get<Float>(animatedProp));
       break;
 
     case WIDTH:
@@ -302,11 +302,11 @@ inline void cloneProp(
       break;
 
     case SHADOW_OPACITY:
-      viewProps.shadowOpacity = FloatDynamic{get<Float>(animatedProp)};
+      viewProps.shadowOpacity = NumberValue::number(get<Float>(animatedProp));
       break;
 
     case SHADOW_RADIUS:
-      viewProps.shadowRadius = FloatDynamic{get<Float>(animatedProp)};
+      viewProps.shadowRadius = LengthValue::length(get<Float>(animatedProp));
       break;
 
     case FILTER:
@@ -318,7 +318,7 @@ inline void cloneProp(
       break;
 
     case OUTLINE_OFFSET: {
-      viewProps.outlineOffset = FloatDynamic{get<Float>(animatedProp)};
+      viewProps.outlineOffset = LengthValue::length(get<Float>(animatedProp));
       break;
     }
 
@@ -327,7 +327,7 @@ inline void cloneProp(
       break;
 
     case OUTLINE_WIDTH:
-      viewProps.outlineWidth = FloatDynamic{get<Float>(animatedProp)};
+      viewProps.outlineWidth = LengthValue::length(get<Float>(animatedProp));
       break;
 
     case ALIGN_CONTENT:

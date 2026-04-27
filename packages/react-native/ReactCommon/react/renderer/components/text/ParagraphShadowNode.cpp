@@ -76,10 +76,14 @@ const Content& ParagraphShadowNode::getContent(
   ensureUnsealed();
 
   auto textAttributes = TextAttributes::defaultTextAttributes();
-  textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
-//			if (getConcreteProps().textAttributes.fontSize.isDynamic()) {
-//				textAttributes.fontSize = props_->calcExpressions.at(getConcreteProps().textAttributes.fontSize.asDynamicId()).resolve(0.0f, layoutContext.viewportSize.width, layoutContext.viewportSize.height);
-//			}
+  textAttributes.fontSizeMultiplier =
+      NumberValue::number(layoutContext.fontSizeMultiplier);
+  //			if
+  //(getConcreteProps().textAttributes.fontSize.isDynamic()) {
+  //				textAttributes.fontSize =
+  //props_->calcExpressions.at(getConcreteProps().textAttributes.fontSize.asDynamicId()).resolve(0.0f,
+  //layoutContext.viewportSize.width, layoutContext.viewportSize.height);
+  //			}
   textAttributes.apply(getConcreteProps().textAttributes);
   textAttributes.layoutDirection =
       YGNodeLayoutGetDirection(&yogaNode_) == YGDirectionRTL

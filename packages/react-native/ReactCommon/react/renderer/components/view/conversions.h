@@ -32,7 +32,6 @@
 #include <react/renderer/graphics/LinearGradient.h>
 #include <react/renderer/graphics/PlatformColorParser.h>
 #include <react/renderer/graphics/Transform.h>
-#include <react/renderer/graphics/ValueUnit.h>
 #include <yoga/YGEnums.h>
 #include <yoga/node/Node.h>
 #include <cmath>
@@ -626,9 +625,9 @@ inline std::optional<Float> toRadians(const RawValue& value) {
   return {};
 }
 
-inline ValueUnit toValueUnit(const RawValue& value) {
+inline UntypedNumericValue toNumericValue(const RawValue& value) {
   if (value.hasType<Float>()) {
-    return ValueUnit((Float)value, UnitType::Point);
+    return UntypedNumericValue::length((Float)value);
   }
   if (!value.hasType<std::string>()) {
     return {};
@@ -636,32 +635,32 @@ inline ValueUnit toValueUnit(const RawValue& value) {
 
   auto pct = parseCSSProperty<CSSPercentage>((std::string)value);
   if (std::holds_alternative<CSSPercentage>(pct)) {
-    return ValueUnit(std::get<CSSPercentage>(pct).value, UnitType::Percent);
+    return UntypedNumericValue::percentage(std::get<CSSPercentage>(pct).value);
   }
 
   // auto calc = parseCSSProperty<CSSCalc>((std::string)value);
   // if (std::holds_alternative<CSSCalc>(calc)) {
   //   auto cssCalc = std::get<CSSCalc>(calc);
   //   if (cssCalc.isPointsOnly()) {
-  //     return ValueUnit(cssCalc.px, UnitType::Point);
+  //     return NumericValue::length(cssCalc.px);
   //   }
   //   if (cssCalc.isPercentOnly()) {
-  //     return ValueUnit(cssCalc.percent, UnitType::Percent);
+  //     return NumericValue::percentage(cssCalc.percent);
   //   }
   //   if (cssCalc.isUnitless()) {
-  //     return ValueUnit(cssCalc.unitless, UnitType::Undefined);
+  //     return NumericValue::number(cssCalc.unitless);
   //   }
   // }
 
   return {};
 }
 
-inline ValueUnit toValueUnit(
+inline UntypedNumericValue toNumericValue(
     const RawValue& value,
     const PropsParserContext& context,
     const std::string_view key = {}) {
-  auto v = toValueUnit(value);
-  if (v.unit != UnitType::Undefined) {
+  auto v = toNumericValue(value);
+  if (v) {
     return v;
   }
 
@@ -669,26 +668,20 @@ inline ValueUnit toValueUnit(
   if (std::holds_alternative<CSSCalc>(calc)) {
     auto cssCalc = std::get<CSSCalc>(calc);
     // if (cssCalc.isComplex()) {
-      auto mapIt =
-          context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-              DynamicPropertiesMapKey);
-      if (mapIt) {
-        auto& map = *mapIt;
-        auto index = map->allocateId();
-        map->insert_or_assign(index, cssCalc);
-        return ValueUnit{index};
-      }
+    auto mapIt =
+        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
+            DynamicPropertiesMapKey);
+    if (mapIt) {
+      auto& map = *mapIt;
+      auto index = map->allocateId();
+      map->insert_or_assign(index, cssCalc);
+      return UntypedNumericValue::dynamic(
+          index, NumericValueDomain::LengthOrPercentage);
+    }
     // }
   }
 
   return {};
-}
-
-inline void fromRawValue(
-    const PropsParserContext& context,
-    const RawValue& value,
-    ValueUnit& result) {
-  result = toValueUnit(value, context);
 }
 
 // `Float` is handled by the explicit specialization in
@@ -696,23 +689,25 @@ inline void fromRawValue(
 // Do not add a non-template overload here — it would win overload resolution
 // and break string/calc parsing for opacity and other Float props.
 
-inline ValueUnit cssLengthPercentageToValueUnit(
+inline UntypedNumericValue cssLengthPercentageToNumericValue(
     const std::variant<CSSLength, CSSPercentage>& value) {
   if (std::holds_alternative<CSSLength>(value)) {
     auto len = std::get<CSSLength>(value);
     if (len.unit != CSSLengthUnit::Px) {
       return {};
     }
-    return {len.value, UnitType::Point};
+    return UntypedNumericValue::length(len.value);
   } else {
-    return {std::get<CSSPercentage>(value).value, UnitType::Percent};
+    return UntypedNumericValue::percentage(
+        std::get<CSSPercentage>(value).value);
   }
 }
 
 inline std::optional<TransformOperation> fromCSSTransformFunction(
     const CSSTransformFunction& cssTransform) {
-  constexpr auto Zero = ValueUnit(0, UnitType::Point);
-  constexpr auto One = ValueUnit(1, UnitType::Point);
+  constexpr auto ZeroNumber = UntypedNumericValue::number(0.0f);
+  constexpr auto ZeroLength = UntypedNumericValue::length(0.0f);
+  constexpr auto One = UntypedNumericValue::number(1.0f);
 
   return std::visit(
       [&](auto&& func) -> std::optional<TransformOperation> {
@@ -722,41 +717,41 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
           auto radians = static_cast<float>(func.degrees * M_PI / 180.0f);
           return TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = Zero,
-              .y = Zero,
-              .z = ValueUnit(radians, UnitType::Point)};
+              .x = ZeroNumber,
+              .y = ZeroNumber,
+              .z = UntypedNumericValue::number(radians)};
         }
 
         if constexpr (std::is_same_v<T, CSSRotateX>) {
           auto radians = static_cast<float>(func.degrees * M_PI / 180.0f);
           return TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = ValueUnit(radians, UnitType::Point),
-              .y = Zero,
-              .z = Zero};
+              .x = UntypedNumericValue::number(radians),
+              .y = ZeroNumber,
+              .z = ZeroNumber};
         }
 
         if constexpr (std::is_same_v<T, CSSRotateY>) {
           auto radians = static_cast<float>(func.degrees * M_PI / 180.0f);
           return TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = Zero,
-              .y = ValueUnit(radians, UnitType::Point),
-              .z = Zero};
+              .x = ZeroNumber,
+              .y = UntypedNumericValue::number(radians),
+              .z = ZeroNumber};
         }
 
         if constexpr (std::is_same_v<T, CSSRotateZ>) {
           auto radians = static_cast<float>(func.degrees * M_PI / 180.0f);
           return TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = Zero,
-              .y = Zero,
-              .z = ValueUnit(radians, UnitType::Point)};
+              .x = ZeroNumber,
+              .y = ZeroNumber,
+              .z = UntypedNumericValue::number(radians)};
         }
 
         if constexpr (std::is_same_v<T, CSSTranslate>) {
-          auto x = cssLengthPercentageToValueUnit(func.x);
-          auto y = cssLengthPercentageToValueUnit(func.y);
+          auto x = cssLengthPercentageToNumericValue(func.x);
+          auto y = cssLengthPercentageToNumericValue(func.y);
           if (!x || !y) {
             return std::nullopt;
           }
@@ -764,36 +759,36 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
               .type = TransformOperationType::Translate,
               .x = x,
               .y = y,
-              .z = Zero};
+              .z = ZeroLength};
         }
 
         if constexpr (std::is_same_v<T, CSSTranslateX>) {
-          auto x = cssLengthPercentageToValueUnit(func.value);
+          auto x = cssLengthPercentageToNumericValue(func.value);
           if (!x) {
             return std::nullopt;
           }
           return TransformOperation{
               .type = TransformOperationType::Translate,
               .x = x,
-              .y = Zero,
-              .z = Zero};
+              .y = ZeroLength,
+              .z = ZeroLength};
         }
 
         if constexpr (std::is_same_v<T, CSSTranslateY>) {
-          auto y = cssLengthPercentageToValueUnit(func.value);
+          auto y = cssLengthPercentageToNumericValue(func.value);
           if (!y) {
             return std::nullopt;
           }
           return TransformOperation{
               .type = TransformOperationType::Translate,
-              .x = Zero,
+              .x = ZeroLength,
               .y = y,
-              .z = Zero};
+              .z = ZeroLength};
         }
 
         if constexpr (std::is_same_v<T, CSSTranslate3D>) {
-          auto x = cssLengthPercentageToValueUnit(func.x);
-          auto y = cssLengthPercentageToValueUnit(func.y);
+          auto x = cssLengthPercentageToNumericValue(func.x);
+          auto y = cssLengthPercentageToNumericValue(func.y);
           if (!x || !y || func.z.unit != CSSLengthUnit::Px) {
             return std::nullopt;
           }
@@ -801,21 +796,21 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
               .type = TransformOperationType::Translate,
               .x = x,
               .y = y,
-              .z = ValueUnit(func.z.value, UnitType::Point)};
+              .z = UntypedNumericValue::length(func.z.value)};
         }
 
         if constexpr (std::is_same_v<T, CSSScale>) {
           return TransformOperation{
               .type = TransformOperationType::Scale,
-              .x = ValueUnit(func.x, UnitType::Point),
-              .y = ValueUnit(func.y, UnitType::Point),
+              .x = UntypedNumericValue::number(func.x),
+              .y = UntypedNumericValue::number(func.y),
               .z = One};
         }
 
         if constexpr (std::is_same_v<T, CSSScaleX>) {
           return TransformOperation{
               .type = TransformOperationType::Scale,
-              .x = ValueUnit(func.value, UnitType::Point),
+              .x = UntypedNumericValue::number(func.value),
               .y = One,
               .z = One};
         }
@@ -824,7 +819,7 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
           return TransformOperation{
               .type = TransformOperationType::Scale,
               .x = One,
-              .y = ValueUnit(func.value, UnitType::Point),
+              .y = UntypedNumericValue::number(func.value),
               .z = One};
         }
 
@@ -832,18 +827,18 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
           auto radians = static_cast<float>(func.degrees * M_PI / 180.0f);
           return TransformOperation{
               .type = TransformOperationType::Skew,
-              .x = ValueUnit(radians, UnitType::Point),
-              .y = Zero,
-              .z = Zero};
+              .x = UntypedNumericValue::number(radians),
+              .y = ZeroNumber,
+              .z = ZeroNumber};
         }
 
         if constexpr (std::is_same_v<T, CSSSkewY>) {
           auto radians = static_cast<float>(func.degrees * M_PI / 180.0f);
           return TransformOperation{
               .type = TransformOperationType::Skew,
-              .x = Zero,
-              .y = ValueUnit(radians, UnitType::Point),
-              .z = Zero};
+              .x = ZeroNumber,
+              .y = UntypedNumericValue::number(radians),
+              .z = ZeroNumber};
         }
 
         if constexpr (std::is_same_v<T, CSSPerspective>) {
@@ -852,17 +847,17 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
           }
           return TransformOperation{
               .type = TransformOperationType::Perspective,
-              .x = ValueUnit(func.length.value, UnitType::Point),
-              .y = Zero,
-              .z = Zero};
+              .x = UntypedNumericValue::length(func.length.value),
+              .y = ZeroNumber,
+              .z = ZeroNumber};
         }
 
         if constexpr (std::is_same_v<T, CSSMatrix>) {
           return TransformOperation{
               .type = TransformOperationType::Arbitrary,
-              .x = Zero,
-              .y = Zero,
-              .z = Zero};
+              .x = ZeroNumber,
+              .y = ZeroNumber,
+              .z = ZeroNumber};
         }
       },
       cssTransform);
@@ -896,8 +891,9 @@ inline void parseProcessedTransform(
     auto pair = configurationPair.begin();
     auto operation = pair->first;
     auto& parameters = pair->second;
-    auto Zero = ValueUnit(0, UnitType::Point);
-    auto One = ValueUnit(1, UnitType::Point);
+    auto ZeroNumber = UntypedNumericValue::number(0.0f);
+    auto ZeroLength = UntypedNumericValue::length(0.0f);
+    auto One = UntypedNumericValue::number(1.0f);
 
     if (operation == "matrix") {
       // T215634510: We should support matrix transforms as part of a list of
@@ -952,9 +948,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Arbitrary,
-              .x = Zero,
-              .y = Zero,
-              .z = Zero});
+              .x = ZeroNumber,
+              .y = ZeroNumber,
+              .z = ZeroNumber});
     } else if (operation == "perspective") {
       if (!parameters.hasType<Float>()) {
         result = {};
@@ -964,9 +960,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Perspective,
-              .x = ValueUnit((Float)parameters, UnitType::Point),
-              .y = Zero,
-              .z = Zero});
+              .x = UntypedNumericValue::length((Float)parameters),
+              .y = ZeroNumber,
+              .z = ZeroNumber});
     } else if (operation == "rotateX") {
       auto radians = toRadians(parameters);
       if (!radians.has_value()) {
@@ -977,9 +973,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = ValueUnit(*radians, UnitType::Point),
-              .y = Zero,
-              .z = Zero});
+              .x = UntypedNumericValue::number(*radians),
+              .y = ZeroNumber,
+              .z = ZeroNumber});
     } else if (operation == "rotateY") {
       auto radians = toRadians(parameters);
       if (!radians.has_value()) {
@@ -990,9 +986,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = Zero,
-              .y = ValueUnit(*radians, UnitType::Point),
-              .z = Zero});
+              .x = ZeroNumber,
+              .y = UntypedNumericValue::number(*radians),
+              .z = ZeroNumber});
     } else if (operation == "rotateZ" || operation == "rotate") {
       auto radians = toRadians(parameters);
       if (!radians.has_value()) {
@@ -1003,9 +999,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Rotate,
-              .x = Zero,
-              .y = Zero,
-              .z = ValueUnit(*radians, UnitType::Point)});
+              .x = ZeroNumber,
+              .y = ZeroNumber,
+              .z = UntypedNumericValue::number(*radians)});
     } else if (operation == "scale") {
       // if (!parameters.hasType<Float>()) {
       // result = {};
@@ -1013,7 +1009,7 @@ inline void parseProcessedTransform(
       // }
 
       if (parameters.hasType<Float>()) {
-        auto number = ValueUnit((Float)parameters, UnitType::Point);
+        auto number = UntypedNumericValue::number((Float)parameters);
         transformMatrix.operations.push_back(
             TransformOperation{
                 .type = TransformOperationType::Scale,
@@ -1026,7 +1022,7 @@ inline void parseProcessedTransform(
         if (std::holds_alternative<CSSCalc>(calc)) {
           auto cssCalc = std::get<CSSCalc>(calc);
           if (cssCalc.isUnitless()) {
-            auto number = ValueUnit(cssCalc.px, UnitType::Point);
+            auto number = UntypedNumericValue::number(cssCalc.px);
             transformMatrix.operations.push_back(
                 TransformOperation{
                     .type = TransformOperationType::Scale,
@@ -1048,7 +1044,7 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Scale,
-              .x = ValueUnit((Float)parameters, UnitType::Point),
+              .x = UntypedNumericValue::number((Float)parameters),
               .y = One,
               .z = One});
     } else if (operation == "scaleY") {
@@ -1061,7 +1057,7 @@ inline void parseProcessedTransform(
           TransformOperation{
               .type = TransformOperationType::Scale,
               .x = One,
-              .y = ValueUnit((Float)parameters, UnitType::Point),
+              .y = UntypedNumericValue::number((Float)parameters),
               .z = One});
     } else if (operation == "scaleZ") {
       if (!parameters.hasType<Float>()) {
@@ -1074,7 +1070,7 @@ inline void parseProcessedTransform(
               .type = TransformOperationType::Scale,
               .x = One,
               .y = One,
-              .z = ValueUnit((Float)parameters, UnitType::Point)});
+              .z = UntypedNumericValue::number((Float)parameters)});
     } else if (operation == "translate") {
       if (!parameters.hasType<std::vector<RawValue>>()) {
         result = {};
@@ -1087,13 +1083,13 @@ inline void parseProcessedTransform(
         return;
       }
 
-      auto valueX = toValueUnit(numbers[0]);
+      auto valueX = toNumericValue(numbers[0]);
       if (!valueX) {
         result = {};
         return;
       }
 
-      auto valueY = toValueUnit(numbers[1]);
+      auto valueY = toNumericValue(numbers[1]);
       if (!valueY) {
         result = {};
         return;
@@ -1104,9 +1100,9 @@ inline void parseProcessedTransform(
               .type = TransformOperationType::Translate,
               .x = valueX,
               .y = valueY,
-              .z = Zero});
+              .z = ZeroLength});
     } else if (operation == "translateX") {
-      auto valueX = toValueUnit(parameters);
+      auto valueX = toNumericValue(parameters);
       if (!valueX) {
         result = {};
         return;
@@ -1116,10 +1112,10 @@ inline void parseProcessedTransform(
           TransformOperation{
               .type = TransformOperationType::Translate,
               .x = valueX,
-              .y = Zero,
-              .z = Zero});
+              .y = ZeroLength,
+              .z = ZeroLength});
     } else if (operation == "translateY") {
-      auto valueY = toValueUnit(parameters);
+      auto valueY = toNumericValue(parameters);
       if (!valueY) {
         result = {};
         return;
@@ -1128,9 +1124,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Translate,
-              .x = Zero,
+              .x = ZeroLength,
               .y = valueY,
-              .z = Zero});
+              .z = ZeroLength});
     } else if (operation == "skewX") {
       auto radians = toRadians(parameters);
       if (!radians.has_value()) {
@@ -1141,9 +1137,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Skew,
-              .x = ValueUnit(*radians, UnitType::Point),
-              .y = Zero,
-              .z = Zero});
+              .x = UntypedNumericValue::number(*radians),
+              .y = ZeroNumber,
+              .z = ZeroNumber});
     } else if (operation == "skewY") {
       auto radians = toRadians(parameters);
       if (!radians.has_value()) {
@@ -1154,9 +1150,9 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Skew,
-              .x = Zero,
-              .y = ValueUnit(*radians, UnitType::Point),
-              .z = Zero});
+              .x = ZeroNumber,
+              .y = UntypedNumericValue::number(*radians),
+              .z = ZeroNumber});
     }
   }
 
@@ -1251,7 +1247,7 @@ inline void parseProcessedTransformOrigin(
   TransformOrigin transformOrigin;
 
   for (size_t i = 0; i < 2; i++) {
-    auto origin = toValueUnit(origins[i]);
+    auto origin = toNumericValue(origins[i]);
     if (!origin) {
       result = {};
       return;
@@ -1281,8 +1277,8 @@ inline void parseUnprocessedTransformOriginString(
   const auto& origin = std::get<CSSTransformOrigin>(cssOrigin);
   TransformOrigin transformOrigin;
 
-  auto x = cssLengthPercentageToValueUnit(origin.x);
-  auto y = cssLengthPercentageToValueUnit(origin.y);
+  auto x = cssLengthPercentageToNumericValue(origin.x);
+  auto y = cssLengthPercentageToNumericValue(origin.y);
   if (!x || !y) {
     result = {};
     return;
@@ -1700,9 +1696,9 @@ inline void fromRawValue(
             (std::string)(xIt->second) == "auto") {
           sizeLengthPercentage.x = std::monostate{};
         } else {
-          auto valueUnit = toValueUnit(xIt->second);
-          if (valueUnit) {
-            sizeLengthPercentage.x = valueUnit;
+          auto numericValue = toNumericValue(xIt->second);
+          if (numericValue) {
+            sizeLengthPercentage.x = numericValue;
           }
         }
       }
@@ -1713,9 +1709,9 @@ inline void fromRawValue(
             (std::string)(yIt->second) == "auto") {
           sizeLengthPercentage.y = std::monostate{};
         } else {
-          auto valueUnit = toValueUnit(yIt->second);
-          if (valueUnit) {
-            sizeLengthPercentage.y = valueUnit;
+          auto numericValue = toNumericValue(yIt->second);
+          if (numericValue) {
+            sizeLengthPercentage.y = numericValue;
           }
         }
       }
@@ -1750,33 +1746,33 @@ inline void fromRawValue(
 
       auto topIt = positionMap.find("top");
       if (topIt != positionMap.end()) {
-        auto valueUnit = toValueUnit(topIt->second);
-        if (valueUnit) {
-          backgroundPosition.top = valueUnit;
+        auto numericValue = toNumericValue(topIt->second);
+        if (numericValue) {
+          backgroundPosition.top = numericValue;
         }
       }
 
       auto bottomIt = positionMap.find("bottom");
       if (bottomIt != positionMap.end()) {
-        auto valueUnit = toValueUnit(bottomIt->second);
-        if (valueUnit) {
-          backgroundPosition.bottom = valueUnit;
+        auto numericValue = toNumericValue(bottomIt->second);
+        if (numericValue) {
+          backgroundPosition.bottom = numericValue;
         }
       }
 
       auto leftIt = positionMap.find("left");
       if (leftIt != positionMap.end()) {
-        auto valueUnit = toValueUnit(leftIt->second);
-        if (valueUnit) {
-          backgroundPosition.left = valueUnit;
+        auto numericValue = toNumericValue(leftIt->second);
+        if (numericValue) {
+          backgroundPosition.left = numericValue;
         }
       }
 
       auto rightIt = positionMap.find("right");
       if (rightIt != positionMap.end()) {
-        auto valueUnit = toValueUnit(rightIt->second);
-        if (valueUnit) {
-          backgroundPosition.right = valueUnit;
+        auto numericValue = toNumericValue(rightIt->second);
+        if (numericValue) {
+          backgroundPosition.right = numericValue;
         }
       }
 
@@ -1987,56 +1983,61 @@ inline std::string toString(const Transform& transform) {
 
     switch (operation.type) {
       case TransformOperationType::Perspective: {
-        result += "{\"perspective\": " + toString(operation.x.value) + "}";
+        result += "{\"perspective\": " + toString(operation.x.asFloat()) + "}";
         break;
       }
       case TransformOperationType::Rotate: {
-        if (operation.x.value != 0 && operation.y.value == 0 &&
-            operation.z.value == 0) {
-          result += R"({"rotateX": ")" + toString(operation.x.value) + "rad\"}";
+        if (operation.x.asFloat() != 0 && operation.y.asFloat() == 0 &&
+            operation.z.asFloat() == 0) {
+          result +=
+              R"({"rotateX": ")" + toString(operation.x.asFloat()) + "rad\"}";
         } else if (
-            operation.x.value == 0 && operation.y.value != 0 &&
-            operation.z.value == 0) {
-          result += R"({"rotateY": ")" + toString(operation.y.value) + "rad\"}";
+            operation.x.asFloat() == 0 && operation.y.asFloat() != 0 &&
+            operation.z.asFloat() == 0) {
+          result +=
+              R"({"rotateY": ")" + toString(operation.y.asFloat()) + "rad\"}";
         } else if (
-            operation.x.value == 0 && operation.y.value == 0 &&
-            operation.z.value != 0) {
-          result += R"({"rotateZ": ")" + toString(operation.z.value) + "rad\"}";
+            operation.x.asFloat() == 0 && operation.y.asFloat() == 0 &&
+            operation.z.asFloat() != 0) {
+          result +=
+              R"({"rotateZ": ")" + toString(operation.z.asFloat()) + "rad\"}";
         }
         break;
       }
       case TransformOperationType::Scale: {
-        if (operation.x.value == operation.y.value &&
-            operation.x.value == operation.z.value) {
-          result += "{\"scale\": " + toString(operation.x.value) + "}";
-        } else if (operation.y.value == 1 && operation.z.value == 1) {
-          result += "{\"scaleX\": " + toString(operation.x.value) + "}";
-        } else if (operation.x.value == 1 && operation.z.value == 1) {
-          result += "{\"scaleY\": " + toString(operation.y.value) + "}";
-        } else if (operation.x.value == 1 && operation.y.value == 1) {
-          result += "{\"scaleZ\": " + toString(operation.z.value) + "}";
+        if (operation.x.asFloat() == operation.y.asFloat() &&
+            operation.x.asFloat() == operation.z.asFloat()) {
+          result += "{\"scale\": " + toString(operation.x.asFloat()) + "}";
+        } else if (operation.y.asFloat() == 1 && operation.z.asFloat() == 1) {
+          result += "{\"scaleX\": " + toString(operation.x.asFloat()) + "}";
+        } else if (operation.x.asFloat() == 1 && operation.z.asFloat() == 1) {
+          result += "{\"scaleY\": " + toString(operation.y.asFloat()) + "}";
+        } else if (operation.x.asFloat() == 1 && operation.y.asFloat() == 1) {
+          result += "{\"scaleZ\": " + toString(operation.z.asFloat()) + "}";
         }
         break;
       }
       case TransformOperationType::Translate: {
-        if (operation.x.value != 0 && operation.y.value != 0 &&
-            operation.z.value == 0) {
+        if (operation.x.asFloat() != 0 && operation.y.asFloat() != 0 &&
+            operation.z.asFloat() == 0) {
           result += "{\"translate\": [";
-          result +=
-              toString(operation.x.value) + ", " + toString(operation.y.value);
+          result += toString(operation.x.asFloat()) + ", " +
+              toString(operation.y.asFloat());
           result += "]}";
-        } else if (operation.x.value != 0 && operation.y.value == 0) {
-          result += "{\"translateX\": " + toString(operation.x.value) + "}";
-        } else if (operation.x.value == 0 && operation.y.value != 0) {
-          result += "{\"translateY\": " + toString(operation.y.value) + "}";
+        } else if (operation.x.asFloat() != 0 && operation.y.asFloat() == 0) {
+          result += "{\"translateX\": " + toString(operation.x.asFloat()) + "}";
+        } else if (operation.x.asFloat() == 0 && operation.y.asFloat() != 0) {
+          result += "{\"translateY\": " + toString(operation.y.asFloat()) + "}";
         }
         break;
       }
       case TransformOperationType::Skew: {
-        if (operation.x.value != 0 && operation.y.value == 0) {
-          result += R"({"skewX": ")" + toString(operation.x.value) + "rad\"}";
-        } else if (operation.x.value == 0 && operation.y.value != 0) {
-          result += R"({"skewY": ")" + toString(operation.y.value) + "rad\"}";
+        if (operation.x.asFloat() != 0 && operation.y.asFloat() == 0) {
+          result +=
+              R"({"skewX": ")" + toString(operation.x.asFloat()) + "rad\"}";
+        } else if (operation.x.asFloat() == 0 && operation.y.asFloat() != 0) {
+          result +=
+              R"({"skewY": ")" + toString(operation.y.asFloat()) + "rad\"}";
         }
         break;
       }

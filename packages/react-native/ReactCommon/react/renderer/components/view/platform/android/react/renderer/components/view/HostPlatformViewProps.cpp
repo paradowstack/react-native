@@ -251,14 +251,14 @@ static void updateBorderWidthProps(
 static void updateBorderRadiusPropValue(
     folly::dynamic& result,
     const std::string& propName,
-    const std::optional<ValueUnit>& newValue,
-    const std::optional<ValueUnit>& oldValue) {
+    const std::optional<LengthPercentageValue>& newValue,
+    const std::optional<LengthPercentageValue>& oldValue) {
   if (newValue != oldValue) {
     if (newValue.has_value()) {
-      if (newValue.value().unit == UnitType::Percent) {
-        result[propName] = std::to_string(newValue.value().value) + "%";
+      if (newValue.value().isPercentage()) {
+        result[propName] = std::to_string(newValue.value().asFloat()) + "%";
       } else {
-        result[propName] = newValue.value().value;
+        result[propName] = newValue.value().asFloat();
       }
     } else {
       result[propName] = -1;
@@ -532,7 +532,7 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
   }
 
   if (opacity != oldProps->opacity) {
-    result["opacity"] = opacity;
+    result["opacity"] = opacity.toDynamic();
   }
 
   if (backgroundColor != oldProps->backgroundColor) {

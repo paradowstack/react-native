@@ -14,6 +14,7 @@
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/utils/hash_combine.h>
 
 namespace facebook::react {
@@ -70,14 +71,17 @@ class ParagraphAttributes : public DebugStringConvertible,
    * In case of font size adjustment enabled, defines minimum and maximum
    * font sizes.
    */
-  FloatDynamic minimumFontSize{std::numeric_limits<Float>::quiet_NaN()};
-  FloatDynamic maximumFontSize{std::numeric_limits<Float>::quiet_NaN()};
+  LengthValue minimumFontSize{
+      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
+  LengthValue maximumFontSize{
+      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
 
   /*
    * Specifies the smallest possible scale a font can reach when
    * adjustsFontSizeToFit is enabled. (values 0.01-1.0).
    */
-  FloatDynamic minimumFontScale{std::numeric_limits<Float>::quiet_NaN()};
+  NumberValue minimumFontScale{
+      NumberValue::number(std::numeric_limits<Float>::quiet_NaN())};
 
   /*
    * The vertical alignment of the text, causing the glyphs to be vertically

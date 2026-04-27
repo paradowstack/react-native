@@ -8,7 +8,6 @@
 #import "RCTRadialGradient.h"
 #import <React/RCTAnimationUtils.h>
 #import <React/RCTConversions.h>
-#include <react/renderer/graphics/ValueUnit.h>
 #import <react/utils/FloatComparison.h>
 #include <cmath>
 #import "RCTGradientUtils.h"

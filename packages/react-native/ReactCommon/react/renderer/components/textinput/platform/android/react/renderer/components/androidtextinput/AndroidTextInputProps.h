@@ -17,6 +17,7 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/graphics/Color.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/imagemanager/primitives.h>
 #include <unordered_map>
 
@@ -28,15 +29,15 @@ struct AndroidTextInputTextShadowOffsetStruct {
 };
 
 inline static bool operator==(
-    const AndroidTextInputTextShadowOffsetStruct &lhs,
-    const AndroidTextInputTextShadowOffsetStruct &rhs)
-{
+    const AndroidTextInputTextShadowOffsetStruct& lhs,
+    const AndroidTextInputTextShadowOffsetStruct& rhs) {
   return lhs.width == rhs.width && lhs.height == rhs.height;
 }
 
-static inline void
-fromRawValue(const PropsParserContext &context, const RawValue &value, AndroidTextInputTextShadowOffsetStruct &result)
-{
+static inline void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    AndroidTextInputTextShadowOffsetStruct& result) {
   auto map = (std::unordered_map<std::string, RawValue>)value;
 
   auto width = map.find("width");
@@ -49,13 +50,13 @@ fromRawValue(const PropsParserContext &context, const RawValue &value, AndroidTe
   }
 }
 
-static inline std::string toString(const AndroidTextInputTextShadowOffsetStruct &value)
-{
+static inline std::string toString(
+    const AndroidTextInputTextShadowOffsetStruct& value) {
   return "[Object AndroidTextInputTextShadowOffsetStruct]";
 }
 
-inline folly::dynamic toDynamic(const AndroidTextInputTextShadowOffsetStruct &value)
-{
+inline folly::dynamic toDynamic(
+    const AndroidTextInputTextShadowOffsetStruct& value) {
   folly::dynamic dynamicValue = folly::dynamic::object();
   dynamicValue["width"] = value.width;
   dynamicValue["height"] = value.height;
@@ -66,12 +67,15 @@ class AndroidTextInputProps final : public BaseTextInputProps {
  public:
   AndroidTextInputProps() = default;
   AndroidTextInputProps(
-      const PropsParserContext &context,
-      const AndroidTextInputProps &sourceProps,
-      const RawProps &rawProps);
+      const PropsParserContext& context,
+      const AndroidTextInputProps& sourceProps,
+      const RawProps& rawProps);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
   folly::dynamic getDynamic() const;
 
@@ -88,7 +92,7 @@ class AndroidTextInputProps final : public BaseTextInputProps {
   bool showSoftInputOnFocus{false};
   bool autoCorrect{false};
   bool allowFontScaling{false};
-  ValueUnit maxFontSizeMultiplier{0.0f, UnitType::Point};
+  NumberValue maxFontSizeMultiplier{NumberValue::number(0.0f)};
   std::string keyboardType{};
   std::string returnKeyType{};
   bool secureTextEntry{false};
@@ -97,15 +101,15 @@ class AndroidTextInputProps final : public BaseTextInputProps {
   bool caretHidden{false};
   bool contextMenuHidden{false};
   SharedColor textShadowColor{};
-  ValueUnit textShadowRadius{0.0f, UnitType::Point};
+  LengthValue textShadowRadius{LengthValue::length(0.0f)};
   std::string textDecorationLine{};
   std::string fontStyle{};
   AndroidTextInputTextShadowOffsetStruct textShadowOffset{};
-  ValueUnit lineHeight{0.0f, UnitType::Point};
+  LengthValue lineHeight{LengthValue::length(0.0f)};
   std::string textTransform{};
   SharedColor color{0};
-  ValueUnit letterSpacing{0.0f, UnitType::Point};
-  ValueUnit fontSize{0.0f, UnitType::Point};
+  LengthValue letterSpacing{LengthValue::length(0.0f)};
+  LengthValue fontSize{LengthValue::length(0.0f)};
   std::string textAlign{};
   bool includeFontPadding{false};
   std::string fontWeight{};
@@ -132,14 +136,16 @@ class AndroidTextInputProps final : public BaseTextInputProps {
 
   ComponentName getDiffPropsImplementationTarget() const override;
   folly::dynamic getDiffProps(
-      const Props *prevProps,
-      const LayoutMetrics *layoutMetrics = nullptr,
-      const LayoutContext *layoutContext = nullptr) const override;
+      const Props* prevProps,
+      const LayoutMetrics* layoutMetrics = nullptr,
+      const LayoutContext* layoutContext = nullptr) const override;
 
-  void resolveProperties(const DynamicResolver &resolver) override;
-  void collectLiveResolvableIds(std::unordered_set<DynamicPropertyId> &ids) const override;
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 
-  folly::dynamic getResolvedProps(const DynamicResolver &resolver) const override;
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
 };
 
 } // namespace facebook::react

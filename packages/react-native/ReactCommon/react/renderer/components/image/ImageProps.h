@@ -10,6 +10,7 @@
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/graphics/Color.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/imagemanager/primitives.h>
 
 namespace facebook::react {
@@ -18,10 +19,16 @@ namespace facebook::react {
 class ImageProps final : public ViewProps {
  public:
   ImageProps() = default;
-  ImageProps(const PropsParserContext &context, const ImageProps &sourceProps, const RawProps &rawProps);
+  ImageProps(
+      const PropsParserContext& context,
+      const ImageProps& sourceProps,
+      const RawProps& rawProps);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
 #pragma mark - Props
 
@@ -29,23 +36,23 @@ class ImageProps final : public ViewProps {
   ImageSource defaultSource{};
   ImageSource loadingIndicatorSource{};
   ImageResizeMode resizeMode{ImageResizeMode::Stretch};
-  FloatDynamic blurRadius{};
+  LengthValue blurRadius{LengthValue::length(0.0f)};
   EdgeInsets capInsets{};
   SharedColor tintColor{};
   std::string internal_analyticTag{};
   std::string resizeMethod{"auto"};
-  FloatDynamic resizeMultiplier{1.f};
+  NumberValue resizeMultiplier{NumberValue::number(1.0f)};
   bool shouldNotifyLoadEvents{};
   SharedColor overlayColor{};
-  FloatDynamic fadeDuration{300.f};
+  NumberValue fadeDuration{NumberValue::number(300.0f)};
   bool progressiveRenderingEnabled{};
 
 #ifdef RN_SERIALIZABLE_STATE
   ComponentName getDiffPropsImplementationTarget() const override;
   folly::dynamic getDiffProps(
-      const Props *prevProps,
-      const LayoutMetrics *layoutMetrics = nullptr,
-      const LayoutContext *layoutContext = nullptr) const override;
+      const Props* prevProps,
+      const LayoutMetrics* layoutMetrics = nullptr,
+      const LayoutContext* layoutContext = nullptr) const override;
 #endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
@@ -55,7 +62,7 @@ class ImageProps final : public ViewProps {
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
       std::unordered_set<DynamicPropertyId>& ids) const override;
-  
+
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic getResolvedProps(
       const DynamicResolver& resolver) const override;

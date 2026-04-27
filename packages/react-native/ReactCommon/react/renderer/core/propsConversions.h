@@ -10,6 +10,7 @@
 #include <optional>
 
 #include <react/renderer/components/view/DynamicPropertiesMap.h>
+#include <react/renderer/components/view/NumericValueConversions.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
@@ -190,34 +191,6 @@ inline void fromRawValue(
   }
 }
 
-template <>
-inline void fromRawValue(
-    const PropsParserContext& context,
-    const RawValue& value,
-    FloatDynamic& result) {
-  if (value.hasType<Float>()) {
-    result = FloatDynamic{(Float)value};
-    return;
-  }
-  if (!value.hasType<std::string>()) {
-    return;
-  }
-
-  auto calc = parseCSSProperty<CSSCalc>((std::string)value);
-  if (std::holds_alternative<CSSCalc>(calc)) {
-    auto cssCalc = std::get<CSSCalc>(calc);
-    auto mapIt =
-        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-            DynamicPropertiesMapKey);
-    if (mapIt) {
-      auto& map = *mapIt;
-      auto index = map->allocateId();
-      map->insert_or_assign(index, cssCalc);
-      result = FloatDynamic{index};
-    }
-  }
-}
-
 template <typename T, typename U = T>
 T convertRawProp(
     const PropsParserContext& context,
@@ -246,6 +219,36 @@ T convertRawProp(
     // In case of errors, log the error and fall back to the default
     RawPropsKey key{.prefix = namePrefix, .name = name, .suffix = nameSuffix};
     // TODO: report this using ErrorUtils so it's more visible to the user
+    LOG(ERROR) << "Error while converting prop '"
+               << static_cast<std::string>(key) << "': " << e.what();
+    return defaultValue;
+  }
+}
+
+inline UntypedNumericValue convertRawProp(
+    const PropsParserContext& context,
+    const RawProps& rawProps,
+    const char* name,
+    const UntypedNumericValue& sourceValue,
+    const UntypedNumericValue& defaultValue,
+    const char* namePrefix = nullptr,
+    const char* nameSuffix = nullptr) {
+  const auto* rawValue = rawProps.at(name, namePrefix, nameSuffix);
+  if (rawValue == nullptr) [[likely]] {
+    return sourceValue;
+  }
+
+  if (!rawValue->hasValue()) [[unlikely]] {
+    return defaultValue;
+  }
+
+  try {
+    UntypedNumericValue result =
+        !sourceValue.isUndefined() ? sourceValue : defaultValue;
+    fromRawValue(context, *rawValue, result);
+    return result;
+  } catch (const std::exception& e) {
+    RawPropsKey key{.prefix = namePrefix, .name = name, .suffix = nameSuffix};
     LOG(ERROR) << "Error while converting prop '"
                << static_cast<std::string>(key) << "': " << e.what();
     return defaultValue;

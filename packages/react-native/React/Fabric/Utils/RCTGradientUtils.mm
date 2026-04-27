@@ -143,13 +143,13 @@ CGSize calculateMultipliers(CGSize bounds)
 
 } // namespace
 
-static std::optional<Float> resolveColorStopPosition(ValueUnit position, CGFloat gradientLineLength)
+static std::optional<Float> resolveColorStopPosition(UntypedNumericValue position, CGFloat gradientLineLength)
 {
-  if (position.unit == UnitType::Point) {
+  if (position.isLength()) {
     return position.resolve(0.0f) / gradientLineLength;
   }
 
-  if (position.unit == UnitType::Percent) {
+  if (position.isPercentage()) {
     return position.resolve(1.0f);
   }
 

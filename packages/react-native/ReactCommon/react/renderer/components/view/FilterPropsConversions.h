@@ -11,6 +11,7 @@
 #include <react/debug/react_native_expect.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/CSSConversions.h>
+#include <react/renderer/components/view/NumericValueConversions.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
 #include <react/renderer/css/CSSFilter.h>
@@ -22,38 +23,11 @@
 
 namespace facebook::react {
 
-inline std::optional<FloatDynamic> parseFilterFloatDynamic(
+inline std::optional<UntypedNumericValue> parseFilterNumericValue(
     const PropsParserContext& context,
-    const RawValue& value) {
-  if (value.hasType<Float>()) {
-    return FloatDynamic{(Float)value};
-  }
-
-  if (!value.hasType<std::string>()) {
-    return {};
-  }
-
-  auto len = parseCSSProperty<CSSCalc, CSSLength>((std::string)value);
-  if (std::holds_alternative<CSSCalc>(len)) {
-    auto cssCalc = std::get<CSSCalc>(len);
-    auto mapIt =
-        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-            DynamicPropertiesMapKey);
-    if (mapIt) {
-      auto& map = *mapIt;
-      auto index = map->allocateId();
-      map->insert_or_assign(index, cssCalc);
-      return FloatDynamic{index};
-    }
-  }
-  if (std::holds_alternative<CSSLength>(len)) {
-    auto cssLen = std::get<CSSLength>(len);
-    if (cssLen.unit == CSSLengthUnit::Px) {
-      return FloatDynamic{(Float)cssLen.value};
-    }
-  }
-
-  return {};
+    const RawValue& value,
+    NumericValueDomain domain) {
+  return parseNumericValue(context, value, domain);
 }
 
 inline void parseProcessedFilter(
@@ -104,7 +78,8 @@ inline void parseProcessedFilter(
         return;
       }
 
-      auto parsedOffsetX = parseFilterFloatDynamic(context, offsetX->second);
+      auto parsedOffsetX = parseFilterNumericValue(
+          context, offsetX->second, NumericValueDomain::Length);
       if (!parsedOffsetX.has_value()) {
         result = {};
         return;
@@ -117,7 +92,8 @@ inline void parseProcessedFilter(
         result = {};
         return;
       }
-      auto parsedOffsetY = parseFilterFloatDynamic(context, offsetY->second);
+      auto parsedOffsetY = parseFilterNumericValue(
+          context, offsetY->second, NumericValueDomain::Length);
       if (!parsedOffsetY.has_value()) {
         result = {};
         return;
@@ -126,8 +102,8 @@ inline void parseProcessedFilter(
 
       auto standardDeviation = rawDropShadow.find("standardDeviation");
       if (standardDeviation != rawDropShadow.end()) {
-        auto parsedStandardDeviation =
-            parseFilterFloatDynamic(context, standardDeviation->second);
+        auto parsedStandardDeviation = parseFilterNumericValue(
+            context, standardDeviation->second, NumericValueDomain::Length);
         if (!parsedStandardDeviation.has_value()) {
           result = {};
           return;
@@ -146,8 +122,11 @@ inline void parseProcessedFilter(
 
       filterFunction.parameters = dropShadowParams;
     } else {
-      auto parsedAmount =
-          parseFilterFloatDynamic(context, rawFilterFunction.begin()->second);
+      auto domain = filterFunction.type == FilterType::Blur
+          ? NumericValueDomain::Length
+          : NumericValueDomain::Number;
+      auto parsedAmount = parseFilterNumericValue(
+          context, rawFilterFunction.begin()->second, domain);
       if (!parsedAmount.has_value()) {
         result = {};
         return;
@@ -212,7 +191,7 @@ inline std::optional<FilterFunction> fromCSSFilter(
           }
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = FloatDynamic{filter.amount.value},
+              .parameters = UntypedNumericValue::length(filter.amount.value),
           };
         }
 
@@ -227,10 +206,10 @@ inline std::optional<FilterFunction> fromCSSFilter(
           return FilterFunction{
               .type = FilterType::DropShadow,
               .parameters = DropShadowParams{
-                  .offsetX = FloatDynamic{filter.offsetX.value},
-                  .offsetY = FloatDynamic{filter.offsetY.value},
+                  .offsetX = LengthValue::length(filter.offsetX.value),
+                  .offsetY = LengthValue::length(filter.offsetY.value),
                   .standardDeviation =
-                      FloatDynamic{filter.standardDeviation.value},
+                      LengthValue::length(filter.standardDeviation.value),
                   .color = fromCSSColor(filter.color),
               }};
         }
@@ -245,14 +224,14 @@ inline std::optional<FilterFunction> fromCSSFilter(
             std::is_same_v<FilterT, CSSSepiaFilter>) {
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = FloatDynamic{filter.amount},
+              .parameters = UntypedNumericValue::number(filter.amount),
           };
         }
 
         if constexpr (std::is_same_v<FilterT, CSSHueRotateFilter>) {
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = FloatDynamic{filter.degrees},
+              .parameters = UntypedNumericValue::number(filter.degrees),
           };
         }
       },
@@ -303,7 +282,8 @@ inline std::optional<FilterFunction> parseDropShadow(
     return {};
   }
 
-  if (auto parsedOffsetX = parseFilterFloatDynamic(context, offsetX->second)) {
+  if (auto parsedOffsetX = parseFilterNumericValue(
+          context, offsetX->second, NumericValueDomain::Length)) {
     dropShadowParams.offsetX = *parsedOffsetX;
   } else {
     return {};
@@ -314,7 +294,8 @@ inline std::optional<FilterFunction> parseDropShadow(
     return {};
   }
 
-  if (auto parsedOffsetY = parseFilterFloatDynamic(context, offsetY->second)) {
+  if (auto parsedOffsetY = parseFilterNumericValue(
+          context, offsetY->second, NumericValueDomain::Length)) {
     dropShadowParams.offsetY = *parsedOffsetY;
   } else {
     return {};
@@ -322,8 +303,8 @@ inline std::optional<FilterFunction> parseDropShadow(
 
   auto standardDeviation = rawDropShadow.find("standardDeviation");
   if (standardDeviation != rawDropShadow.end()) {
-    if (auto parsedStandardDeviation =
-            parseFilterFloatDynamic(context, standardDeviation->second)) {
+    if (auto parsedStandardDeviation = parseFilterNumericValue(
+            context, standardDeviation->second, NumericValueDomain::Length)) {
       if (!parsedStandardDeviation->isDynamic() &&
           parsedStandardDeviation->asFloat() < 0.0f) {
         return {};
@@ -365,8 +346,8 @@ inline std::optional<FilterFunction> parseFilterRawValue(
   if (filterKey == "drop-shadow") {
     return parseDropShadow(context, rawFilter.begin()->second);
   } else if (filterKey == "blur") {
-    if (auto length =
-            parseFilterFloatDynamic(context, rawFilter.begin()->second)) {
+    if (auto length = parseFilterNumericValue(
+            context, rawFilter.begin()->second, NumericValueDomain::Length)) {
       if (!length->isDynamic() && length->asFloat() < 0.0f) {
         return {};
       }
@@ -376,7 +357,8 @@ inline std::optional<FilterFunction> parseFilterRawValue(
   } else if (filterKey == "hue-rotate") {
     if (auto angle = coerceAngle(rawFilter.begin()->second)) {
       return FilterFunction{
-          .type = FilterType::HueRotate, .parameters = FloatDynamic{*angle}};
+          .type = FilterType::HueRotate,
+          .parameters = UntypedNumericValue::number(*angle)};
     }
     return {};
   } else {
@@ -389,7 +371,8 @@ inline std::optional<FilterFunction> parseFilterRawValue(
         return {};
       }
       return FilterFunction{
-          .type = *filterType, .parameters = FloatDynamic{*amount}};
+          .type = *filterType,
+          .parameters = UntypedNumericValue::number(*amount)};
     }
     return {};
   }

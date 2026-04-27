@@ -10,9 +10,9 @@
 #include <react/renderer/components/view/DynamicResolveContext.h>
 #include <react/renderer/css/CSSCalc.h>
 #include <react/renderer/graphics/Color.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/RectangleCorners.h>
 #include <react/renderer/graphics/RectangleEdges.h>
-#include <react/renderer/graphics/ValueUnit.h>
 #include <algorithm>
 
 #include <array>
@@ -240,7 +240,7 @@ using CascadedBorderWidths = CascadedRectangleEdges<Float>;
 using CascadedBorderCurves = CascadedRectangleCorners<BorderCurve>;
 using CascadedBorderStyles = CascadedRectangleEdges<BorderStyle>;
 using CascadedBorderColors = CascadedRectangleEdges<SharedColor>;
-using CascadedBorderRadii = CascadedRectangleCorners<ValueUnit>;
+using CascadedBorderRadii = CascadedRectangleCorners<LengthPercentageValue>;
 
 struct BorderMetrics {
   BorderColors borderColors{};
@@ -252,88 +252,4 @@ struct BorderMetrics {
   bool operator==(const BorderMetrics& rhs) const = default;
 };
 
-using FloatDynamicId = uint32_t;
-
-enum class FloatDynamicType : bool {
-  Float,
-  Dynamic,
-};
-
-struct FloatDynamic {
-  Float value{0.0f};
-  FloatDynamicType type{FloatDynamicType::Float};
-
-  constexpr FloatDynamic() = default;
-  constexpr explicit FloatDynamic(Float val)
-      : value(val), type(FloatDynamicType::Float) {}
-  constexpr explicit FloatDynamic(FloatDynamicId calcId)
-      : value(static_cast<Float>(calcId)), type(FloatDynamicType::Dynamic) {}
-  constexpr FloatDynamic& operator=(Float val) {
-    value = val;
-    type = FloatDynamicType::Float;
-    return *this;
-  }
-
-  constexpr bool isDynamic() const {
-    return type == FloatDynamicType::Dynamic;
-  }
-  constexpr Float asFloat() const {
-    return value;
-  }
-  constexpr FloatDynamicId asDynamicId() const {
-    return static_cast<FloatDynamicId>(value);
-  }
-
-#ifdef RN_SERIALIZABLE_STATE
-  operator folly::dynamic() const {
-    return value;
-  }
-#endif
-
-  constexpr operator Float() const {
-    if (isDynamic()) {
-      throw std::runtime_error(
-          "Cannot convert dynamic Float to Float directly");
-    }
-    return asFloat();
-  }
-
-  constexpr bool operator!=(float v) const {
-    return !isDynamic() && this->value != v;
-  }
-
-  constexpr bool operator!=(double v) const {
-    return !isDynamic() && this->value != v;
-  }
-
-  constexpr bool operator==(const FloatDynamic& rhs) const {
-    if (type != rhs.type) {
-      return false;
-    }
-    if (isDynamic()) {
-      return false;
-    }
-    return value == rhs.value;
-  }
-};
-
-inline std::string toString(FloatDynamic value) {
-  if (value.isDynamic()) {
-    return "calc(id=" + std::to_string(value.asDynamicId()) + ")";
-  }
-  return std::to_string(value.asFloat());
-}
-
 } // namespace facebook::react
-
-namespace std {
-template <>
-struct hash<facebook::react::FloatDynamic> {
-  size_t operator()(const facebook::react::FloatDynamic& value) const {
-    if (value.isDynamic()) {
-      return std::hash<uint32_t>()(value.asDynamicId());
-    }
-    return std::hash<float>()(value.asFloat());
-  }
-};
-} // namespace std

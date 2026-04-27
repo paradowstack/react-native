@@ -337,8 +337,8 @@ static void RCTPerformMountInstructions(
       componentView.layer.transform = newTransform;
     }
   }
-  if (updatesOpacity && componentView.layer.opacity != (float)newViewProps.opacity) {
-    componentView.layer.opacity = newViewProps.opacity;
+	if (updatesOpacity && componentView.layer.opacity != (float)newViewProps.opacity.asFloat()) {
+		componentView.layer.opacity = newViewProps.opacity.asFloat();
   }
 
   [componentView finalizeUpdates:RNComponentViewUpdateMaskProps];
