@@ -33,7 +33,7 @@ inline bool floatEquality(
   }
 
   if (a.isDynamic()) {
-    return a.asDynamicId() == b.asDynamicId() && a.domain() == b.domain();
+    return a.asDynamicId() == b.asDynamicId();
   }
 
   if (a.isUndefined()) {

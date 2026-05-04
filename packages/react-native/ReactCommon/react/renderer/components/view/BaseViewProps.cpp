@@ -9,6 +9,7 @@
 
 #include <folly/json.h>
 #include <algorithm>
+#include <cmath>
 
 #include <glog/logging.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
@@ -26,6 +27,37 @@
 namespace facebook::react {
 
 namespace {
+
+// Computes the CSS gradient-line length for a linear gradient:
+// L = |W * sin(θ)| + |H * cos(θ)|
+// where θ is the gradient angle in degrees (0 = to top, 90 = to right).
+// For GradientKeyword directions the equivalent angle depends on frame size.
+static float linearGradientLineLength(
+    const GradientDirection& direction,
+    float width,
+    float height) {
+  float angleDeg = 0.0f;
+  if (std::holds_alternative<Float>(direction)) {
+    angleDeg = std::get<Float>(direction);
+  } else {
+    switch (std::get<GradientKeyword>(direction)) {
+      case GradientKeyword::ToTopRight:
+        angleDeg = 90.0f - std::atan2(width, height) * 180.0f / M_PI;
+        break;
+      case GradientKeyword::ToBottomRight:
+        angleDeg = std::atan2(width, height) * 180.0f / M_PI + 90.0f;
+        break;
+      case GradientKeyword::ToTopLeft:
+        angleDeg = std::atan2(width, height) * 180.0f / M_PI + 270.0f;
+        break;
+      case GradientKeyword::ToBottomLeft:
+        angleDeg = std::atan2(height, width) * 180.0f / M_PI + 180.0f;
+        break;
+    }
+  }
+  float rad = angleDeg * static_cast<float>(M_PI) / 180.0f;
+  return std::abs(width * std::sin(rad)) + std::abs(height * std::cos(rad));
+}
 
 std::array<float, 3> getTranslateForTransformOrigin(
     float viewWidth,
@@ -559,11 +591,15 @@ CascadedBorderWidths BaseViewProps::getBorderWidths(
     if (borderWidth.isDynamic()) {
       auto callbackId = borderWidth.callbackId();
       if (calcExpressions.contains(callbackId)) {
-        auto& calcExpression = calcExpressions.at(callbackId);
-        return calcExpression.resolve(
-            0.0f,
-            layoutContext.viewportSize.width,
-            layoutContext.viewportSize.height);
+        auto& entry = calcExpressions.at(callbackId);
+        return std::visit(
+            [&](const auto& e) {
+              return std::optional<Float>{e.calc.resolve(
+                  0.0f,
+                  layoutContext.viewportSize.width,
+                  layoutContext.viewportSize.height)};
+            },
+            entry);
       }
     }
     return optionalFloatFromYogaValue(yogaStyle.border(edge));
@@ -627,13 +663,19 @@ BorderMetrics BaseViewProps::resolveBorderMetrics(
 }
 
 Transform BaseViewProps::resolveTransform(
-    const LayoutMetrics& layoutMetrics) const {
-  const auto& frameSize = layoutMetrics.frame.size;
-  return resolveTransform(frameSize, transform, transformOrigin);
+    const LayoutMetrics& layoutMetrics,
+    const LayoutContext& layoutContext) const {
+  return resolveTransform(
+      DynamicResolver{calcExpressions, {layoutMetrics, layoutContext}});
 }
 
 Transform BaseViewProps::resolveTransform(
-    const Size& frameSize,
+    const DynamicResolver& resolver) const {
+  return resolveTransform(resolver, transform, transformOrigin);
+}
+
+Transform BaseViewProps::resolveTransform(
+    const DynamicResolver& resolver,
     const Transform& transform,
     const TransformOrigin& transformOrigin) {
   auto transformMatrix = Transform{};
@@ -645,13 +687,15 @@ Transform BaseViewProps::resolveTransform(
   } else {
     for (const auto& operation : transform.operations) {
       transformMatrix = transformMatrix *
-          Transform::FromTransformOperation(operation, frameSize, transform);
+          Transform::FromTransformOperation(operation, resolver, transform);
     }
   }
 
   if (transformOrigin.isSet()) {
     std::array<float, 3> translateOffsets = getTranslateForTransformOrigin(
-        frameSize.width, frameSize.height, transformOrigin);
+        resolver.context.frameWidth(),
+        resolver.context.frameHeight(),
+        transformOrigin);
     transformMatrix =
         Transform::Translate(
             translateOffsets[0], translateOffsets[1], translateOffsets[2]) *
@@ -705,8 +749,11 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
   }
 
 #ifdef RN_SERIALIZABLE_STATE
+  [[maybe_unused]] auto p1 = folly::toJson(rawProps);
   auto resolved = getResolvedProps(resolver);
+  [[maybe_unused]] auto p2 = folly::toJson(resolved);
   rawProps.update(resolved);
+  [[maybe_unused]] auto p3 = folly::toJson(rawProps);
 #endif
 
   opacity = NumberValue::number(resolver.resolveNumber(opacity));
@@ -714,6 +761,60 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
   outlineWidth = LengthValue::length(resolver.resolveLength(outlineWidth));
   shadowOpacity = NumberValue::number(resolver.resolveNumber(shadowOpacity));
   shadowRadius = LengthValue::length(resolver.resolveLength(shadowRadius));
+
+  // Resolve dynamic calc values in background image gradients.
+  for (auto& bgImage : backgroundImage) {
+    auto resolveColorStops = [&](std::vector<ColorStop>& colorStops,
+                                 float lineLength) {
+      for (auto& stop : colorStops) {
+        if (stop.position.isDynamic() && lineLength != 0.0f) {
+          stop.position =
+              resolver.resolveLengthPercentage(stop.position, lineLength);
+        }
+      }
+    };
+
+    if (auto* linear = std::get_if<LinearGradient>(&bgImage)) {
+      float lineLength = linearGradientLineLength(
+          linear->direction,
+          resolver.context.frameWidth(),
+          resolver.context.frameHeight());
+      resolveColorStops(linear->colorStops, lineLength);
+    } else if (auto* radial = std::get_if<RadialGradient>(&bgImage)) {
+      // For radial gradients, color stop percentages are relative to the
+      // gradient-line length (max radius), which isn't known until render time.
+      // Pass 0 so dynamic calc values are resolved for their px/vw components;
+      // pure-percentage stops stay as percentages and are resolved at render
+      // time.
+      resolveColorStops(radial->colorStops, 0.0f);
+
+      auto& pos = radial->position;
+      if (pos.top.has_value()) {
+        *pos.top = resolver.resolveLengthPercentage(
+            *pos.top, resolver.context.frameHeight());
+      }
+      if (pos.left.has_value()) {
+        *pos.left = resolver.resolveLengthPercentage(
+            *pos.left, resolver.context.frameWidth());
+      }
+      if (pos.right.has_value()) {
+        *pos.right = resolver.resolveLengthPercentage(
+            *pos.right, resolver.context.frameWidth());
+      }
+      if (pos.bottom.has_value()) {
+        *pos.bottom = resolver.resolveLengthPercentage(
+            *pos.bottom, resolver.context.frameHeight());
+      }
+
+      if (auto* dims = std::get_if<RadialGradientSize::Dimensions>(
+              &radial->size.value)) {
+        dims->x = resolver.resolveLengthPercentage(
+            dims->x, resolver.context.frameWidth());
+        dims->y = resolver.resolveLengthPercentage(
+            dims->y, resolver.context.frameHeight());
+      }
+    }
+  }
 
   // Resolve length-like values in box shadows.
   for (auto& shadow : boxShadow) {
@@ -772,14 +873,28 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
             std::get_if<BackgroundSizeLengthPercentage>(&size)) {
       if (auto x = std::get_if<UntypedNumericValue>(&lengthPercentage->x);
           x && x->isDynamic()) {
-        *x = UntypedNumericValue::length(
-            resolver.resolveLengthOrPercentage(*x, 0.0f));
+        *x = UntypedNumericValue::length(resolver.resolveLengthOrPercentage(
+            *x, resolver.context.frameWidth()));
       }
       if (auto y = std::get_if<UntypedNumericValue>(&lengthPercentage->y);
           y && y->isDynamic()) {
-        *y = UntypedNumericValue::length(
-            resolver.resolveLengthOrPercentage(*y, 0.0f));
+        *y = UntypedNumericValue::length(resolver.resolveLengthOrPercentage(
+            *y, resolver.context.frameHeight()));
       }
+    }
+  }
+
+  for (auto& operation : transform.operations) {
+    if (operation.x.isDynamic()) {
+      operation.x =
+          resolver.resolveAny(operation.x, resolver.context.frameWidth());
+    }
+    if (operation.y.isDynamic()) {
+      operation.y =
+          resolver.resolveAny(operation.y, resolver.context.frameHeight());
+    }
+    if (operation.z.isDynamic()) {
+      operation.z = resolver.resolveAny(operation.z, 0.0f);
     }
   }
 
@@ -811,24 +926,25 @@ folly::dynamic BaseViewProps::getResolvedProps(
     props["shadowRadius"] = resolver.toDynamicLength(shadowRadius);
   }
 
-  // Resolve length-like values in box shadows.
-  for (size_t i = 0; i < boxShadow.size(); i++) {
-    auto& shadow = boxShadow[i];
-    auto& shadowEntry = props["boxShadow"][i];
-    if (shadow.offsetX.isDynamic()) {
-      shadowEntry["offsetX"] = resolver.toDynamicLength(shadow.offsetX);
+  if (props.count("boxShadow")) {
+    for (size_t i = 0; i < boxShadow.size(); i++) {
+      auto& shadow = boxShadow[i];
+      auto& shadowEntry = props["boxShadow"][i];
+      if (shadow.offsetX.isDynamic()) {
+        shadowEntry["offsetX"] = resolver.toDynamicLength(shadow.offsetX);
+      }
+      if (shadow.offsetY.isDynamic()) {
+        shadowEntry["offsetY"] = resolver.toDynamicLength(shadow.offsetY);
+      }
+      if (shadow.blurRadius.isDynamic()) {
+        shadowEntry["blurRadius"] = resolver.toDynamicLength(shadow.blurRadius);
+      }
+      if (shadow.spreadDistance.isDynamic()) {
+        shadowEntry["spreadDistance"] =
+            resolver.toDynamicLength(shadow.spreadDistance);
+      }
+      props["boxShadow"][i] = shadowEntry;
     }
-    if (shadow.offsetY.isDynamic()) {
-      shadowEntry["offsetY"] = resolver.toDynamicLength(shadow.offsetY);
-    }
-    if (shadow.blurRadius.isDynamic()) {
-      shadowEntry["blurRadius"] = resolver.toDynamicLength(shadow.blurRadius);
-    }
-    if (shadow.spreadDistance.isDynamic()) {
-      shadowEntry["spreadDistance"] =
-          resolver.toDynamicLength(shadow.spreadDistance);
-    }
-    props["boxShadow"][i] = shadowEntry;
   }
 
   auto findFilterEntry = [&](const std::string& typeKey) -> folly::dynamic* {
@@ -874,6 +990,74 @@ folly::dynamic BaseViewProps::getResolvedProps(
       if (dropShadowParams->standardDeviation.isDynamic()) {
         (*entry)["standardDeviation"] =
             resolver.toDynamicLength(dropShadowParams->standardDeviation);
+      }
+    }
+  }
+
+  if (props.count("experimental_backgroundImage")) {
+    for (size_t i = 0; i < backgroundImage.size(); i++) {
+      auto& bgImage = backgroundImage[i];
+      auto& bgImageEntry = props["experimental_backgroundImage"][i];
+
+      if (const auto* linear = std::get_if<LinearGradient>(&bgImage)) {
+        float lineLength = linearGradientLineLength(
+            linear->direction,
+            resolver.context.frameWidth(),
+            resolver.context.frameHeight());
+
+        for (size_t j = 0; j < linear->colorStops.size(); j++) {
+          const auto& stop = linear->colorStops[j];
+          if (stop.position.isDynamic() && lineLength != 0.0f) {
+            bgImageEntry["colorStops"][j]["position"] =
+                resolver.toDynamicLengthOrPercentage(stop.position, lineLength);
+          }
+        }
+      } else if (const auto* radial = std::get_if<RadialGradient>(&bgImage)) {
+        for (size_t j = 0; j < radial->colorStops.size(); j++) {
+          const auto& stop = radial->colorStops[j];
+          if (stop.position.isDynamic()) {
+            bgImageEntry["colorStops"][j]["position"] =
+                resolver.toDynamicLengthOrPercentage(stop.position, 0.0f);
+          }
+        }
+
+        if (radial->position.top.has_value() &&
+            radial->position.top->isDynamic()) {
+          bgImageEntry["position"]["top"] =
+              resolver.toDynamicLengthOrPercentage(
+                  *radial->position.top, resolver.context.frameHeight());
+        }
+        if (radial->position.left.has_value() &&
+            radial->position.left->isDynamic()) {
+          bgImageEntry["position"]["left"] =
+              resolver.toDynamicLengthOrPercentage(
+                  *radial->position.left, resolver.context.frameWidth());
+        }
+        if (radial->position.right.has_value() &&
+            radial->position.right->isDynamic()) {
+          bgImageEntry["position"]["right"] =
+              resolver.toDynamicLengthOrPercentage(
+                  *radial->position.right, resolver.context.frameWidth());
+        }
+        if (radial->position.bottom.has_value() &&
+            radial->position.bottom->isDynamic()) {
+          bgImageEntry["position"]["bottom"] =
+              resolver.toDynamicLengthOrPercentage(
+                  *radial->position.bottom, resolver.context.frameHeight());
+        }
+
+        if (const auto* dims = std::get_if<RadialGradientSize::Dimensions>(
+                &radial->size.value)) {
+          if (dims->x.isDynamic()) {
+            bgImageEntry["size"]["x"] = resolver.toDynamicLengthOrPercentage(
+                dims->x, resolver.context.frameWidth());
+          }
+          if (dims->y.isDynamic()) {
+            bgImageEntry["size"]["y"] = resolver.toDynamicLengthOrPercentage(
+                dims->y, resolver.context.frameHeight());
+          }
+        }
+        props["experimental_backgroundImage"][i] = bgImageEntry;
       }
     }
   }
@@ -971,6 +1155,7 @@ folly::dynamic BaseViewProps::getResolvedProps(
     props["borderStartStartRadius"] =
         resolver.toDynamicLengthOrPercentage(borderRadii.startStart.value());
   }
+
   [[maybe_unused]] auto after = folly::toJson(props);
 
   LOG(ERROR) << "Before: " << before;
@@ -1096,6 +1281,29 @@ void BaseViewProps::collectLiveResolvableIds(
       }
       if (const auto* value = std::get_if<UntypedNumericValue>(&lp->y)) {
         addNVDirect(*value);
+      }
+    }
+  }
+
+  for (const auto& bgImage : backgroundImage) {
+    auto collectColorStops = [&](const std::vector<ColorStop>& colorStops) {
+      for (const auto& stop : colorStops) {
+        addNV(stop.position);
+      }
+    };
+
+    if (const auto* linear = std::get_if<LinearGradient>(&bgImage)) {
+      collectColorStops(linear->colorStops);
+    } else if (const auto* radial = std::get_if<RadialGradient>(&bgImage)) {
+      collectColorStops(radial->colorStops);
+      addOptionalNV(radial->position.top);
+      addOptionalNV(radial->position.left);
+      addOptionalNV(radial->position.right);
+      addOptionalNV(radial->position.bottom);
+      if (const auto* dims = std::get_if<RadialGradientSize::Dimensions>(
+              &radial->size.value)) {
+        addNVDirect(dims->x);
+        addNVDirect(dims->y);
       }
     }
   }

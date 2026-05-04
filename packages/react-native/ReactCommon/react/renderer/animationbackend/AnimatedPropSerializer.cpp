@@ -21,7 +21,7 @@ folly::dynamic numericValueToDynamic(const T& value) {
     return nullptr;
   }
 
-  if (value.isPercentage()) {
+  if (value.kind() == NumericValueKind::Percentage) {
     return std::to_string(value.asFloat()) + "%";
   }
 
@@ -30,29 +30,18 @@ folly::dynamic numericValueToDynamic(const T& value) {
 
 template <typename T>
 std::string numericValueUnitToString(const T& value) {
-  if (value.isLength()) {
-    return "point";
+  switch (value.kind()) {
+    case NumericValueKind::Length:
+      return "point";
+    case NumericValueKind::Percentage:
+      return "percent";
+    case NumericValueKind::Number:
+      return "number";
+    case NumericValueKind::Dynamic:
+      return "dynamic";
+    case NumericValueKind::Undefined:
+      break;
   }
-
-  if (value.isPercentage()) {
-    return "percent";
-  }
-
-  if (value.isNumber()) {
-    return "number";
-  }
-
-  if (value.isDynamic()) {
-    switch (value.domain()) {
-      case NumericValueDomain::Length:
-        return "point";
-      case NumericValueDomain::Number:
-        return "number";
-      case NumericValueDomain::LengthOrPercentage:
-        return "dynamic";
-    }
-  }
-
   return "undefined";
 }
 

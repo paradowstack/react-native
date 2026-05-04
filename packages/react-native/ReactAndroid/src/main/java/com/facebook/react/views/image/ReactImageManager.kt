@@ -12,6 +12,7 @@ import android.graphics.PorterDuff
 import com.facebook.common.logging.FLog
 import com.facebook.drawee.backends.pipeline.Fresco
 import com.facebook.drawee.controller.AbstractDraweeControllerBuilder
+import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.common.ReactConstants
@@ -173,11 +174,9 @@ public constructor(
           ],
       defaultFloat = Float.NaN,
   )
-  public fun setBorderRadius(view: ReactImageView, index: Int, borderRadius: Float) {
-    val radius =
-        if (borderRadius.isNaN()) null
-        else LengthPercentage(borderRadius, LengthPercentageType.POINT)
-    BackgroundStyleApplicator.setBorderRadius(view, BorderRadiusProp.values()[index], radius)
+  public fun setBorderRadius(view: ReactImageView, index: Int, borderRadius: Dynamic) {
+    val radius = LengthPercentage.setFromDynamic(borderRadius)
+    BackgroundStyleApplicator.setBorderRadius(view, BorderRadiusProp.BORDER_RADIUS, radius)
   }
 
   @ReactProp(name = ViewProps.RESIZE_MODE)

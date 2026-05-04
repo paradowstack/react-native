@@ -26,6 +26,14 @@ struct DynamicResolver {
   Float resolveLengthOrPercentage(
       const UntypedNumericValue& value,
       float percentRef = 0.0f) const;
+  // Resolves a length-or-percentage dynamic value, preserving the concrete
+  // length/percentage kind for non-dynamic values.
+  LengthPercentageValue resolveLengthPercentage(
+      const LengthPercentageValue& value,
+      float percentRef = 0.0f) const;
+  UntypedNumericValue resolveAny(
+      const UntypedNumericValue& value,
+      float percentRef = 0.0f) const;
   Float resolve(
       const facebook::yoga::StyleLength& length,
       float percentRef = 0.0f) const;
@@ -39,6 +47,9 @@ struct DynamicResolver {
   folly::dynamic toDynamicLengthOrPercentage(
       const UntypedNumericValue& value,
       float percentRef = 0.0f) const;
+  folly::dynamic toDynamicAny(
+      const UntypedNumericValue& value,
+      float percentRef = 0.0f) const;
   folly::dynamic toDynamic(
       const facebook::yoga::StyleLength& length,
       float percentRef = 0.0f) const;
@@ -48,19 +59,18 @@ struct DynamicResolver {
 #endif
 
  private:
-  Float resolve(
-      const UntypedNumericValue& value,
-      NumericValueDomain domain,
+  Float resolveCalcEntry(
+      const TypedCalcEntry& entry,
       float referenceLength = 0.0f) const;
-  Float resolve(DynamicPropertyId id, float referenceLength = 0.0f) const;
+  Float resolveById(DynamicPropertyId id, float referenceLength = 0.0f) const;
 
 #ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic toDynamic(
-      const UntypedNumericValue& value,
-      NumericValueDomain domain,
+  folly::dynamic toDynamicCalcEntry(
+      const TypedCalcEntry& entry,
       float referenceLength = 0.0f) const;
-  folly::dynamic toDynamic(DynamicPropertyId id, float referenceLength = 0.0f)
-      const;
+  folly::dynamic toDynamicById(
+      DynamicPropertyId id,
+      float referenceLength = 0.0f) const;
 #endif
 };
 

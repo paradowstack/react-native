@@ -28,6 +28,12 @@ void processTransform(
   static ContextContainer contextContainer;
   static PropsParserContext context(0, contextContainer);
 
+  DynamicPropertiesMap calcExpressions;
+  context.contextContainer.insert_or_assign(
+      DynamicPropertiesMapKey,
+      std::shared_ptr<DynamicPropertiesMap>(
+          &calcExpressions, [](DynamicPropertiesMap*) {}));
+
   RawValue transformValue(jTransforms->getArray());
   Transform transform;
   fromRawValue(context, transformValue, transform);
@@ -38,8 +44,9 @@ void processTransform(
     fromRawValue(context, transformOriginValue, transformOrigin);
   }
 
+  auto resolver = DynamicResolver{calcExpressions, {{.frame = {{}, {viewWidth, viewHeight}}}, {}}};
   auto result = BaseViewProps::resolveTransform(
-      Size{.width = viewWidth, .height = viewHeight},
+      resolver,
       transform,
       transformOrigin);
 

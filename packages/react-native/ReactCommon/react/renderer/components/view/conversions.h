@@ -11,6 +11,7 @@
 #include <react/debug/react_native_expect.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/DynamicPropertiesMap.h>
+#include <react/renderer/components/view/NumericValueConversions.h>
 #include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -509,7 +510,7 @@ inline void fromRawValue(
           if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
-            map->insert_or_assign(index, cssCalc);
+            map->insert_or_assign(index, LengthOrPercentageCalcEntry{cssCalc});
             result = yoga::StyleSizeLength::dynamic(
                 &yogaNodeCalcValueResolver, index);
             return;
@@ -560,7 +561,7 @@ inline void fromRawValue(
           if (mapIt) {
             auto& map = *mapIt;
             auto index = map->allocateId();
-            map->insert_or_assign(index, cssCalc);
+            map->insert_or_assign(index, LengthOrPercentageCalcEntry{cssCalc});
             result =
                 yoga::StyleLength::dynamic(&yogaNodeCalcValueResolver, index);
             return;
@@ -625,83 +626,10 @@ inline std::optional<Float> toRadians(const RawValue& value) {
   return {};
 }
 
-inline UntypedNumericValue toNumericValue(const RawValue& value) {
-  if (value.hasType<Float>()) {
-    return UntypedNumericValue::length((Float)value);
-  }
-  if (!value.hasType<std::string>()) {
-    return {};
-  }
-
-  auto pct = parseCSSProperty<CSSPercentage>((std::string)value);
-  if (std::holds_alternative<CSSPercentage>(pct)) {
-    return UntypedNumericValue::percentage(std::get<CSSPercentage>(pct).value);
-  }
-
-  // auto calc = parseCSSProperty<CSSCalc>((std::string)value);
-  // if (std::holds_alternative<CSSCalc>(calc)) {
-  //   auto cssCalc = std::get<CSSCalc>(calc);
-  //   if (cssCalc.isPointsOnly()) {
-  //     return NumericValue::length(cssCalc.px);
-  //   }
-  //   if (cssCalc.isPercentOnly()) {
-  //     return NumericValue::percentage(cssCalc.percent);
-  //   }
-  //   if (cssCalc.isUnitless()) {
-  //     return NumericValue::number(cssCalc.unitless);
-  //   }
-  // }
-
-  return {};
-}
-
-inline UntypedNumericValue toNumericValue(
-    const RawValue& value,
-    const PropsParserContext& context,
-    const std::string_view key = {}) {
-  auto v = toNumericValue(value);
-  if (v) {
-    return v;
-  }
-
-  auto calc = parseCSSProperty<CSSCalc>((std::string)value);
-  if (std::holds_alternative<CSSCalc>(calc)) {
-    auto cssCalc = std::get<CSSCalc>(calc);
-    // if (cssCalc.isComplex()) {
-    auto mapIt =
-        context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-            DynamicPropertiesMapKey);
-    if (mapIt) {
-      auto& map = *mapIt;
-      auto index = map->allocateId();
-      map->insert_or_assign(index, cssCalc);
-      return UntypedNumericValue::dynamic(
-          index, NumericValueDomain::LengthOrPercentage);
-    }
-    // }
-  }
-
-  return {};
-}
-
 // `Float` is handled by the explicit specialization in
 // react/renderer/core/propsConversions.h (parse number + calc() strings).
 // Do not add a non-template overload here — it would win overload resolution
 // and break string/calc parsing for opacity and other Float props.
-
-inline UntypedNumericValue cssLengthPercentageToNumericValue(
-    const std::variant<CSSLength, CSSPercentage>& value) {
-  if (std::holds_alternative<CSSLength>(value)) {
-    auto len = std::get<CSSLength>(value);
-    if (len.unit != CSSLengthUnit::Px) {
-      return {};
-    }
-    return UntypedNumericValue::length(len.value);
-  } else {
-    return UntypedNumericValue::percentage(
-        std::get<CSSPercentage>(value).value);
-  }
-}
 
 inline std::optional<TransformOperation> fromCSSTransformFunction(
     const CSSTransformFunction& cssTransform) {
@@ -750,8 +678,8 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
         }
 
         if constexpr (std::is_same_v<T, CSSTranslate>) {
-          auto x = cssLengthPercentageToNumericValue(func.x);
-          auto y = cssLengthPercentageToNumericValue(func.y);
+          auto x = numericValueFromCSSLengthPercentage(func.x);
+          auto y = numericValueFromCSSLengthPercentage(func.y);
           if (!x || !y) {
             return std::nullopt;
           }
@@ -763,7 +691,7 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
         }
 
         if constexpr (std::is_same_v<T, CSSTranslateX>) {
-          auto x = cssLengthPercentageToNumericValue(func.value);
+          auto x = numericValueFromCSSLengthPercentage(func.value);
           if (!x) {
             return std::nullopt;
           }
@@ -775,7 +703,7 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
         }
 
         if constexpr (std::is_same_v<T, CSSTranslateY>) {
-          auto y = cssLengthPercentageToNumericValue(func.value);
+          auto y = numericValueFromCSSLengthPercentage(func.value);
           if (!y) {
             return std::nullopt;
           }
@@ -787,8 +715,8 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
         }
 
         if constexpr (std::is_same_v<T, CSSTranslate3D>) {
-          auto x = cssLengthPercentageToNumericValue(func.x);
-          auto y = cssLengthPercentageToNumericValue(func.y);
+          auto x = numericValueFromCSSLengthPercentage(func.x);
+          auto y = numericValueFromCSSLengthPercentage(func.y);
           if (!x || !y || func.z.unit != CSSLengthUnit::Px) {
             return std::nullopt;
           }
@@ -864,7 +792,7 @@ inline std::optional<TransformOperation> fromCSSTransformFunction(
 }
 
 inline void parseProcessedTransform(
-    const PropsParserContext& /*context*/,
+    const PropsParserContext& context,
     const RawValue& value,
     Transform& result) {
   auto transformMatrix = Transform{};
@@ -952,7 +880,9 @@ inline void parseProcessedTransform(
               .y = ZeroNumber,
               .z = ZeroNumber});
     } else if (operation == "perspective") {
-      if (!parameters.hasType<Float>()) {
+      auto perspective =
+          parseNumericValueAs<NumericValueLength>(context, parameters);
+      if (!perspective) {
         result = {};
         return;
       }
@@ -960,7 +890,7 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Perspective,
-              .x = UntypedNumericValue::length((Float)parameters),
+              .x = *perspective,
               .y = ZeroNumber,
               .z = ZeroNumber});
     } else if (operation == "rotateX") {
@@ -1003,40 +933,20 @@ inline void parseProcessedTransform(
               .y = ZeroNumber,
               .z = UntypedNumericValue::number(*radians)});
     } else if (operation == "scale") {
-      // if (!parameters.hasType<Float>()) {
-      // result = {};
-      // return;
-      // }
-
-      if (parameters.hasType<Float>()) {
-        auto number = UntypedNumericValue::number((Float)parameters);
-        transformMatrix.operations.push_back(
-            TransformOperation{
-                .type = TransformOperationType::Scale,
-                .x = number,
-                .y = number,
-                .z = number});
-      } else if (parameters.hasType<std::string>()) {
-        auto stringValue = (std::string)parameters;
-        auto calc = parseCSSProperty<CSSCalc>((std::string)stringValue);
-        if (std::holds_alternative<CSSCalc>(calc)) {
-          auto cssCalc = std::get<CSSCalc>(calc);
-          if (cssCalc.isUnitless()) {
-            auto number = UntypedNumericValue::number(cssCalc.px);
-            transformMatrix.operations.push_back(
-                TransformOperation{
-                    .type = TransformOperationType::Scale,
-                    .x = number,
-                    .y = number,
-                    .z = number});
-          }
-        } else {
-          result = {};
-          return;
-        }
+      auto scale = parseScaleNumericValue(context, parameters);
+      if (!scale) {
+        result = {};
+        return;
       }
+      transformMatrix.operations.push_back(
+          TransformOperation{
+              .type = TransformOperationType::Scale,
+              .x = *scale,
+              .y = *scale,
+              .z = *scale});
     } else if (operation == "scaleX") {
-      if (!parameters.hasType<Float>()) {
+      auto scaleX = parseScaleNumericValue(context, parameters);
+      if (!scaleX) {
         result = {};
         return;
       }
@@ -1044,11 +954,12 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Scale,
-              .x = UntypedNumericValue::number((Float)parameters),
+              .x = *scaleX,
               .y = One,
               .z = One});
     } else if (operation == "scaleY") {
-      if (!parameters.hasType<Float>()) {
+      auto scaleY = parseScaleNumericValue(context, parameters);
+      if (!scaleY) {
         result = {};
         return;
       }
@@ -1057,10 +968,11 @@ inline void parseProcessedTransform(
           TransformOperation{
               .type = TransformOperationType::Scale,
               .x = One,
-              .y = UntypedNumericValue::number((Float)parameters),
+              .y = *scaleY,
               .z = One});
     } else if (operation == "scaleZ") {
-      if (!parameters.hasType<Float>()) {
+      auto scaleZ = parseScaleNumericValue(context, parameters);
+      if (!scaleZ) {
         result = {};
         return;
       }
@@ -1070,7 +982,7 @@ inline void parseProcessedTransform(
               .type = TransformOperationType::Scale,
               .x = One,
               .y = One,
-              .z = UntypedNumericValue::number((Float)parameters)});
+              .z = *scaleZ});
     } else if (operation == "translate") {
       if (!parameters.hasType<std::vector<RawValue>>()) {
         result = {};
@@ -1083,13 +995,15 @@ inline void parseProcessedTransform(
         return;
       }
 
-      auto valueX = toNumericValue(numbers[0]);
+      auto valueX = parseNumericValueAs<NumericValueLengthPercentage>(
+          context, numbers[0]);
       if (!valueX) {
         result = {};
         return;
       }
 
-      auto valueY = toNumericValue(numbers[1]);
+      auto valueY = parseNumericValueAs<NumericValueLengthPercentage>(
+          context, numbers[1]);
       if (!valueY) {
         result = {};
         return;
@@ -1098,11 +1012,12 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Translate,
-              .x = valueX,
-              .y = valueY,
+              .x = *valueX,
+              .y = *valueY,
               .z = ZeroLength});
     } else if (operation == "translateX") {
-      auto valueX = toNumericValue(parameters);
+      auto valueX = parseNumericValueAs<NumericValueLengthPercentage>(
+          context, parameters);
       if (!valueX) {
         result = {};
         return;
@@ -1111,11 +1026,12 @@ inline void parseProcessedTransform(
       transformMatrix.operations.push_back(
           TransformOperation{
               .type = TransformOperationType::Translate,
-              .x = valueX,
+              .x = *valueX,
               .y = ZeroLength,
               .z = ZeroLength});
     } else if (operation == "translateY") {
-      auto valueY = toNumericValue(parameters);
+      auto valueY = parseNumericValueAs<NumericValueLengthPercentage>(
+          context, parameters);
       if (!valueY) {
         result = {};
         return;
@@ -1125,7 +1041,7 @@ inline void parseProcessedTransform(
           TransformOperation{
               .type = TransformOperationType::Translate,
               .x = ZeroLength,
-              .y = valueY,
+              .y = *valueY,
               .z = ZeroLength});
     } else if (operation == "skewX") {
       auto radians = toRadians(parameters);
@@ -1230,7 +1146,7 @@ inline void fromRawValue(
 }
 
 inline void parseProcessedTransformOrigin(
-    const PropsParserContext& /*context*/,
+    const PropsParserContext& context,
     const RawValue& value,
     TransformOrigin& result) {
   if (!value.hasType<std::vector<RawValue>>()) {
@@ -1247,13 +1163,14 @@ inline void parseProcessedTransformOrigin(
   TransformOrigin transformOrigin;
 
   for (size_t i = 0; i < 2; i++) {
-    auto origin = toNumericValue(origins[i]);
+    auto origin =
+        parseNumericValue<NumericValueLengthPercentage>(context, origins[i]);
     if (!origin) {
       result = {};
       return;
     }
 
-    transformOrigin.xy[i] = origin;
+    transformOrigin.xy[i] = *origin;
   }
 
   if (!origins[2].hasType<Float>()) {
@@ -1277,8 +1194,8 @@ inline void parseUnprocessedTransformOriginString(
   const auto& origin = std::get<CSSTransformOrigin>(cssOrigin);
   TransformOrigin transformOrigin;
 
-  auto x = cssLengthPercentageToNumericValue(origin.x);
-  auto y = cssLengthPercentageToNumericValue(origin.y);
+  auto x = numericValueFromCSSLengthPercentage(origin.x);
+  auto y = numericValueFromCSSLengthPercentage(origin.y);
   if (!x || !y) {
     result = {};
     return;
@@ -1662,7 +1579,7 @@ inline void fromRawValue(
 }
 
 inline void fromRawValue(
-    const PropsParserContext& /*context*/,
+    const PropsParserContext& context,
     const RawValue& value,
     std::vector<BackgroundSize>& result) {
   react_native_expect(value.hasType<std::vector<RawValue>>());
@@ -1696,9 +1613,10 @@ inline void fromRawValue(
             (std::string)(xIt->second) == "auto") {
           sizeLengthPercentage.x = std::monostate{};
         } else {
-          auto numericValue = toNumericValue(xIt->second);
+          auto numericValue = parseNumericValue<NumericValueLengthPercentage>(
+              context, xIt->second);
           if (numericValue) {
-            sizeLengthPercentage.x = numericValue;
+            sizeLengthPercentage.x = *numericValue;
           }
         }
       }
@@ -1709,9 +1627,10 @@ inline void fromRawValue(
             (std::string)(yIt->second) == "auto") {
           sizeLengthPercentage.y = std::monostate{};
         } else {
-          auto numericValue = toNumericValue(yIt->second);
+          auto numericValue = parseNumericValue<NumericValueLengthPercentage>(
+              context, yIt->second);
           if (numericValue) {
-            sizeLengthPercentage.y = numericValue;
+            sizeLengthPercentage.y = *numericValue;
           }
         }
       }
@@ -1724,7 +1643,7 @@ inline void fromRawValue(
 }
 
 inline void fromRawValue(
-    const PropsParserContext& /*context*/,
+    const PropsParserContext& context,
     const RawValue& value,
     std::vector<BackgroundPosition>& result) {
   react_native_expect(value.hasType<std::vector<RawValue>>());
@@ -1746,33 +1665,37 @@ inline void fromRawValue(
 
       auto topIt = positionMap.find("top");
       if (topIt != positionMap.end()) {
-        auto numericValue = toNumericValue(topIt->second);
+        auto numericValue = parseNumericValue<NumericValueLengthPercentage>(
+            context, topIt->second);
         if (numericValue) {
-          backgroundPosition.top = numericValue;
+          backgroundPosition.top = *numericValue;
         }
       }
 
       auto bottomIt = positionMap.find("bottom");
       if (bottomIt != positionMap.end()) {
-        auto numericValue = toNumericValue(bottomIt->second);
+        auto numericValue = parseNumericValue<NumericValueLengthPercentage>(
+            context, bottomIt->second);
         if (numericValue) {
-          backgroundPosition.bottom = numericValue;
+          backgroundPosition.bottom = *numericValue;
         }
       }
 
       auto leftIt = positionMap.find("left");
       if (leftIt != positionMap.end()) {
-        auto numericValue = toNumericValue(leftIt->second);
+        auto numericValue = parseNumericValue<NumericValueLengthPercentage>(
+            context, leftIt->second);
         if (numericValue) {
-          backgroundPosition.left = numericValue;
+          backgroundPosition.left = *numericValue;
         }
       }
 
       auto rightIt = positionMap.find("right");
       if (rightIt != positionMap.end()) {
-        auto numericValue = toNumericValue(rightIt->second);
+        auto numericValue = parseNumericValue<NumericValueLengthPercentage>(
+            context, rightIt->second);
         if (numericValue) {
-          backgroundPosition.right = numericValue;
+          backgroundPosition.right = *numericValue;
         }
       }
 

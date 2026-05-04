@@ -376,25 +376,5 @@ struct CSSDataTypeParser<CSSCalc> {
   }
 };
 
-constexpr auto CSSDataTypeParser<CSSLength>::consumeFunctionBlock(
-    const CSSFunctionBlock &func,
-    CSSValueParser &parser) -> std::optional<CSSLength>
-{
-  if (auto calc = CSSDataTypeParser<CSSCalc>::consumeFunctionBlock(func, parser)) {
-		return {};
-  }
-  return std::nullopt;
-}
-
-constexpr auto CSSDataTypeParser<CSSNumber>::consumeFunctionBlock(
-    const CSSFunctionBlock &func,
-    CSSValueParser &parser) -> std::optional<CSSNumber>
-{
-  if (auto calc = CSSDataTypeParser<CSSCalc>::consumeFunctionBlock(func, parser)) {
-    return CSSNumber::fromCalc(*calc);
-  }
-  return std::nullopt;
-}
-
 } // namespace facebook::react
 

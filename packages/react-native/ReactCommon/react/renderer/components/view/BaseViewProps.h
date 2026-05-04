@@ -128,7 +128,10 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
   BorderMetrics resolveBorderMetrics(
       const LayoutMetrics& layoutMetrics,
       const LayoutContext& layoutContext) const;
-  Transform resolveTransform(const LayoutMetrics& layoutMetrics) const;
+  Transform resolveTransform(
+      const LayoutMetrics& layoutMetrics,
+      const LayoutContext& layoutContext) const;
+  Transform resolveTransform(const DynamicResolver& resolver) const;
   bool getClipsContentToBounds() const;
 
   void resolveProperties(const DynamicResolver& resolver) override;
@@ -142,7 +145,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
  public:
   static Transform resolveTransform(
-      const Size& frameSize,
+      const DynamicResolver& resolver,
       const Transform& transform,
       const TransformOrigin& transformOrigin);
 

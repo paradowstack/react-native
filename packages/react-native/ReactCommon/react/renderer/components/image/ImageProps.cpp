@@ -10,6 +10,7 @@
 #include <react/renderer/components/image/conversions.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/debugStringConvertibleUtils.h>
+#include <folly/json.h>
 
 namespace facebook::react {
 
@@ -366,7 +367,9 @@ void ImageProps::collectLiveResolvableIds(
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic ImageProps::getResolvedProps(
     const DynamicResolver& resolver) const {
-  folly::dynamic props = folly::dynamic::object();
+  [[maybe_unused]] auto p0 = folly::toJson(rawProps);
+  folly::dynamic props = ViewProps::getResolvedProps(resolver);
+  [[maybe_unused]] auto p1 = folly::toJson(props);
   if (blurRadius.isDynamic()) {
     props["blurRadius"] = resolver.toDynamicLength(blurRadius);
   }
@@ -376,6 +379,7 @@ folly::dynamic ImageProps::getResolvedProps(
   if (fadeDuration.isDynamic()) {
     props["fadeDuration"] = resolver.toDynamicNumber(fadeDuration);
   }
+  [[maybe_unused]] auto p2 = folly::toJson(props);
   return props;
 }
 #endif

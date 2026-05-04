@@ -83,10 +83,8 @@ void parseProcessedBackgroundImage(
           if (positionIt != stopMap.end() && colorIt != stopMap.end()) {
             ColorStop colorStop;
             if (positionIt->second.hasValue()) {
-              auto value = parseNumericValue(
-                  context,
-                  positionIt->second,
-                  NumericValueDomain::LengthOrPercentage);
+              auto value = parseNumericValue<NumericValueLengthPercentage>(
+                  context, positionIt->second);
               if (!value) {
                 result = {};
                 return;
@@ -173,8 +171,12 @@ void parseProcessedBackgroundImage(
           if (xIt != sizeMap.end() && yIt != sizeMap.end()) {
             radialGradient.size = RadialGradientSize{
                 .value = RadialGradientSize::Dimensions{
-                    .x = toNumericValue(xIt->second),
-                    .y = toNumericValue(yIt->second)}};
+                    .x = parseNumericValueAs<NumericValueLengthPercentage>(
+                             context, xIt->second)
+                             .value_or(LengthPercentageValue{}),
+                    .y = parseNumericValueAs<NumericValueLengthPercentage>(
+                             context, yIt->second)
+                             .value_or(LengthPercentageValue{})}};
           }
         }
 
@@ -189,18 +191,27 @@ void parseProcessedBackgroundImage(
           auto rightIt = positionMap.find("right");
 
           if (topIt != positionMap.end()) {
-            auto topValue = toNumericValue(topIt->second);
+            auto topValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                context, topIt->second)
+                                .value_or(LengthPercentageValue{});
             radialGradient.position.top = topValue;
           } else if (bottomIt != positionMap.end()) {
-            auto bottomValue = toNumericValue(bottomIt->second);
+            auto bottomValue =
+                parseNumericValueAs<NumericValueLengthPercentage>(
+                    context, bottomIt->second)
+                    .value_or(LengthPercentageValue{});
             radialGradient.position.bottom = bottomValue;
           }
 
           if (leftIt != positionMap.end()) {
-            auto leftValue = toNumericValue(leftIt->second);
+            auto leftValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                 context, leftIt->second)
+                                 .value_or(LengthPercentageValue{});
             radialGradient.position.left = leftValue;
           } else if (rightIt != positionMap.end()) {
-            auto rightValue = toNumericValue(rightIt->second);
+            auto rightValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                  context, rightIt->second)
+                                  .value_or(LengthPercentageValue{});
             radialGradient.position.right = rightValue;
           }
         }
@@ -263,7 +274,8 @@ void parseUnprocessedBackgroundImageList(
             }
             colorStops.push_back(
                 ColorStop{
-                    .color = std::move(color), .position = NumericValue()});
+                    .color = std::move(color),
+                    .position = LengthPercentageValue{}});
             continue;
           }
 
@@ -273,8 +285,9 @@ void parseUnprocessedBackgroundImageList(
               positionsIt->second.hasType<RawValueList>()) {
             auto positions = static_cast<RawValueList>(positionsIt->second);
             for (const auto& position : positions) {
-              auto positionValue = parseNumericValue(
-                  context, position, NumericValueDomain::LengthOrPercentage);
+              auto positionValue =
+                  parseNumericValue<NumericValueLengthPercentage>(
+                      context, position);
               if (!positionValue) {
                 // invalid position
                 result = {};
@@ -377,8 +390,12 @@ void parseUnprocessedBackgroundImageList(
           auto yIt = sizeMap.find("y");
           if (xIt != sizeMap.end() && yIt != sizeMap.end()) {
             radialGradient.size = {RadialGradientSize::Dimensions{
-                .x = toNumericValue(xIt->second),
-                .y = toNumericValue(yIt->second)}};
+                .x = parseNumericValueAs<NumericValueLengthPercentage>(
+                         context, xIt->second)
+                         .value_or(LengthPercentageValue{}),
+                .y = parseNumericValueAs<NumericValueLengthPercentage>(
+                         context, yIt->second)
+                         .value_or(LengthPercentageValue{})}};
           }
         }
 
@@ -393,18 +410,27 @@ void parseUnprocessedBackgroundImageList(
           auto rightIt = positionMap.find("right");
 
           if (topIt != positionMap.end()) {
-            auto topValue = toNumericValue(topIt->second);
+            auto topValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                context, topIt->second)
+                                .value_or(LengthPercentageValue{});
             radialGradient.position.top = topValue;
           } else if (bottomIt != positionMap.end()) {
-            auto bottomValue = toNumericValue(bottomIt->second);
+            auto bottomValue =
+                parseNumericValueAs<NumericValueLengthPercentage>(
+                    context, bottomIt->second)
+                    .value_or(LengthPercentageValue{});
             radialGradient.position.bottom = bottomValue;
           }
 
           if (leftIt != positionMap.end()) {
-            auto leftValue = toNumericValue(leftIt->second);
+            auto leftValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                 context, leftIt->second)
+                                 .value_or(LengthPercentageValue{});
             radialGradient.position.left = leftValue;
           } else if (rightIt != positionMap.end()) {
-            auto rightValue = toNumericValue(rightIt->second);
+            auto rightValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                  context, rightIt->second)
+                                  .value_or(LengthPercentageValue{});
             radialGradient.position.right = rightValue;
           }
         }
@@ -422,15 +448,26 @@ void parseUnprocessedBackgroundImageList(
 }
 
 namespace {
-UntypedNumericValue convertLengthPercentageToNumericValue(
-    const std::variant<CSSLength, CSSPercentage>& value) {
-  if (std::holds_alternative<CSSLength>(value)) {
-    return UntypedNumericValue::length(std::get<CSSLength>(value).value);
+LengthPercentageValue convertCalcToNumericValue(
+    const PropsParserContext& context,
+    const CSSCalc& calc) {
+  if (calc.isUnitless()) {
+    return {};
   }
-  return UntypedNumericValue::percentage(std::get<CSSPercentage>(value).value);
+  if (!calc.isComplex() && calc.percent == 0.0f) {
+    return LengthPercentageValue::length(calc.px);
+  }
+  if (calc.isPercentOnly()) {
+    return LengthPercentageValue::percentage(calc.percent);
+  }
+  if (calc.percent != 0.0f) {
+    return numericValueFromCSSCalc<NumericValueLengthPercentage>(context, calc);
+  }
+  return numericValueFromCSSCalc<NumericValueLength>(context, calc);
 }
 
 void fromCSSColorStop(
+    const PropsParserContext& context,
     const std::variant<CSSColorStop, CSSColorHint>& item,
     std::vector<ColorStop>& colorStops) {
   if (std::holds_alternative<CSSColorStop>(item)) {
@@ -444,15 +481,15 @@ void fromCSSColorStop(
       colorStops.push_back(
           ColorStop{
               .color = fromCSSColor(colorStop.color),
-              .position = convertLengthPercentageToNumericValue(
-                  *colorStop.startPosition)});
+              .position = convertCalcToNumericValue(
+                  context, *colorStop.startPosition)});
 
       // second stop with end position (same color)
       colorStops.push_back(
           ColorStop{
               .color = fromCSSColor(colorStop.color),
-              .position = convertLengthPercentageToNumericValue(
-                  *colorStop.endPosition)});
+              .position =
+                  convertCalcToNumericValue(context, *colorStop.endPosition)});
     } else {
       // single color stop
       ColorStop stop;
@@ -461,7 +498,7 @@ void fromCSSColorStop(
       // handle start position if present
       if (colorStop.startPosition.has_value()) {
         stop.position =
-            convertLengthPercentageToNumericValue(*colorStop.startPosition);
+            convertCalcToNumericValue(context, *colorStop.startPosition);
       }
 
       colorStops.push_back(stop);
@@ -470,13 +507,13 @@ void fromCSSColorStop(
     const auto& colorHint = std::get<CSSColorHint>(item);
     // color hint: add a stop with null color and the hint position
     ColorStop hintStop;
-    hintStop.position =
-        convertLengthPercentageToNumericValue(colorHint.position);
+    hintStop.position = convertCalcToNumericValue(context, colorHint.position);
     colorStops.push_back(hintStop);
   }
 }
 
 std::optional<BackgroundImage> fromCSSBackgroundImage(
+    const PropsParserContext& context,
     const CSSBackgroundImage& cssBackgroundImage) {
   if (std::holds_alternative<CSSLinearGradientFunction>(cssBackgroundImage)) {
     const auto& gradient =
@@ -510,7 +547,7 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
     }
 
     for (const auto& item : gradient.items) {
-      fromCSSColorStop(item, linearGradient.colorStops);
+      fromCSSColorStop(context, item, linearGradient.colorStops);
     }
 
     return BackgroundImage{linearGradient};
@@ -556,8 +593,8 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
         const auto& explicitSize =
             std::get<CSSRadialGradientExplicitSize>(*gradient.size);
         radialGradient.size.value = RadialGradientSize::Dimensions{
-            .x = convertLengthPercentageToNumericValue(explicitSize.sizeX),
-            .y = convertLengthPercentageToNumericValue(explicitSize.sizeY)};
+            .x = convertCalcToNumericValue(context, explicitSize.sizeX),
+            .y = convertCalcToNumericValue(context, explicitSize.sizeY)};
       }
     }
 
@@ -565,24 +602,24 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
       const auto& pos = *gradient.position;
       if (pos.top.has_value()) {
         radialGradient.position.top =
-            convertLengthPercentageToNumericValue(*pos.top);
+            convertCalcToNumericValue(context, *pos.top);
       }
       if (pos.bottom.has_value()) {
         radialGradient.position.bottom =
-            convertLengthPercentageToNumericValue(*pos.bottom);
+            convertCalcToNumericValue(context, *pos.bottom);
       }
       if (pos.left.has_value()) {
         radialGradient.position.left =
-            convertLengthPercentageToNumericValue(*pos.left);
+            convertCalcToNumericValue(context, *pos.left);
       }
       if (pos.right.has_value()) {
         radialGradient.position.right =
-            convertLengthPercentageToNumericValue(*pos.right);
+            convertCalcToNumericValue(context, *pos.right);
       }
     }
 
     for (const auto& item : gradient.items) {
-      fromCSSColorStop(item, radialGradient.colorStops);
+      fromCSSColorStop(context, item, radialGradient.colorStops);
     }
 
     return BackgroundImage{radialGradient};
@@ -593,6 +630,7 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
 } // namespace
 
 void parseUnprocessedBackgroundImageString(
+    const PropsParserContext& context,
     const std::string& value,
     std::vector<BackgroundImage>& result) {
   auto backgroundImageList = parseCSSProperty<CSSBackgroundImageList>(value);
@@ -604,7 +642,8 @@ void parseUnprocessedBackgroundImageString(
   std::vector<BackgroundImage> backgroundImages;
   for (const auto& cssBackgroundImage :
        std::get<CSSBackgroundImageList>(backgroundImageList)) {
-    if (auto backgroundImage = fromCSSBackgroundImage(cssBackgroundImage)) {
+    if (auto backgroundImage =
+            fromCSSBackgroundImage(context, cssBackgroundImage)) {
       backgroundImages.push_back(std::move(*backgroundImage));
     } else {
       result = {};

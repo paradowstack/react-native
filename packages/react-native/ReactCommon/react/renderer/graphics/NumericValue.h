@@ -1,10 +1,3 @@
-/*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
 #pragma once
 
 #include <cmath>
@@ -35,277 +28,321 @@ enum class NumericValueKind : uint8_t {
   Dynamic,
 };
 
-enum class NumericValueDomain : uint8_t {
-  Number,
-  Length,
-  LengthOrPercentage,
-};
-
 struct NumericValueNumber {
   Float value{0.0f};
-
   constexpr bool operator==(const NumericValueNumber& other) const = default;
 };
 
 struct NumericValueLength {
   Float value{0.0f};
-
   constexpr bool operator==(const NumericValueLength& other) const = default;
 };
 
 struct NumericValuePercentage {
   Float value{0.0f};
-
   constexpr bool operator==(const NumericValuePercentage& other) const =
       default;
 };
 
+struct NumericValueLengthPercentage {
+  std::variant<NumericValueLength, NumericValuePercentage> value;
+
+  constexpr NumericValueLengthPercentage() : value{NumericValueLength{0.0f}} {}
+  constexpr explicit NumericValueLengthPercentage(NumericValueLength l)
+      : value{l} {}
+  constexpr explicit NumericValueLengthPercentage(NumericValuePercentage p)
+      : value{p} {}
+
+  constexpr bool operator==(const NumericValueLengthPercentage& other) const =
+      default;
+};
+
+struct NumericValueAny {
+  std::variant<NumericValueNumber, NumericValueLength, NumericValuePercentage>
+      value;
+
+  constexpr NumericValueAny() : value{NumericValueNumber{0.0f}} {}
+  constexpr explicit NumericValueAny(NumericValueNumber n) : value{n} {}
+  constexpr explicit NumericValueAny(NumericValueLength l) : value{l} {}
+  constexpr explicit NumericValueAny(NumericValuePercentage p) : value{p} {}
+
+  constexpr bool operator==(const NumericValueAny& other) const = default;
+};
+
 struct NumericValueDynamic {
   NumericValueDynamicId id{0};
-  NumericValueDomain domain{NumericValueDomain::Number};
 
   constexpr bool operator==(const NumericValueDynamic& other) const = default;
 };
 
-struct NumberDomain {
-  static constexpr NumericValueDomain value = NumericValueDomain::Number;
-};
+template <typename T>
+concept NumericValueConcreteType = std::same_as<T, NumericValueNumber> ||
+    std::same_as<T, NumericValueLength> ||
+    std::same_as<T, NumericValuePercentage> ||
+    std::same_as<T, NumericValueLengthPercentage> ||
+    std::same_as<T, NumericValueAny>;
 
-struct LengthDomain {
-  static constexpr NumericValueDomain value = NumericValueDomain::Length;
-};
+template <typename T>
+concept SupportsNumber =
+    std::same_as<T, NumericValueNumber> || std::same_as<T, NumericValueAny>;
 
-struct LengthPercentageDomain {
-  static constexpr NumericValueDomain value =
-      NumericValueDomain::LengthOrPercentage;
-};
+template <typename T>
+concept SupportsLength = std::same_as<T, NumericValueLength> ||
+    std::same_as<T, NumericValueLengthPercentage> ||
+    std::same_as<T, NumericValueAny>;
 
-struct AnyNumericValueDomain {};
+template <typename T>
+concept SupportsPercentage = std::same_as<T, NumericValuePercentage> ||
+    std::same_as<T, NumericValueLengthPercentage> ||
+    std::same_as<T, NumericValueAny>;
 
-template <typename DomainT>
-concept NumericValueHasStaticDomain = requires {
-  { DomainT::value } -> std::convertible_to<NumericValueDomain>;
-};
-
-template <typename DomainT>
-concept SupportsNumber = std::same_as<DomainT, AnyNumericValueDomain> ||
-    std::same_as<DomainT, NumberDomain>;
-
-template <typename DomainT>
-concept SupportsLength = std::same_as<DomainT, AnyNumericValueDomain> ||
-    std::same_as<DomainT, LengthDomain> ||
-    std::same_as<DomainT, LengthPercentageDomain>;
-
-template <typename DomainT>
-concept SupportsPercentage = std::same_as<DomainT, AnyNumericValueDomain> ||
-    std::same_as<DomainT, LengthPercentageDomain>;
-
-template <typename DomainT = AnyNumericValueDomain>
+template <NumericValueConcreteType T = NumericValueAny>
 class NumericValue {
  public:
-  template <typename OtherDomainT>
+  template <NumericValueConcreteType OtherT>
   friend class NumericValue;
 
-  using Storage = std::variant<
-      std::monostate,
-      NumericValueNumber,
-      NumericValueLength,
-      NumericValuePercentage,
-      NumericValueDynamic>;
+  using Storage = std::variant<std::monostate, NumericValueDynamic, T>;
 
   constexpr NumericValue() = default;
-  constexpr explicit NumericValue(Float value)
-    requires SupportsNumber<DomainT>
-      : storage_(NumericValueNumber{value}) {}
-  constexpr explicit NumericValue(NumericValueDynamicId value)
-    requires SupportsNumber<DomainT>
-      : storage_(NumericValueDynamic{value, expectedDomain()}) {}
-  constexpr explicit NumericValue(NumericValueNumber value)
-    requires SupportsNumber<DomainT>
-      : storage_(value) {}
-  constexpr explicit NumericValue(NumericValueLength value)
-    requires SupportsLength<DomainT>
-      : storage_(value) {}
-  constexpr explicit NumericValue(NumericValuePercentage value)
-    requires SupportsPercentage<DomainT>
-      : storage_(value) {}
-  constexpr explicit NumericValue(NumericValueDynamic value)
-      : storage_(value) {}
 
-  template <typename OtherDomainT>
-  constexpr NumericValue(const NumericValue<OtherDomainT>& other)
-      : storage_(other.storage_) {}
+  constexpr explicit NumericValue(T concreteValue)
+      : storage_(std::move(concreteValue)) {}
 
-  template <typename OtherDomainT>
-  constexpr NumericValue& operator=(const NumericValue<OtherDomainT>& other) {
-    storage_ = other.storage_;
+  constexpr explicit NumericValue(NumericValueDynamic dynamicValue)
+      : storage_(dynamicValue) {}
+
+  template <typename U>
+    requires std::constructible_from<T, U> &&
+      (!std::same_as<std::decay_t<U>, NumericValue<T>>) &&
+      (!std::same_as<std::decay_t<U>, NumericValueDynamic>)
+  constexpr NumericValue(U&& inner) : storage_(T{std::forward<U>(inner)}) {}
+
+  template <NumericValueConcreteType OtherT>
+    requires(!std::same_as<T, OtherT>)
+  constexpr NumericValue(const NumericValue<OtherT>& other) {
+    assignFrom(other);
+  }
+
+  template <NumericValueConcreteType OtherT>
+    requires(!std::same_as<T, OtherT>)
+  constexpr NumericValue& operator=(const NumericValue<OtherT>& other) {
+    assignFrom(other);
     return *this;
   }
 
-  static constexpr NumericValue number(Float value) {
-    static_assert(
-        SupportsNumber<DomainT>,
-        "NumericValue domain does not support unitless numbers");
-    return NumericValue{NumericValueNumber{value}};
-  }
-
-  static constexpr NumericValue length(Float value) {
-    static_assert(
-        SupportsLength<DomainT>,
-        "NumericValue domain does not support lengths");
-    return NumericValue{NumericValueLength{value}};
-  }
-
-  static constexpr NumericValue percentage(Float value) {
-    static_assert(
-        SupportsPercentage<DomainT>,
-        "NumericValue domain does not support percentages");
-    return NumericValue{NumericValuePercentage{value}};
-  }
-
-  static constexpr NumericValue dynamic(NumericValueDynamicId value) {
-    return dynamic(value, expectedDomain());
-  }
-
-  static constexpr NumericValue dynamic(
-      NumericValueDynamicId value,
-      NumericValueDomain domain) {
-    if constexpr (NumericValueHasStaticDomain<DomainT>) {
-      react_native_assert(domain == DomainT::value);
-      return NumericValue{NumericValueDynamic{value, DomainT::value}};
-    }
-    return NumericValue{NumericValueDynamic{value, domain}};
-  }
-
   constexpr bool operator==(const NumericValue& other) const = default;
-
-  constexpr bool isUndefined() const {
-    return std::holds_alternative<std::monostate>(storage_);
-  }
-
-  constexpr bool isNumber() const {
-    return std::holds_alternative<NumericValueNumber>(storage_);
-  }
-
-  constexpr bool isLength() const {
-    return std::holds_alternative<NumericValueLength>(storage_);
-  }
-
-  constexpr bool isPercentage() const {
-    return std::holds_alternative<NumericValuePercentage>(storage_);
-  }
-
-  constexpr bool isDynamic() const {
-    return std::holds_alternative<NumericValueDynamic>(storage_);
-  }
-
-  constexpr NumericValueKind kind() const {
-    if (isNumber()) {
-      return NumericValueKind::Number;
-    }
-    if (isLength()) {
-      return NumericValueKind::Length;
-    }
-    if (isPercentage()) {
-      return NumericValueKind::Percentage;
-    }
-    if (isDynamic()) {
-      return NumericValueKind::Dynamic;
-    }
-    return NumericValueKind::Undefined;
-  }
 
   constexpr explicit operator bool() const {
     return !isUndefined();
   }
 
-  static constexpr NumericValueDomain expectedDomain() {
-    if constexpr (NumericValueHasStaticDomain<DomainT>) {
-      return DomainT::value;
-    }
-
-    return NumericValueDomain::LengthOrPercentage;
+  constexpr bool is_undefined() const {
+    return std::holds_alternative<std::monostate>(storage_);
   }
 
-  static constexpr NumericValueDomain staticDomain()
-    requires NumericValueHasStaticDomain<DomainT>
+  constexpr bool is_resolved() const {
+    return std::holds_alternative<T>(storage_);
+  }
+
+  constexpr bool is_dynamic() const {
+    return std::holds_alternative<NumericValueDynamic>(storage_);
+  }
+
+  constexpr bool isUndefined() const {
+    return is_undefined();
+  }
+  constexpr bool isDynamic() const {
+    return is_dynamic();
+  }
+
+  constexpr bool isNumber() const
+    requires SupportsNumber<T>
   {
-    return DomainT::value;
+    if (!is_resolved()) {
+      return false;
+    }
+    if constexpr (std::same_as<T, NumericValueNumber>) {
+      return true;
+    } else {
+      return std::holds_alternative<NumericValueNumber>(
+          std::get<T>(storage_).value);
+    }
   }
 
-  constexpr NumericValue<> unwrap() const {
-    return NumericValue<>{*this};
+  constexpr bool isLength() const
+    requires SupportsLength<T>
+  {
+    if (!is_resolved()) {
+      return false;
+    }
+    if constexpr (std::same_as<T, NumericValueLength>) {
+      return true;
+    } else {
+      return std::holds_alternative<NumericValueLength>(
+          std::get<T>(storage_).value);
+    }
   }
 
-  constexpr NumericValueDynamicId asDynamicId() const {
-    return isDynamic() ? std::get<NumericValueDynamic>(storage_).id : 0;
+  constexpr bool isPercentage() const
+    requires SupportsPercentage<T>
+  {
+    if (!is_resolved()) {
+      return false;
+    }
+    if constexpr (std::same_as<T, NumericValuePercentage>) {
+      return true;
+    } else {
+      return std::holds_alternative<NumericValuePercentage>(
+          std::get<T>(storage_).value);
+    }
   }
 
-  constexpr NumericValueDomain domain() const {
-    if (isUndefined()) {
-      return expectedDomain();
+  constexpr Float asNumber() const
+    requires SupportsNumber<T>
+  {
+    react_native_assert(isNumber());
+    if constexpr (std::same_as<T, NumericValueNumber>) {
+      return std::get<T>(storage_).value;
+    } else {
+      return std::get<NumericValueNumber>(std::get<T>(storage_).value).value;
     }
-    if (isNumber()) {
-      return NumericValueDomain::Number;
+  }
+
+  constexpr Float asLength() const
+    requires SupportsLength<T>
+  {
+    react_native_assert(isLength());
+    if constexpr (std::same_as<T, NumericValueLength>) {
+      return std::get<T>(storage_).value;
+    } else {
+      return std::get<NumericValueLength>(std::get<T>(storage_).value).value;
     }
-    if (isLength()) {
-      return NumericValueDomain::Length;
+  }
+
+  constexpr Float asPercentage() const
+    requires SupportsPercentage<T>
+  {
+    react_native_assert(isPercentage());
+    if constexpr (std::same_as<T, NumericValuePercentage>) {
+      return std::get<T>(storage_).value;
+    } else {
+      return std::get<NumericValuePercentage>(std::get<T>(storage_).value)
+          .value;
     }
-    if (isPercentage()) {
-      return NumericValueDomain::LengthOrPercentage;
+  }
+
+  constexpr Float value() const {
+    if (!is_resolved()) {
+      return 0.0f;
     }
-    if (isDynamic()) {
-      return std::get<NumericValueDynamic>(storage_).domain;
-    }
-    return NumericValueDomain::LengthOrPercentage;
+    return resolvedFloat();
   }
 
   constexpr Float asFloat() const {
-    if (isNumber()) {
-      return std::get<NumericValueNumber>(storage_).value;
+    if (!is_resolved()) {
+      return std::numeric_limits<Float>::quiet_NaN();
     }
-    if (isLength()) {
-      return std::get<NumericValueLength>(storage_).value;
-    }
-    if (isPercentage()) {
-      return std::get<NumericValuePercentage>(storage_).value;
-    }
-    return std::numeric_limits<Float>::quiet_NaN();
+    return resolvedFloat();
   }
 
   constexpr bool isNan() const {
-    return isNumber() && std::isnan(asFloat());
+    return is_resolved() && std::isnan(resolvedFloat());
+  }
+
+  constexpr NumericValueDynamic dynamic_id() const {
+    react_native_assert(is_dynamic());
+    return std::get<NumericValueDynamic>(storage_);
+  }
+
+  constexpr NumericValueDynamicId asDynamicId() const {
+    return is_dynamic() ? std::get<NumericValueDynamic>(storage_).id : 0;
+  }
+
+  static constexpr NumericValue number(Float v)
+    requires SupportsNumber<T>
+  {
+    if constexpr (std::same_as<T, NumericValueNumber>) {
+      return NumericValue{NumericValueNumber{v}};
+    } else {
+      return NumericValue{T{NumericValueNumber{v}}};
+    }
+  }
+
+  static constexpr NumericValue length(Float v)
+    requires SupportsLength<T>
+  {
+    if constexpr (std::same_as<T, NumericValueLength>) {
+      return NumericValue{NumericValueLength{v}};
+    } else {
+      return NumericValue{T{NumericValueLength{v}}};
+    }
+  }
+
+  static constexpr NumericValue percentage(Float v)
+    requires SupportsPercentage<T>
+  {
+    if constexpr (std::same_as<T, NumericValuePercentage>) {
+      return NumericValue{NumericValuePercentage{v}};
+    } else {
+      return NumericValue{T{NumericValuePercentage{v}}};
+    }
+  }
+
+  static constexpr NumericValue dynamic(NumericValueDynamicId id) {
+    return NumericValue{NumericValueDynamic{id}};
+  }
+
+  constexpr NumericValueKind kind() const {
+    if (is_undefined()) {
+      return NumericValueKind::Undefined;
+    }
+    if (is_dynamic()) {
+      return NumericValueKind::Dynamic;
+    }
+    if constexpr (std::same_as<T, NumericValueNumber>) {
+      return NumericValueKind::Number;
+    } else if constexpr (std::same_as<T, NumericValueLength>) {
+      return NumericValueKind::Length;
+    } else if constexpr (std::same_as<T, NumericValuePercentage>) {
+      return NumericValueKind::Percentage;
+    } else {
+      return std::visit(
+          [](const auto& inner) constexpr {
+            using I = std::decay_t<decltype(inner)>;
+            if constexpr (std::same_as<I, NumericValueNumber>) {
+              return NumericValueKind::Number;
+            } else if constexpr (std::same_as<I, NumericValueLength>) {
+              return NumericValueKind::Length;
+            } else {
+              return NumericValueKind::Percentage;
+            }
+          },
+          std::get<T>(storage_).value);
+    }
   }
 
   constexpr Float resolve(Float referenceLength = 0.0f) const {
-    if (isPercentage()) {
-      return std::get<NumericValuePercentage>(storage_).value *
-          referenceLength * 0.01f;
+    if constexpr (SupportsPercentage<T>) {
+      if (isPercentage()) {
+        return asPercentage() * referenceLength * 0.01f;
+      }
     }
-    if (isNumber()) {
-      return std::get<NumericValueNumber>(storage_).value;
+    if constexpr (SupportsNumber<T>) {
+      if (isNumber()) {
+        return asNumber();
+      }
     }
-    if (isLength()) {
-      return std::get<NumericValueLength>(storage_).value;
+    if constexpr (SupportsLength<T>) {
+      if (isLength()) {
+        return asLength();
+      }
     }
     return 0.0f;
   }
 
-  constexpr bool matchesDomain(NumericValueDomain domain) const {
-    switch (domain) {
-      case NumericValueDomain::Number:
-        return isNumber() ||
-            (isDynamic() && this->domain() == NumericValueDomain::Number);
-      case NumericValueDomain::Length:
-        return isLength() ||
-            (isDynamic() && this->domain() == NumericValueDomain::Length);
-      case NumericValueDomain::LengthOrPercentage:
-        return isLength() || isPercentage() ||
-            (isDynamic() &&
-             this->domain() == NumericValueDomain::LengthOrPercentage);
-    }
-
-    return false;
+  constexpr NumericValue<NumericValueAny> unwrap() const {
+    return NumericValue<NumericValueAny>{*this};
   }
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -318,45 +355,117 @@ class NumericValue {
 
  private:
   Storage storage_{};
+
+  constexpr Float resolvedFloat() const {
+    if constexpr (
+        std::same_as<T, NumericValueNumber> ||
+        std::same_as<T, NumericValueLength> ||
+        std::same_as<T, NumericValuePercentage>) {
+      return std::get<T>(storage_).value;
+    } else {
+      return std::visit(
+          [](const auto& inner) constexpr { return inner.value; },
+          std::get<T>(storage_).value);
+    }
+  }
+
+  template <NumericValueConcreteType OtherT>
+  constexpr void assignFrom(const NumericValue<OtherT>& other) {
+    if (other.is_undefined()) {
+      storage_ = std::monostate{};
+    } else if (other.is_dynamic()) {
+      storage_ = other.dynamic_id();
+    } else {
+      convertResolvedFrom(other);
+    }
+  }
+
+  template <NumericValueConcreteType OtherT>
+  constexpr void convertResolvedFrom(const NumericValue<OtherT>& other) {
+    if constexpr (std::same_as<T, NumericValueAny>) {
+      if constexpr (
+          std::same_as<OtherT, NumericValueNumber> ||
+          std::same_as<OtherT, NumericValueLength> ||
+          std::same_as<OtherT, NumericValuePercentage>) {
+        storage_ = T{std::get<OtherT>(other.storage_)};
+      } else if constexpr (std::same_as<OtherT, NumericValueLengthPercentage>) {
+        std::visit(
+            [this](const auto& inner) { storage_ = T{inner}; },
+            std::get<OtherT>(other.storage_).value);
+      }
+    } else if constexpr (std::same_as<OtherT, NumericValueAny>) {
+      std::visit(
+          [this](const auto& inner) {
+            using I = std::decay_t<decltype(inner)>;
+            if constexpr (std::same_as<T, I>) {
+              storage_ = inner;
+            } else if constexpr (
+                std::same_as<T, NumericValueLengthPercentage>) {
+              if constexpr (
+                  std::same_as<I, NumericValueLength> ||
+                  std::same_as<I, NumericValuePercentage>) {
+                storage_ = T{inner};
+              }
+            }
+          },
+          std::get<OtherT>(other.storage_).value);
+    } else if constexpr (
+        std::same_as<T, NumericValueLengthPercentage> &&
+        (std::same_as<OtherT, NumericValueLength> ||
+         std::same_as<OtherT, NumericValuePercentage>)) {
+      storage_ = T{std::get<OtherT>(other.storage_)};
+    } else if constexpr (
+        (std::same_as<T, NumericValueLength> ||
+         std::same_as<T, NumericValuePercentage>) &&
+        std::same_as<OtherT, NumericValueLengthPercentage>) {
+      auto* v = std::get_if<T>(&std::get<OtherT>(other.storage_).value);
+      if (v != nullptr) {
+        storage_ = *v;
+      }
+    }
+  }
 };
 
-using UntypedNumericValue = NumericValue<>;
-using NumberValue = NumericValue<NumberDomain>;
-using LengthValue = NumericValue<LengthDomain>;
-using LengthPercentageValue = NumericValue<LengthPercentageDomain>;
+using NumberValue = NumericValue<NumericValueNumber>;
+using LengthValue = NumericValue<NumericValueLength>;
+using PercentageValue = NumericValue<NumericValuePercentage>;
+using LengthPercentageValue = NumericValue<NumericValueLengthPercentage>;
+using UntypedNumericValue = NumericValue<NumericValueAny>;
 
 #ifdef RN_SERIALIZABLE_STATE
-template <typename DomainT>
-inline folly::dynamic NumericValue<DomainT>::toDynamic() const {
+template <NumericValueConcreteType T>
+inline folly::dynamic NumericValue<T>::toDynamic() const {
   switch (kind()) {
     case NumericValueKind::Undefined:
       return nullptr;
     case NumericValueKind::Number:
     case NumericValueKind::Length:
-      return asFloat();
+      return static_cast<double>(asFloat());
     case NumericValueKind::Percentage:
-      return ::facebook::react::toString(asFloat(), '%');
+      return std::to_string(asFloat()) + "%";
     case NumericValueKind::Dynamic:
       return nullptr;
   }
+  return nullptr;
 }
 #endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-template <typename DomainT>
-inline std::string NumericValue<DomainT>::toString() const {
+template <NumericValueConcreteType T>
+inline std::string NumericValue<T>::toString() const {
   switch (kind()) {
     case NumericValueKind::Undefined:
       return "undefined";
     case NumericValueKind::Number:
-      return ::facebook::react::toString(asFloat(), '\0');
+      return std::to_string(asFloat());
     case NumericValueKind::Length:
-      return ::facebook::react::toString(asFloat(), '\0') + "px";
+      return std::to_string(asFloat()) + "px";
     case NumericValueKind::Percentage:
-      return ::facebook::react::toString(asFloat(), '%');
+      return std::to_string(asFloat()) + "%";
     case NumericValueKind::Dynamic:
-      return "calc(id=" + std::to_string(asDynamicId()) + ")";
+      return "undefined";
   }
+  return "";
 }
 #endif
 
@@ -364,9 +473,9 @@ inline std::string NumericValue<DomainT>::toString() const {
 
 namespace std {
 
-template <typename DomainT>
-struct hash<facebook::react::NumericValue<DomainT>> {
-  size_t operator()(const facebook::react::NumericValue<DomainT>& value) const {
+template <facebook::react::NumericValueConcreteType T>
+struct hash<facebook::react::NumericValue<T>> {
+  size_t operator()(const facebook::react::NumericValue<T>& value) const {
     size_t seed = std::hash<uint8_t>()(static_cast<uint8_t>(value.kind()));
     size_t payload = value.isDynamic()
         ? std::hash<facebook::react::NumericValueDynamicId>()(

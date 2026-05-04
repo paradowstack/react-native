@@ -353,7 +353,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if ((oldViewProps.transform != newViewProps.transform ||
        oldViewProps.transformOrigin != newViewProps.transformOrigin) &&
       ![_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"transform"]) {
-    auto newTransform = newViewProps.resolveTransform(_layoutMetrics);
+		auto newTransform = newViewProps.resolveTransform(_layoutMetrics, _layoutContext);
     CATransform3D caTransform = RCTCATransform3DFromTransformMatrix(newTransform);
 
     self.layer.transform = caTransform;
@@ -674,7 +674,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // the view was recycled with stale dimensions.
   if ((_props->transformOrigin.isSet() || !_props->transform.operations.empty()) &&
       layoutMetrics.frame.size != previousFrameSize) {
-    auto newTransform = _props->resolveTransform(layoutMetrics);
+		auto newTransform = _props->resolveTransform(_layoutMetrics, _layoutContext);
     self.layer.transform = RCTCATransform3DFromTransformMatrix(newTransform);
   }
 

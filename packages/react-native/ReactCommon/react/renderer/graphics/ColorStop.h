@@ -22,7 +22,7 @@ namespace facebook::react {
 struct ColorStop {
   bool operator==(const ColorStop& other) const = default;
   SharedColor color;
-  LengthPercentageValue position;
+  LengthPercentageValue position{};
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;

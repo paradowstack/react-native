@@ -16,27 +16,168 @@
 
 namespace facebook::react {
 
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+Float DynamicResolver::resolveCalcEntry(
+    const TypedCalcEntry& entry,
+    float referenceLength) const {
+  return std::visit(
+      [&](const auto& e) {
+        return e.calc.resolve(
+            referenceLength, context.viewportWidth(), context.viewportHeight());
+      },
+      entry);
+}
+
+Float DynamicResolver::resolveById(DynamicPropertyId id, float referenceLength)
+    const {
+  auto it = propertiesMap.find(id);
+  if (it != propertiesMap.end()) {
+    return resolveCalcEntry(it->second, referenceLength);
+  }
+  return {};
+}
+
+// ---------------------------------------------------------------------------
+// Public resolve methods
+// ---------------------------------------------------------------------------
+
 Float DynamicResolver::resolveNumber(const UntypedNumericValue& value) const {
-  return resolve(value, NumericValueDomain::Number);
+  if (value.isDynamic()) {
+    auto it = propertiesMap.find(value.asDynamicId());
+    if (it == propertiesMap.end() ||
+        !std::holds_alternative<NumberCalcEntry>(it->second)) {
+      return std::numeric_limits<Float>::quiet_NaN();
+    }
+    return resolveCalcEntry(it->second, 0.0f);
+  }
+  if (value.kind() != NumericValueKind::Number) {
+    return std::numeric_limits<Float>::quiet_NaN();
+  }
+  return value.resolve(0.0f);
 }
 
 Float DynamicResolver::resolveLength(const UntypedNumericValue& value) const {
-  return resolve(value, NumericValueDomain::Length);
+  if (value.isDynamic()) {
+    auto it = propertiesMap.find(value.asDynamicId());
+    if (it == propertiesMap.end() ||
+        !std::holds_alternative<LengthCalcEntry>(it->second)) {
+      return std::numeric_limits<Float>::quiet_NaN();
+    }
+    return resolveCalcEntry(it->second, 0.0f);
+  }
+  if (value.kind() != NumericValueKind::Length) {
+    return std::numeric_limits<Float>::quiet_NaN();
+  }
+  return value.resolve(0.0f);
 }
 
 Float DynamicResolver::resolveLengthOrPercentage(
     const UntypedNumericValue& value,
     float percentRef) const {
-  return resolve(value, NumericValueDomain::LengthOrPercentage, percentRef);
+  if (value.isDynamic()) {
+    auto it = propertiesMap.find(value.asDynamicId());
+    if (it == propertiesMap.end() ||
+        !std::holds_alternative<LengthOrPercentageCalcEntry>(it->second)) {
+      return std::numeric_limits<Float>::quiet_NaN();
+    }
+    return resolveCalcEntry(it->second, percentRef);
+  }
+  auto k = value.kind();
+  if (k != NumericValueKind::Length && k != NumericValueKind::Percentage) {
+    return std::numeric_limits<Float>::quiet_NaN();
+  }
+  return value.resolve(percentRef);
+}
+
+LengthPercentageValue DynamicResolver::resolveLengthPercentage(
+    const LengthPercentageValue& value,
+    float percentRef) const {
+  if (!value.isDynamic()) {
+    return value;
+  }
+
+  auto it = propertiesMap.find(value.asDynamicId());
+  if (it == propertiesMap.end()) {
+    return LengthPercentageValue{};
+  }
+
+  return std::visit(
+      [&](const auto& e) -> LengthPercentageValue {
+        using E = std::decay_t<decltype(e)>;
+        auto& calc = e.calc;
+        if constexpr (std::is_same_v<E, LengthCalcEntry>) {
+          auto resolved = calc.resolve(
+              0.0f, context.viewportWidth(), context.viewportHeight());
+          return LengthPercentageValue::length(resolved);
+        } else if constexpr (std::is_same_v<E, LengthOrPercentageCalcEntry>) {
+          if (calc.percent != 0.0f && percentRef <= 0.0f) {
+            return value; // still dynamic – no layout yet
+          }
+          auto resolved = calc.resolve(
+              percentRef, context.viewportWidth(), context.viewportHeight());
+          if (calc.isPercentOnly()) {
+            return LengthPercentageValue::percentage(resolved);
+          }
+          return LengthPercentageValue::length(resolved);
+        } else {
+          return LengthPercentageValue{};
+        }
+      },
+      it->second);
+}
+
+UntypedNumericValue DynamicResolver::resolveAny(
+    const UntypedNumericValue& value,
+    float percentRef) const {
+  if (!value.isDynamic()) {
+    return value;
+  }
+
+  auto it = propertiesMap.find(value.asDynamicId());
+  if (it == propertiesMap.end()) {
+    return UntypedNumericValue{};
+  }
+
+  return std::visit(
+      [&](const auto& e) -> UntypedNumericValue {
+        using E = std::decay_t<decltype(e)>;
+        auto& calc = e.calc;
+
+        if constexpr (std::is_same_v<E, NumberCalcEntry>) {
+          auto resolved = calc.resolve(
+              0.0f, context.viewportWidth(), context.viewportHeight());
+          return UntypedNumericValue::number(resolved);
+        } else if constexpr (std::is_same_v<E, LengthCalcEntry>) {
+          auto resolved = calc.resolve(
+              0.0f, context.viewportWidth(), context.viewportHeight());
+          return UntypedNumericValue::length(resolved);
+        } else {
+          // LengthOrPercentageCalcEntry
+          if (calc.percent != 0.0f &&
+              context.layoutMetrics.frame.size.width <= 0.0f &&
+              context.layoutMetrics.frame.size.height <= 0.0f) {
+            return value; // still dynamic – no layout yet
+          }
+          auto resolved = calc.resolve(
+              percentRef, context.viewportWidth(), context.viewportHeight());
+          if (calc.isPercentOnly()) {
+            return UntypedNumericValue::percentage(resolved);
+          }
+          return UntypedNumericValue::length(resolved);
+        }
+      },
+      it->second);
 }
 
 Float DynamicResolver::resolve(
     const facebook::yoga::StyleLength& length,
     float percentRef) const {
   if (length.isDynamic()) {
-    return resolve(length.callbackId(), percentRef);
+    return resolveById(length.callbackId(), percentRef);
   }
-
   return length.resolve(percentRef, nullptr).unwrap();
 }
 
@@ -44,109 +185,122 @@ Float DynamicResolver::resolve(
     const facebook::yoga::StyleSizeLength& length,
     float percentRef) const {
   if (length.isDynamic()) {
-    return resolve(length.callbackId(), percentRef);
+    return resolveById(length.callbackId(), percentRef);
   }
-
   return length.resolve(percentRef, nullptr).unwrap();
 }
 
-Float DynamicResolver::resolve(DynamicPropertyId id, float referenceLength)
-    const {
+// ---------------------------------------------------------------------------
+// Serializable helpers
+// ---------------------------------------------------------------------------
+
+#ifdef RN_SERIALIZABLE_STATE
+
+folly::dynamic DynamicResolver::toDynamicCalcEntry(
+    const TypedCalcEntry& entry,
+    float referenceLength) const {
+  return std::visit(
+      [&](const auto& e) -> folly::dynamic {
+        using E = std::decay_t<decltype(e)>;
+        auto& calc = e.calc;
+        if constexpr (std::is_same_v<E, LengthOrPercentageCalcEntry>) {
+          if (calc.isPercentOnly()) {
+            return toString(calc.percent, '%');
+          }
+        }
+        return calc.resolve(
+            referenceLength, context.viewportWidth(), context.viewportHeight());
+      },
+      entry);
+}
+
+folly::dynamic DynamicResolver::toDynamicById(
+    DynamicPropertyId id,
+    float referenceLength) const {
   auto it = propertiesMap.find(id);
   if (it != propertiesMap.end()) {
-    return it->second.resolve(
-        referenceLength, context.viewportWidth(), context.viewportHeight());
+    return toDynamicCalcEntry(it->second, referenceLength);
   }
   return {};
 }
 
-Float DynamicResolver::resolve(
-    const UntypedNumericValue& value,
-    NumericValueDomain domain,
-    float referenceLength) const {
+folly::dynamic DynamicResolver::toDynamicNumber(
+    const UntypedNumericValue& value) const {
   if (value.isDynamic()) {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
-        !cssCalcMatchesDomain(it->second, domain)) {
-      return std::numeric_limits<Float>::quiet_NaN();
+        !std::holds_alternative<NumberCalcEntry>(it->second)) {
+      return nullptr;
     }
-    return resolve(value.asDynamicId(), referenceLength);
+    return toDynamicById(value.asDynamicId(), 0.0f);
   }
-
-  if (!value.matchesDomain(domain)) {
-    return std::numeric_limits<Float>::quiet_NaN();
+  if (value.kind() != NumericValueKind::Number) {
+    return nullptr;
   }
-
-  return value.resolve(referenceLength);
-}
-
-#ifdef RN_SERIALIZABLE_STATE
-folly::dynamic DynamicResolver::toDynamicNumber(
-    const UntypedNumericValue& value) const {
-  return toDynamic(value, NumericValueDomain::Number);
+  return value.toDynamic();
 }
 
 folly::dynamic DynamicResolver::toDynamicLength(
     const UntypedNumericValue& value) const {
-  return toDynamic(value, NumericValueDomain::Length);
+  if (value.isDynamic()) {
+    auto it = propertiesMap.find(value.asDynamicId());
+    if (it == propertiesMap.end() ||
+        !std::holds_alternative<LengthCalcEntry>(it->second)) {
+      return nullptr;
+    }
+    return toDynamicById(value.asDynamicId(), 0.0f);
+  }
+  if (value.kind() != NumericValueKind::Length) {
+    return nullptr;
+  }
+  return value.toDynamic();
 }
 
 folly::dynamic DynamicResolver::toDynamicLengthOrPercentage(
     const UntypedNumericValue& value,
     float percentRef) const {
-  return toDynamic(value, NumericValueDomain::LengthOrPercentage, percentRef);
+  if (value.isDynamic()) {
+    auto it = propertiesMap.find(value.asDynamicId());
+    if (it == propertiesMap.end() ||
+        !std::holds_alternative<LengthOrPercentageCalcEntry>(it->second)) {
+      return nullptr;
+    }
+    return toDynamicById(value.asDynamicId(), percentRef);
+  }
+  auto k = value.kind();
+  if (k != NumericValueKind::Length && k != NumericValueKind::Percentage) {
+    return nullptr;
+  }
+  return value.toDynamic();
+}
+
+folly::dynamic DynamicResolver::toDynamicAny(
+    const UntypedNumericValue& value,
+    float percentRef) const {
+  if (!value.isDynamic()) {
+    return {};
+  }
+  return toDynamicById(value.asDynamicId(), percentRef);
 }
 
 folly::dynamic DynamicResolver::toDynamic(
     const facebook::yoga::StyleLength& length,
     float percentRef) const {
   if (length.isDynamic()) {
-    return toDynamic(length.callbackId(), percentRef);
+    return toDynamicById(length.callbackId(), percentRef);
   }
   return {};
 }
+
 folly::dynamic DynamicResolver::toDynamic(
     const facebook::yoga::StyleSizeLength& length,
     float percentRef) const {
   if (length.isDynamic()) {
-    return toDynamic(length.callbackId(), percentRef);
-  }
-  return {};
-}
-folly::dynamic DynamicResolver::toDynamic(
-    DynamicPropertyId id,
-    float referenceLength) const {
-  auto it = propertiesMap.find(id);
-  if (it != propertiesMap.end()) {
-    auto& calc = it->second;
-    if (calc.isPercentOnly()) {
-      return toString(calc.percent, '%');
-    }
-    return calc.resolve(
-        referenceLength, context.viewportWidth(), context.viewportHeight());
+    return toDynamicById(length.callbackId(), percentRef);
   }
   return {};
 }
 
-folly::dynamic DynamicResolver::toDynamic(
-    const UntypedNumericValue& value,
-    NumericValueDomain domain,
-    float referenceLength) const {
-  if (value.isDynamic()) {
-    auto it = propertiesMap.find(value.asDynamicId());
-    if (it == propertiesMap.end() ||
-        !cssCalcMatchesDomain(it->second, domain)) {
-      return nullptr;
-    }
-    return toDynamic(value.asDynamicId(), referenceLength);
-  }
-
-  if (!value.matchesDomain(domain)) {
-    return nullptr;
-  }
-
-  return value.toDynamic();
-}
 #endif
 
 } // namespace facebook::react

@@ -76,7 +76,7 @@ class LayoutableShadowNode : public ShadowNode {
    * called on the root node.
    * Default implementation does nothing.
    */
-  virtual void layoutTree(LayoutContext layoutContext, LayoutConstraints layoutConstraints) = 0;
+  virtual void layoutTree(LayoutContext layoutContext, LayoutConstraints layoutConstraints);
 
   /*
    * Measures the node (and node content, probably recursively) with
@@ -109,6 +109,11 @@ class LayoutableShadowNode : public ShadowNode {
    * Returns layout metrics computed during previous layout pass.
    */
   LayoutMetrics getLayoutMetrics() const;
+
+  /*
+   * Returns layout context computed during previous layout pass.
+   */
+  static LayoutContext getLayoutContext();
 
   /*
    * Returns a transform object that represents transformations that will/should

@@ -164,33 +164,34 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
 
 /* static */ Transform Transform::FromTransformOperation(
     TransformOperation transformOperation,
-    const Size& size,
+    const DynamicResolver &resolver,
     const Transform& transform) {
   if (transformOperation.type == TransformOperationType::Perspective) {
     return Transform::Perspective(transformOperation.x.resolve(0));
   }
   if (transformOperation.type == TransformOperationType::Scale) {
     return Transform::Scale(
-        transformOperation.x.resolve(0),
-        transformOperation.y.resolve(0),
-        transformOperation.z.resolve(0));
+        resolver.resolveAny(transformOperation.x).value(),
+        resolver.resolveAny(transformOperation.y).value(),
+        resolver.resolveAny(transformOperation.z).value());
   }
   if (transformOperation.type == TransformOperationType::Translate) {
-    auto translateX = transformOperation.x.resolve(size.width);
-    auto translateY = transformOperation.y.resolve(size.height);
+    auto translateX = resolver.resolveAny(transformOperation.x, resolver.context.frameWidth()).value();
+    auto translateY = resolver.resolveAny(transformOperation.y, resolver.context.frameHeight()).value();
+    auto translateZ = resolver.resolveAny(transformOperation.z).value();
 
     return Transform::Translate(
-        translateX, translateY, transformOperation.z.resolve(0));
+        translateX, translateY, translateZ);
   }
   if (transformOperation.type == TransformOperationType::Skew) {
     return Transform::Skew(
-        transformOperation.x.resolve(0), transformOperation.y.resolve(0));
+        resolver.resolveAny(transformOperation.x).value(), resolver.resolveAny(transformOperation.y).value());
   }
   if (transformOperation.type == TransformOperationType::Rotate) {
     return Transform::Rotate(
-        transformOperation.x.resolve(0),
-        transformOperation.y.resolve(0),
-        transformOperation.z.resolve(0));
+        resolver.resolveAny(transformOperation.x).value(),
+        resolver.resolveAny(transformOperation.y).value(),
+        resolver.resolveAny(transformOperation.z).value());
   }
   // when using arbitrary transform, the caller is responsible for applying the
   // value
@@ -303,6 +304,7 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
     react_native_assert(type == lhsOp.type);
     react_native_assert(type == rhsOp.type);
 
+    auto resolver = DynamicResolver{{}, {{.frame = {.size = size}}, {}}};
     result = result *
         Transform::FromTransformOperation(
                  TransformOperation{
@@ -321,7 +323,7 @@ Transform::Translate(Float x, Float y, Float z) noexcept {
                          lhsOp.z.resolve(0) +
                          (rhsOp.z.resolve(0) - lhsOp.z.resolve(0)) *
                              animationProgress)},
-                 size);
+                 resolver);
   }
 
   return result;

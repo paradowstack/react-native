@@ -23,13 +23,6 @@
 
 namespace facebook::react {
 
-inline std::optional<UntypedNumericValue> parseFilterNumericValue(
-    const PropsParserContext& context,
-    const RawValue& value,
-    NumericValueDomain domain) {
-  return parseNumericValue(context, value, domain);
-}
-
 inline void parseProcessedFilter(
     const PropsParserContext& context,
     const RawValue& value,
@@ -78,8 +71,8 @@ inline void parseProcessedFilter(
         return;
       }
 
-      auto parsedOffsetX = parseFilterNumericValue(
-          context, offsetX->second, NumericValueDomain::Length);
+      auto parsedOffsetX =
+          parseNumericValueAs<NumericValueLength>(context, offsetX->second);
       if (!parsedOffsetX.has_value()) {
         result = {};
         return;
@@ -92,8 +85,8 @@ inline void parseProcessedFilter(
         result = {};
         return;
       }
-      auto parsedOffsetY = parseFilterNumericValue(
-          context, offsetY->second, NumericValueDomain::Length);
+      auto parsedOffsetY =
+          parseNumericValueAs<NumericValueLength>(context, offsetY->second);
       if (!parsedOffsetY.has_value()) {
         result = {};
         return;
@@ -102,8 +95,8 @@ inline void parseProcessedFilter(
 
       auto standardDeviation = rawDropShadow.find("standardDeviation");
       if (standardDeviation != rawDropShadow.end()) {
-        auto parsedStandardDeviation = parseFilterNumericValue(
-            context, standardDeviation->second, NumericValueDomain::Length);
+        auto parsedStandardDeviation = parseNumericValueAs<NumericValueLength>(
+            context, standardDeviation->second);
         if (!parsedStandardDeviation.has_value()) {
           result = {};
           return;
@@ -122,11 +115,12 @@ inline void parseProcessedFilter(
 
       filterFunction.parameters = dropShadowParams;
     } else {
-      auto domain = filterFunction.type == FilterType::Blur
-          ? NumericValueDomain::Length
-          : NumericValueDomain::Number;
-      auto parsedAmount = parseFilterNumericValue(
-          context, rawFilterFunction.begin()->second, domain);
+      std::optional<UntypedNumericValue> parsedAmount =
+          filterFunction.type == FilterType::Blur
+          ? parseNumericValueAs<NumericValueLength>(
+                context, rawFilterFunction.begin()->second)
+          : parseNumericValueAs<NumericValueNumber>(
+                context, rawFilterFunction.begin()->second);
       if (!parsedAmount.has_value()) {
         result = {};
         return;
@@ -179,37 +173,32 @@ inline FilterType filterTypeFromVariant(const CSSFilterFunction& filter) {
 }
 
 inline std::optional<FilterFunction> fromCSSFilter(
+    const PropsParserContext& context,
     const CSSFilterFunction& cssFilter) {
   return std::visit(
       [&](auto&& filter) -> std::optional<FilterFunction> {
         using FilterT = std::decay_t<decltype(filter)>;
 
         if constexpr (std::is_same_v<FilterT, CSSBlurFilter>) {
-          // TODO: support non-px values
-          if (filter.amount.unit != CSSLengthUnit::Px) {
-            return {};
-          }
           return FilterFunction{
               .type = filterTypeFromVariant(cssFilter),
-              .parameters = UntypedNumericValue::length(filter.amount.value),
+              .parameters = numericValueFromCSSCalc<NumericValueLength>(
+                                context, filter.amount)
+                                .unwrap(),
           };
         }
 
         if constexpr (std::is_same_v<FilterT, CSSDropShadowFilter>) {
-          // TODO: support non-px values
-          if (filter.offsetX.unit != CSSLengthUnit::Px ||
-              filter.offsetY.unit != CSSLengthUnit::Px ||
-              filter.standardDeviation.unit != CSSLengthUnit::Px) {
-            return {};
-          }
-
           return FilterFunction{
               .type = FilterType::DropShadow,
               .parameters = DropShadowParams{
-                  .offsetX = LengthValue::length(filter.offsetX.value),
-                  .offsetY = LengthValue::length(filter.offsetY.value),
+                  .offsetX = numericValueFromCSSCalc<NumericValueLength>(
+                      context, filter.offsetX),
+                  .offsetY = numericValueFromCSSCalc<NumericValueLength>(
+                      context, filter.offsetY),
                   .standardDeviation =
-                      LengthValue::length(filter.standardDeviation.value),
+                      numericValueFromCSSCalc<NumericValueLength>(
+                          context, filter.standardDeviation),
                   .color = fromCSSColor(filter.color),
               }};
         }
@@ -239,6 +228,7 @@ inline std::optional<FilterFunction> fromCSSFilter(
 }
 
 inline void parseUnprocessedFilterString(
+    const PropsParserContext& context,
     std::string&& value,
     std::vector<FilterFunction>& result) {
   auto filterList = parseCSSProperty<CSSFilterList>((std::string)value);
@@ -248,7 +238,7 @@ inline void parseUnprocessedFilterString(
   }
 
   for (const auto& cssFilter : std::get<CSSFilterList>(filterList)) {
-    if (auto filter = fromCSSFilter(cssFilter)) {
+    if (auto filter = fromCSSFilter(context, cssFilter)) {
       result.push_back(*filter);
     } else {
       result = {};
@@ -264,7 +254,7 @@ inline std::optional<FilterFunction> parseDropShadow(
     auto val = parseCSSProperty<CSSDropShadowFilter>(
         std::string("drop-shadow(") + (std::string)value + ")");
     if (std::holds_alternative<CSSDropShadowFilter>(val)) {
-      return fromCSSFilter(std::get<CSSDropShadowFilter>(val));
+      return fromCSSFilter(context, std::get<CSSDropShadowFilter>(val));
     }
     return {};
   }
@@ -282,8 +272,8 @@ inline std::optional<FilterFunction> parseDropShadow(
     return {};
   }
 
-  if (auto parsedOffsetX = parseFilterNumericValue(
-          context, offsetX->second, NumericValueDomain::Length)) {
+  if (auto parsedOffsetX =
+          parseNumericValueAs<NumericValueLength>(context, offsetX->second)) {
     dropShadowParams.offsetX = *parsedOffsetX;
   } else {
     return {};
@@ -294,8 +284,8 @@ inline std::optional<FilterFunction> parseDropShadow(
     return {};
   }
 
-  if (auto parsedOffsetY = parseFilterNumericValue(
-          context, offsetY->second, NumericValueDomain::Length)) {
+  if (auto parsedOffsetY =
+          parseNumericValueAs<NumericValueLength>(context, offsetY->second)) {
     dropShadowParams.offsetY = *parsedOffsetY;
   } else {
     return {};
@@ -303,8 +293,8 @@ inline std::optional<FilterFunction> parseDropShadow(
 
   auto standardDeviation = rawDropShadow.find("standardDeviation");
   if (standardDeviation != rawDropShadow.end()) {
-    if (auto parsedStandardDeviation = parseFilterNumericValue(
-            context, standardDeviation->second, NumericValueDomain::Length)) {
+    if (auto parsedStandardDeviation = parseNumericValueAs<NumericValueLength>(
+            context, standardDeviation->second)) {
       if (!parsedStandardDeviation->isDynamic() &&
           parsedStandardDeviation->asFloat() < 0.0f) {
         return {};
@@ -346,8 +336,8 @@ inline std::optional<FilterFunction> parseFilterRawValue(
   if (filterKey == "drop-shadow") {
     return parseDropShadow(context, rawFilter.begin()->second);
   } else if (filterKey == "blur") {
-    if (auto length = parseFilterNumericValue(
-            context, rawFilter.begin()->second, NumericValueDomain::Length)) {
+    if (auto length = parseNumericValueAs<NumericValueLength>(
+            context, rawFilter.begin()->second)) {
       if (!length->isDynamic() && length->asFloat() < 0.0f) {
         return {};
       }
@@ -366,13 +356,12 @@ inline std::optional<FilterFunction> parseFilterRawValue(
     if (!filterType.has_value()) {
       return {};
     }
-    if (auto amount = coerceAmount(rawFilter.begin()->second)) {
-      if (*amount < 0.0f) {
+    if (auto amount = parseNumericValueAs<NumericValueNumber>(
+            context, rawFilter.begin()->second)) {
+      if (!amount->isDynamic() && amount->asFloat() < 0.0f) {
         return {};
       }
-      return FilterFunction{
-          .type = *filterType,
-          .parameters = UntypedNumericValue::number(*amount)};
+      return FilterFunction{.type = *filterType, .parameters = *amount};
     }
     return {};
   }
@@ -397,7 +386,7 @@ inline void parseUnprocessedFilter(
     const RawValue& value,
     std::vector<FilterFunction>& result) {
   if (value.hasType<std::string>()) {
-    parseUnprocessedFilterString((std::string)value, result);
+    parseUnprocessedFilterString(context, (std::string)value, result);
   } else if (value.hasType<std::vector<RawValue>>()) {
     parseUnprocessedFilterList(context, (std::vector<RawValue>)value, result);
   } else {

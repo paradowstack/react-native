@@ -14,22 +14,19 @@ namespace facebook::react {
 TEST(CSSFilter, blur) {
   auto value = parseCSSProperty<CSSFilterFunction>("blur(10px)");
   EXPECT_TRUE(std::holds_alternative<CSSBlurFilter>(value));
-  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.value, 10.0f);
-  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.px, 10.0f);
 }
 
 TEST(CSSFilter, blur_funky) {
   auto value = parseCSSProperty<CSSFilterFunction>("bLUr( 10px  )");
   EXPECT_TRUE(std::holds_alternative<CSSBlurFilter>(value));
-  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.value, 10.0f);
-  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.px, 10.0f);
 }
 
 TEST(CSSFilter, blur_default) {
   auto value = parseCSSProperty<CSSFilterFunction>("blur()");
   EXPECT_TRUE(std::holds_alternative<CSSBlurFilter>(value));
-  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.value, 0.0f);
-  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSBlurFilter>(value).amount.px, 0.0f);
 }
 
 TEST(CSSFilter, blur_number) {
@@ -118,64 +115,33 @@ TEST(CSSFilter, contrast_length) {
 TEST(CSSFilter, drop_shadow_no_blur) {
   auto value = parseCSSProperty<CSSFilterFunction>("drop-shadow(10px 5px)");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 0.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 0.0f);
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, CSSColor::black());
 }
 
 TEST(CSSFilter, drop_shadow_no_blur_negative_offset) {
+  // em units cannot be resolved at parse time and are rejected
   auto value = parseCSSProperty<CSSFilterFunction>("drop-shadow(10px -5em)");
-  EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, -5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Em);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 0.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, CSSColor::black());
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(value));
 }
 
 TEST(CSSFilter, drop_shadow_no_blur_funky) {
   auto value = parseCSSProperty<CSSFilterFunction>("drop-Shadow( 10px 5px )");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 0.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 0.0f);
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, CSSColor::black());
 }
 
 TEST(CSSFilter, drop_shadow_no_blur_pre_color) {
   auto value = parseCSSProperty<CSSFilterFunction>("drop-shadow(red 10px 5px)");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 0.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 0.0f);
 
   CSSColor red{.r = 255, .g = 0, .b = 0, .a = 255};
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, red);
@@ -185,16 +151,9 @@ TEST(CSSFilter, drop_shadow_no_blur_post_color) {
   auto value =
       parseCSSProperty<CSSFilterFunction>("drop-shadow( 10px 5px red )");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 0.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 0.0f);
   CSSColor red{.r = 255, .g = 0, .b = 0, .a = 255};
 
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, red);
@@ -203,16 +162,9 @@ TEST(CSSFilter, drop_shadow_no_blur_post_color) {
 TEST(CSSFilter, drop_shadow_with_blur) {
   auto value = parseCSSProperty<CSSFilterFunction>("drop-shadow(10px 5px 3px)");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 3.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 3.0f);
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, CSSColor::black());
 }
 
@@ -220,16 +172,9 @@ TEST(CSSFilter, drop_shadow_with_blur_pre_color) {
   auto value =
       parseCSSProperty<CSSFilterFunction>("drop-shadow(red 10px 5px 3px )");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 3.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 3.0f);
 
   CSSColor red{.r = 255, .g = 0, .b = 0, .a = 255};
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, red);
@@ -239,16 +184,9 @@ TEST(CSSFilter, drop_shadow_with_blur_post_color) {
   auto value =
       parseCSSProperty<CSSFilterFunction>("drop-shadow( 10px 5px 3px red )");
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(value));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.value, 5.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.value, 3.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(value).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).offsetY.px, 5.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(value).standardDeviation.px, 3.0f);
 
   CSSColor red{.r = 255, .g = 0, .b = 0, .a = 255};
   EXPECT_EQ(std::get<CSSDropShadowFilter>(value).color, red);
@@ -525,46 +463,29 @@ TEST(CSSFilter, sepia_length) {
 
 TEST(CSSFilter, filter_list) {
   auto value = parseCSSProperty<CSSFilterList>(
-      "blur(10px) brightness(0.5) drop-shadow(10px 10px 10px red)\t\n drop-shadow(4px -20em)");
+      "blur(10px) brightness(0.5) drop-shadow(10px 10px 10px red)\t\n drop-shadow(4px -20px)");
   EXPECT_TRUE(std::holds_alternative<CSSFilterList>(value));
 
   auto list = std::get<CSSFilterList>(value);
   EXPECT_EQ(list.size(), 4);
 
   EXPECT_TRUE(std::holds_alternative<CSSBlurFilter>(list[0]));
-  EXPECT_EQ(std::get<CSSBlurFilter>(list[0]).amount.value, 10.0f);
-  EXPECT_EQ(std::get<CSSBlurFilter>(list[0]).amount.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSBlurFilter>(list[0]).amount.px, 10.0f);
 
   EXPECT_TRUE(std::holds_alternative<CSSBrightnessFilter>(list[1]));
   EXPECT_EQ(std::get<CSSBrightnessFilter>(list[1]).amount, 0.5f);
 
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(list[2]));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[2]).offsetX.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[2]).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[2]).offsetY.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[2]).offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[2]).standardDeviation.value, 10.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[2]).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[2]).offsetX.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[2]).offsetY.px, 10.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[2]).standardDeviation.px, 10.0f);
   CSSColor red{.r = 255, .g = 0, .b = 0, .a = 255};
   EXPECT_EQ(std::get<CSSDropShadowFilter>(list[2]).color, red);
 
   EXPECT_TRUE(std::holds_alternative<CSSDropShadowFilter>(list[3]));
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[3]).offsetX.value, 4.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[3]).offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[3]).offsetY.value, -20.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[3]).offsetY.unit, CSSLengthUnit::Em);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[3]).standardDeviation.value, 0.0f);
-  EXPECT_EQ(
-      std::get<CSSDropShadowFilter>(list[3]).standardDeviation.unit,
-      CSSLengthUnit::Px);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[3]).offsetX.px, 4.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[3]).offsetY.px, -20.0f);
+  EXPECT_EQ(std::get<CSSDropShadowFilter>(list[3]).standardDeviation.px, 0.0f);
   EXPECT_EQ(std::get<CSSDropShadowFilter>(list[3]).color, CSSColor::black());
 }
 

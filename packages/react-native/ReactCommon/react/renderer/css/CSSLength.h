@@ -33,10 +33,6 @@ struct CSSLength {
 
 template <>
 struct CSSDataTypeParser<CSSLength> {
- static constexpr auto consumeFunctionBlock(
-     const CSSFunctionBlock &func,
-     CSSValueParser &parser) -> std::optional<CSSLength>;
-
   static constexpr auto consumePreservedToken(const CSSPreservedToken &token) -> std::optional<CSSLength>
   {
     switch (token.type()) {

@@ -19,11 +19,17 @@ namespace facebook::react {
 template <class T>
 using LayoutableSmallVector = std::vector<T>;
 
+thread_local LayoutContext threadLocalLayoutContext;
+
 LayoutableShadowNode::LayoutableShadowNode(
     const ShadowNodeFragment& fragment,
     const ShadowNodeFamily::Shared& family,
     ShadowNodeTraits traits)
-    : ShadowNode(fragment, family, traits), layoutMetrics_({}) {}
+    : ShadowNode(fragment, family, traits), layoutMetrics_({}) {
+//  if (auto rootProps = std::dynamic_pointer_cast<const RootProps>(props_)) {
+//    threadLocalLayoutContext = rootProps->layoutContext;
+//  }
+}
 
 LayoutableShadowNode::LayoutableShadowNode(
     const ShadowNode& sourceShadowNode,
@@ -31,7 +37,11 @@ LayoutableShadowNode::LayoutableShadowNode(
     : ShadowNode(sourceShadowNode, fragment),
       layoutMetrics_(
           static_cast<const LayoutableShadowNode&>(sourceShadowNode)
-              .layoutMetrics_) {}
+              .layoutMetrics_) {
+//  if (auto rootProps = std::dynamic_pointer_cast<const RootProps>(props_)) {
+//    threadLocalLayoutContext = rootProps->layoutContext;
+//  }
+}
 
 LayoutMetrics LayoutableShadowNode::computeLayoutMetricsFromRoot(
     const ShadowNodeFamily& descendantNodeFamily,
@@ -211,6 +221,10 @@ void LayoutableShadowNode::setLayoutMetrics(LayoutMetrics layoutMetrics) {
   layoutMetrics_ = layoutMetrics;
 }
 
+LayoutContext LayoutableShadowNode::getLayoutContext() {
+  return threadLocalLayoutContext;
+}
+
 Transform LayoutableShadowNode::getTransform() const {
   return Transform::Identity();
 }
@@ -240,6 +254,10 @@ LayoutableShadowNode::getLayoutableChildNodes() const {
     }
   }
   return layoutableChildren;
+}
+
+void LayoutableShadowNode::layoutTree(LayoutContext layoutContext, LayoutConstraints layoutConstraints) {
+    threadLocalLayoutContext = layoutContext;
 }
 
 Size LayoutableShadowNode::measureContent(

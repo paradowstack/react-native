@@ -31,6 +31,8 @@
 #include <cmath>
 #include <vector>
 
+#include <iostream>
+
 namespace facebook::react {
 
 FabricMountingManager::FabricMountingManager(
@@ -500,6 +502,10 @@ inline void writeUpdatePropsMountItem(
     InstructionBuffer& buffer,
     const CppMountItem& mountItem,
     const std::optional<LayoutContext>& layoutContext) {
+  [[maybe_unused]] auto oldProps = folly::toJson(mountItem.oldChildShadowView.props->rawProps);
+  [[maybe_unused]] auto newProps = folly::toJson(mountItem.oldChildShadowView.props->rawProps);
+  std::cerr << "Was: " << oldProps << std::endl;
+  std::cerr << "Is: " << newProps << std::endl;
   buffer.writeInt(mountItem.newChildShadowView.tag);
   buffer.writeObject(getProps(
                          mountItem.oldChildShadowView,

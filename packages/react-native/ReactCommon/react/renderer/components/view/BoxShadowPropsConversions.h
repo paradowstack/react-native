@@ -61,26 +61,25 @@ inline void parseProcessedBoxShadow(
   result = boxShadows;
 }
 
-inline std::optional<BoxShadow> fromCSSShadow(const CSSShadow& cssShadow) {
-  // TODO: handle non-px values
-  if (cssShadow.offsetX.unit != CSSLengthUnit::Px ||
-      cssShadow.offsetY.unit != CSSLengthUnit::Px ||
-      cssShadow.blurRadius.unit != CSSLengthUnit::Px ||
-      cssShadow.spreadDistance.unit != CSSLengthUnit::Px) {
-    return {};
-  }
-
+inline BoxShadow fromCSSShadow(
+    const PropsParserContext& context,
+    const CSSShadow& cssShadow) {
   return BoxShadow{
-      .offsetX = LengthValue::length(cssShadow.offsetX.value),
-      .offsetY = LengthValue::length(cssShadow.offsetY.value),
-      .blurRadius = LengthValue::length(cssShadow.blurRadius.value),
-      .spreadDistance = LengthValue::length(cssShadow.spreadDistance.value),
+      .offsetX = numericValueFromCSSCalc<NumericValueLength>(
+          context, cssShadow.offsetX),
+      .offsetY = numericValueFromCSSCalc<NumericValueLength>(
+          context, cssShadow.offsetY),
+      .blurRadius = numericValueFromCSSCalc<NumericValueLength>(
+          context, cssShadow.blurRadius),
+      .spreadDistance = numericValueFromCSSCalc<NumericValueLength>(
+          context, cssShadow.spreadDistance),
       .color = fromCSSColor(cssShadow.color),
       .inset = cssShadow.inset,
   };
 }
 
 inline void parseUnprocessedBoxShadowString(
+    const PropsParserContext& context,
     std::string&& value,
     std::vector<BoxShadow>& result) {
   auto boxShadowList = parseCSSProperty<CSSShadowList>((std::string)value);
@@ -90,19 +89,8 @@ inline void parseUnprocessedBoxShadowString(
   }
 
   for (const auto& cssShadow : std::get<CSSShadowList>(boxShadowList)) {
-    if (auto boxShadow = fromCSSShadow(cssShadow)) {
-      result.push_back(*boxShadow);
-    } else {
-      result = {};
-      return;
-    }
+    result.push_back(fromCSSShadow(context, cssShadow));
   }
-}
-
-inline std::optional<LengthValue> toLengthNumericValue(
-    const PropsParserContext& context,
-    const RawValue& value) {
-  return parseNumericValue(context, value, NumericValueDomain::Length);
 }
 
 inline std::optional<BoxShadow> parseBoxShadowRawValue(
@@ -118,7 +106,8 @@ inline std::optional<BoxShadow> parseBoxShadowRawValue(
     return {};
   }
 
-  auto offsetX = toLengthNumericValue(context, rawOffsetX->second);
+  auto offsetX =
+      parseNumericValue<NumericValueLength>(context, rawOffsetX->second);
   if (!offsetX.has_value()) {
     return {};
   }
@@ -127,14 +116,15 @@ inline std::optional<BoxShadow> parseBoxShadowRawValue(
   if (rawOffsetY == boxShadow.end()) {
     return {};
   }
-  auto offsetY = toLengthNumericValue(context, rawOffsetY->second);
+  auto offsetY =
+      parseNumericValue<NumericValueLength>(context, rawOffsetY->second);
   if (!offsetY.has_value()) {
     return {};
   }
 
   auto rawBlurRadius = boxShadow.find("blurRadius");
   auto blurRadius = rawBlurRadius != boxShadow.end()
-      ? toLengthNumericValue(context, rawBlurRadius->second)
+      ? parseNumericValue<NumericValueLength>(context, rawBlurRadius->second)
       : std::optional<LengthValue>(LengthValue::length(0.0f));
   if (!blurRadius.has_value()) {
     return {};
@@ -142,7 +132,8 @@ inline std::optional<BoxShadow> parseBoxShadowRawValue(
 
   auto rawSpreadDistance = boxShadow.find("spreadDistance");
   auto spreadDistance = rawSpreadDistance != boxShadow.end()
-      ? toLengthNumericValue(context, rawSpreadDistance->second)
+      ? parseNumericValue<NumericValueLength>(
+            context, rawSpreadDistance->second)
       : std::optional<LengthValue>(LengthValue::length(0.0f));
   if (!spreadDistance.has_value()) {
     return {};
@@ -195,7 +186,7 @@ inline void parseUnprocessedBoxShadow(
     const RawValue& value,
     std::vector<BoxShadow>& result) {
   if (value.hasType<std::string>()) {
-    parseUnprocessedBoxShadowString((std::string)value, result);
+    parseUnprocessedBoxShadowString(context, (std::string)value, result);
   } else if (value.hasType<std::vector<RawValue>>()) {
     parseUnprocessedBoxShadowList(
         context, (std::vector<RawValue>)value, result);

@@ -242,7 +242,8 @@ function _validateTransform(
     case 'translateY':
       invariant(
         typeof value === 'number' ||
-          (typeof value === 'string' && value.endsWith('%')),
+          (typeof value === 'string' &&
+            (value.endsWith('%') || value.startsWith('calc('))),
         'Transform with key of "%s" must be number or a percentage. Passed value: %s.',
         key,
         stringifySafe(transformation),
@@ -251,12 +252,13 @@ function _validateTransform(
     case 'scale':
     case 'scaleX':
     case 'scaleY':
-      // invariant(
-      //   typeof value === 'number',
-      //   'Transform with key of "%s" must be a number: %s',
-      //   key,
-      //   stringifySafe(transformation),
-      // );
+      invariant(
+        typeof value === 'number' ||
+          (typeof value === 'string' && value.startsWith('calc(')),
+        'Transform with key of "%s" must be a number or a calc expression: %s',
+        key,
+        stringifySafe(transformation),
+      );
       break;
     default:
       invariant(

@@ -37,8 +37,8 @@ struct RadialGradientSize {
   };
 
   struct Dimensions {
-    UntypedNumericValue x;
-    UntypedNumericValue y;
+    LengthPercentageValue x;
+    LengthPercentageValue y;
 
     bool operator==(const Dimensions& other) const = default;
 
@@ -57,10 +57,10 @@ struct RadialGradientSize {
 };
 
 struct RadialGradientPosition {
-  std::optional<UntypedNumericValue> top;
-  std::optional<UntypedNumericValue> left;
-  std::optional<UntypedNumericValue> right;
-  std::optional<UntypedNumericValue> bottom;
+  std::optional<LengthPercentageValue> top;
+  std::optional<LengthPercentageValue> left;
+  std::optional<LengthPercentageValue> right;
+  std::optional<LengthPercentageValue> bottom;
 
   bool operator==(const RadialGradientPosition& other) const = default;
 

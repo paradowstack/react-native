@@ -8,6 +8,7 @@
 #import "RCTMountingManager.h"
 
 #import <QuartzCore/QuartzCore.h>
+#import <folly/json.h>
 
 #import <React/RCTAssert.h>
 #import <React/RCTComponent.h>
@@ -296,6 +297,7 @@ static void RCTPerformMountInstructions(
                       componentDescriptor:(const ComponentDescriptor &)componentDescriptor
 {
   RCTAssertMainQueue();
+	auto text = folly::toJson(props);
   bool updatesTransform = props.find("transform") != props.items().end();
   bool updatesOpacity = props.find("opacity") != props.items().end();
 
@@ -313,9 +315,10 @@ static void RCTPerformMountInstructions(
   }
 
   SurfaceId surfaceId = RCTSurfaceIdForView(componentView);
+	LayoutContext layoutContext;
   if (self.delegate != nil &&
       [self.delegate respondsToSelector:@selector(mountingManager:layoutContextForRootTag:)]) {
-    LayoutContext layoutContext = [self.delegate mountingManager:self layoutContextForRootTag:surfaceId];
+    layoutContext = [self.delegate mountingManager:self layoutContextForRootTag:surfaceId];
     [componentView updateLayoutContext:layoutContext];
   }
   Props::Shared oldProps = [componentView props];
@@ -332,7 +335,7 @@ static void RCTPerformMountInstructions(
     auto layoutMetrics = LayoutMetrics();
     layoutMetrics.frame.size.width = componentView.layer.bounds.size.width;
     layoutMetrics.frame.size.height = componentView.layer.bounds.size.height;
-    CATransform3D newTransform = RCTCATransform3DFromTransformMatrix(newViewProps.resolveTransform(layoutMetrics));
+    CATransform3D newTransform = RCTCATransform3DFromTransformMatrix(newViewProps.resolveTransform(layoutMetrics, layoutContext));
     if (!CATransform3DEqualToTransform(newTransform, componentView.layer.transform)) {
       componentView.layer.transform = newTransform;
     }

@@ -69,12 +69,12 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsStackingContext(viewProps) ||
       !viewProps.accessibilityOrder.empty();
 
-  bool formsView = formsStackingContext ||
+  bool formsView = (formsStackingContext ||
       isColorMeaningful(viewProps.backgroundColor) || hasBorder() ||
       !viewProps.testId.empty() || !viewProps.boxShadow.empty() ||
       !viewProps.backgroundImage.empty() ||
       HostPlatformViewTraitsInitializer::formsView(viewProps) ||
-      viewProps.outlineWidth.asFloat() > 0;
+      viewProps.outlineWidth.asFloat() > 0) && viewProps.calcExpressions.empty();
 
   if (formsView) {
     traits_.set(ShadowNodeTraits::Trait::FormsView);

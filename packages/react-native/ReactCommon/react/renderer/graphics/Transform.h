@@ -10,6 +10,7 @@
 #include <array>
 #include <vector>
 
+#include <react/renderer/components/view/DynamicResolver.h>
 #include <react/renderer/debug/flags.h>
 #include <react/renderer/graphics/Float.h>
 #include <react/renderer/graphics/NumericValue.h>
@@ -88,7 +89,7 @@ struct Transform {
    */
   static Transform FromTransformOperation(
       TransformOperation transformOperation,
-      const Size& size,
+      const DynamicResolver& resolver,
       const Transform& transform = Transform::Identity());
   static TransformOperation DefaultTransformOperation(
       TransformOperationType type);

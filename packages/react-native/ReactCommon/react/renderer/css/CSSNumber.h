@@ -29,10 +29,6 @@ struct CSSNumber {
 
 template <>
 struct CSSDataTypeParser<CSSNumber> {
-  static constexpr auto consumeFunctionBlock(
-      const CSSFunctionBlock &func,
-      CSSValueParser &parser) -> std::optional<CSSNumber>;
-
   static constexpr auto consumePreservedToken(const CSSPreservedToken &token) -> std::optional<CSSNumber>
   {
     if (token.type() == CSSTokenType::Number) {
