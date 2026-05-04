@@ -7,6 +7,7 @@
 
 #include "WritableNativeArray.h"
 
+#include <folly/io/IOBuf.h>
 #include "ReadableNativeMap.h"
 
 using namespace facebook::jni;
@@ -77,6 +78,25 @@ void WritableNativeArray::pushNativeMap(ReadableNativeMap* map) {
   }
   throwIfConsumed();
   array_.push_back(map->consume());
+}
+
+void WritableNativeArray::pushNativeByteBuffer(jobject value) {
+  // throwIfConsumed();
+  // if (!value) {
+  //   pushNull();
+  //   return;
+  // }
+  // auto env = Environment::current();
+  // auto byteBuffer = adopt_local(value);
+  // auto size = env->GetDirectBufferCapacity(byteBuffer.get());
+  // auto data = env->GetDirectBufferAddress(byteBuffer.get());
+  // if (data == nullptr || size <= 0) {
+  //   throw std::runtime_error("Invalid direct ByteBuffer");
+  // }
+  // // Copy the data into a folly::IOBuf
+  // auto buf = folly::IOBuf(folly::IOBuf::COPY_BUFFER, data, size);
+  // // Store the IOBuf in the dynamic array
+  // array_.push_back(folly::dynamic(std::move(buf)));
 }
 
 void WritableNativeArray::registerNatives() {

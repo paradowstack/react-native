@@ -7,6 +7,7 @@
 
 package com.facebook.react.bridge
 
+import java.nio.ByteBuffer
 import java.util.HashMap
 import kotlin.collections.Iterator
 import kotlin.collections.Map
@@ -19,6 +20,8 @@ public interface ReadableMap {
   public val entryIterator: Iterator<Map.Entry<String, Any?>>
 
   public fun getArray(name: String): ReadableArray?
+
+  public fun getByteBuffer(name: String): ByteBuffer?
 
   public fun getBoolean(name: String): Boolean
 

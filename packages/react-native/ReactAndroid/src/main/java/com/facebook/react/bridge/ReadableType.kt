@@ -18,4 +18,5 @@ public enum class ReadableType {
   String,
   Map,
   Array,
+  ByteBuffer
 }

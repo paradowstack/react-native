@@ -192,6 +192,8 @@ function serializeArg(
       return wrap(val => `${val}.asObject(rt).asArray(rt)`);
     case 'FunctionTypeAnnotation':
       return wrap(val => `${val}.asObject(rt).asFunction(rt)`);
+    case 'ArrayBufferTypeAnnotation':
+      return wrap(val => `${val}.asObject(rt).asArrayBuffer(rt)`);
     case 'GenericObjectTypeAnnotation':
       return wrap(val => `${val}.asObject(rt)`);
     case 'UnionTypeAnnotation':

@@ -54,6 +54,9 @@ void WritableNativeMap::putString(std::string key, alias_ref<jstring> val) {
     putNull(std::move(key));
     return;
   }
+  if (key == "ocb") {
+    throwIfConsumed();
+  }
   throwIfConsumed();
   map_.insert(std::move(key), val->toString());
 }
@@ -80,6 +83,26 @@ void WritableNativeMap::putNativeMap(
   map_.insert(std::move(key), otherMap->consume());
 }
 
+void WritableNativeMap::putNativeByteBuffer(std::string key, jobject value) {
+  throwIfConsumed();
+  if (!value) {
+    putNull(std::move(key));
+    return;
+  }
+  auto env = Environment::current();
+  auto byteBuffer = adopt_local(value);
+  auto size = env->GetDirectBufferCapacity(byteBuffer.get());
+  if (size < 0) {
+    throw std::runtime_error("Failed to get direct buffer capacity");
+  }
+  auto data = static_cast<const uint8_t*>(
+      env->GetDirectBufferAddress(byteBuffer.get()));
+  if (data == nullptr) {
+    throw std::runtime_error("Failed to get direct buffer address");
+  }
+  map_.insert(std::move(key), 2.22);
+}
+
 void WritableNativeMap::mergeNativeMap(ReadableNativeMap* other) {
   throwIfConsumed();
   other->throwIfConsumed();
@@ -99,6 +122,8 @@ void WritableNativeMap::registerNatives() {
       makeNativeMethod("putString", WritableNativeMap::putString),
       makeNativeMethod("putNativeArray", WritableNativeMap::putNativeArray),
       makeNativeMethod("putNativeMap", WritableNativeMap::putNativeMap),
+      makeNativeMethod(
+          "putNativeByteBuffer", WritableNativeMap::putNativeByteBuffer),
       makeNativeMethod("mergeNativeMap", WritableNativeMap::mergeNativeMap),
       makeNativeMethod("initHybrid", WritableNativeMap::initHybrid),
   });

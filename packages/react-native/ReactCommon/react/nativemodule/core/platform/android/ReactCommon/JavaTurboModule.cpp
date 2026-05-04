@@ -10,10 +10,12 @@
 
 #include <cxxreact/MoveWrapper.h>
 #include <cxxreact/TraceSection.h>
+#include <fbjni/ByteBuffer.h>
 #include <fbjni/fbjni.h>
 #include <glog/logging.h>
 #include <jsi/jsi.h>
 
+#include <ReactCommon/ExternalMutableBuffer.h>
 #include <ReactCommon/TurboModule.h>
 #include <ReactCommon/TurboModulePerfLogger.h>
 #include <jsi/JSIDynamic.h>
@@ -434,6 +436,18 @@ JNIArgs convertJSIArgsToJNIArgs(
       auto dynamicFromValue = jsi::dynamicFromValue(rt, *arg);
       auto jParams = JDynamicNative::newObjectCxxArgs(dynamicFromValue);
       jarg->l = makeGlobalIfNecessary(jParams.release());
+    } else if (type == jni::JByteBuffer::kJavaDescriptor) {
+      if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
+        throw JavaTurboModuleArgumentConversionException(
+            "ArrayBuffer", argIndex, methodName, arg, &rt);
+      }
+
+      auto arrayBuffer = arg->asObject(rt).asArrayBuffer(rt);
+      auto len = arrayBuffer.size(rt);
+      auto data = arrayBuffer.data(rt);
+      auto directBuffer = jni::JByteBuffer::wrapBytes(data, len);
+      jarg->l = makeGlobalIfNecessary(directBuffer.release());
+      continue;
     } else {
       throw JavaTurboModuleInvalidArgumentTypeException(
           type, argIndex, methodName);
@@ -962,6 +976,31 @@ jsi::Value JavaTurboModule::invokeJavaMethod(
           });
       TMPL::asyncMethodCallEnd(moduleName, methodName);
       return jsPromise;
+    }
+    case ArrayBufferKind: {
+      auto returnObject =
+          (jobject)env->CallObjectMethodA(instance, methodID, jargs.data());
+      checkJNIErrorForMethodCall();
+
+      TMPL::syncMethodCallExecutionEnd(moduleName, methodName);
+      TMPL::syncMethodCallReturnConversionStart(moduleName, methodName);
+
+      auto returnValue = jsi::Value::null();
+      if (returnObject != nullptr) {
+        auto bufferObj = jni::adopt_local(
+            static_cast<jni::JByteBuffer::javaobject>(returnObject));
+        auto size = bufferObj->getDirectSize();
+        auto data = bufferObj->getDirectBytes();
+        auto mutableBuffer =
+            std::make_shared<ExternalMutableBuffer>(data, size);
+        auto arrayBuffer = jsi::ArrayBuffer{runtime, mutableBuffer};
+        auto obj = jsi::Value{runtime, arrayBuffer};
+        returnValue = std::move(obj);
+      }
+
+      TMPL::syncMethodCallReturnConversionEnd(moduleName, methodName);
+      TMPL::syncMethodCallEnd(moduleName, methodName);
+      return returnValue;
     }
     default:
       throw std::runtime_error(

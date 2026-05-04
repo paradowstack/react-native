@@ -1639,6 +1639,26 @@ describe('emitCommonTypes', () => {
     });
   });
 
+  describe("when 'typeAnnotation.id.name' is 'ArrayBuffer'", () => {
+    const typeAnnotation = {
+      typeParameters: {
+        params: [],
+        type: 'ArrayBufferTypeAnnotation',
+      },
+      id: {
+        name: 'ArrayBuffer',
+      },
+    };
+    const expected = {
+      type: 'ArrayBufferTypeAnnotation',
+    };
+    const result = emitCommonTypesForUnitTest(typeAnnotation, false);
+
+    it("returns 'ArrayBufferTypeAnnotation'", () => {
+      expect(result).toEqual(expected);
+    });
+  });
+
   describe("when 'typeAnnotation.id.name' is 'UnsafeObject'", () => {
     const typeAnnotation = {
       typeParameters: {

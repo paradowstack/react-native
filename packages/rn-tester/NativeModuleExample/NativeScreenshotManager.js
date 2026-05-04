@@ -14,21 +14,21 @@ import {TurboModuleRegistry} from 'react-native';
 
 export type ScreenshotManagerOptions = CodegenTypes.UnsafeObject;
 
+export type ValueStruct = {
+  x: number,
+  y: string,
+  buffer: ArrayBuffer,
+};
+
 export interface Spec extends TurboModule {
-  +getConstants: () => {};
   takeScreenshot(
     id: string,
     options: ScreenshotManagerOptions,
   ): Promise<string>;
+  getBuffer(): ArrayBuffer;
+  processBuffer(buffer: ArrayBuffer): string;
+  lazyBuffer(): Promise<ArrayBuffer>;
+  getValue: (x: number, y: string, a: ArrayBuffer) => ValueStruct;
 }
 
-const NativeModule = TurboModuleRegistry.get<Spec>('ScreenshotManager');
-export function takeScreenshot(
-  id: string,
-  options: ScreenshotManagerOptions,
-): Promise<string> {
-  if (NativeModule != null) {
-    return NativeModule.takeScreenshot(id, options);
-  }
-  return Promise.reject();
-}
+export default (TurboModuleRegistry.get<Spec>('ScreenshotManager'): ?Spec);

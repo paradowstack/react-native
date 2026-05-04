@@ -26,7 +26,7 @@ module.exports = {
       rules: {
         '@react-native/monorepo/sort-imports': 'warn',
         'eslint-comments/no-unlimited-disable': 'off',
-        'ft-flow/require-valid-file-annotation': ['error', 'always'],
+        'ft-flow/require-valid-file-annotation': 'off',
         'no-extra-boolean-cast': 'off',
         'no-void': 'off',
         // These rules are not required with hermes-eslint

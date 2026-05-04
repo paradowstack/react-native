@@ -8,6 +8,7 @@
 package com.facebook.react.bridge
 
 import com.facebook.proguard.annotations.DoNotStrip
+import java.nio.ByteBuffer
 
 /**
  * Implementation of a write-only array stored in native memory. Use [Arguments#createArray()] if
@@ -37,6 +38,8 @@ public class WritableNativeArray : ReadableNativeArray(), WritableArray {
     check(array == null || array is ReadableNativeArray) { "Illegal type provided" }
     pushNativeArray(array as ReadableNativeArray?)
   }
+
+  external override fun pushByteBuffer(value: ByteBuffer?)
 
   // Note: this consumes the map so do not reuse it.
   override fun pushMap(map: ReadableMap?) {

@@ -221,6 +221,8 @@ function translatePrimitiveJSTypeToCpp(
       return wrapOptional('jsi::Value', isRequired);
     case 'MixedTypeAnnotation':
       return wrapOptional('jsi::Value', isRequired);
+    case 'ArrayBufferTypeAnnotation':
+      return wrapOptional('jsi::ArrayBuffer', isRequired);
     default:
       (realTypeAnnotation.type: empty);
       throw new Error(createErrorMessage(realTypeAnnotation.type));

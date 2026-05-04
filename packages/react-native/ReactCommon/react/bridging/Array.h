@@ -148,4 +148,21 @@ struct Bridging<std::set<T>> : array_detail::BridgingDynamic<std::set<T>> {
   }
 };
 
+// template <typename T>
+// struct Bridging<T> {
+//   static jsi::ArrayBuffer toJs(
+//       facebook::jsi::Runtime& rt,
+//       const T& array,
+//       const std::shared_ptr<CallInvoker>& /*unused*/) {
+//     jsi::ArrayBuffer arrayBuffer(rt, {});
+//     return arrayBuffer;
+//   }
+//   static T fromJs(
+//       facebook::jsi::Runtime& /*unused*/,
+//       const jsi::ArrayBuffer& /*unused*/,
+//       const std::shared_ptr<CallInvoker>& /*unused*/) {
+//     return T{};
+//   }
+// };
+
 } // namespace facebook::react

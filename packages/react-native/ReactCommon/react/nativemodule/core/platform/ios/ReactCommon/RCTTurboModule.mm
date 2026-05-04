@@ -14,6 +14,7 @@
 #import <React/RCTModuleMethod.h>
 #import <React/RCTUtils.h>
 #import <ReactCommon/CallInvoker.h>
+#import <ReactCommon/ExternalMutableBuffer.h>
 #import <ReactCommon/TurboModule.h>
 #import <ReactCommon/TurboModulePerfLogger.h>
 #import <cxxreact/TraceSection.h>
@@ -89,6 +90,15 @@ static std::vector<jsi::Value> convertNSArrayToStdVector(jsi::Runtime &runtime, 
   return result;
 }
 
+static jsi::ArrayBuffer convertNSDataToJSIArrayBuffer(jsi::Runtime &runtime, NSData *value)
+{
+	auto length = [value length];
+	auto data = (uint8_t*)[value bytes];
+	auto mutableBuffer = std::make_shared<ExternalMutableBuffer>(data, length);
+	auto arrayBuffer = jsi::ArrayBuffer(runtime, mutableBuffer);
+	return arrayBuffer;
+}
+
 jsi::Value convertObjCObjectToJSIValue(jsi::Runtime &runtime, id value)
 {
   if ([value isKindOfClass:[NSString class]]) {
@@ -104,6 +114,8 @@ jsi::Value convertObjCObjectToJSIValue(jsi::Runtime &runtime, id value)
     return convertNSArrayToJSIArray(runtime, (NSArray *)value);
   } else if (value == (id)kCFNull) {
     return jsi::Value::null();
+	} else if ([value isKindOfClass:[NSData class]]) {
+		return convertNSDataToJSIArrayBuffer(runtime, (NSData *)value);
   }
   return jsi::Value::undefined();
 }
@@ -128,6 +140,21 @@ static NSArray *convertJSIArrayToNSArray(
   }
   return result;
 }
+
+static NSMutableData *convertJSIArrayBufferToNSData(
+		jsi::Runtime &runtime,
+		const jsi::ArrayBuffer &value,
+		const std::shared_ptr<CallInvoker> &jsInvoker,
+		BOOL useNSNull)
+{
+	auto length = value.size(runtime);
+	auto buffer = value.data(runtime);
+	
+	NSMutableData* data = [NSMutableData dataWithBytesNoCopy:buffer length:length freeWhenDone:NO];
+
+	return data;
+}
+
 
 static NSDictionary *convertJSIObjectToNSDictionary(
     jsi::Runtime &runtime,
@@ -196,6 +223,9 @@ id convertJSIValueToObjCObject(
     if (o.isFunction(runtime)) {
       return convertJSIFunctionToCallback(runtime, o.getFunction(runtime), jsInvoker);
     }
+		if (o.isArrayBuffer(runtime)) {
+			return convertJSIArrayBufferToNSData(runtime, o.getArrayBuffer(runtime), jsInvoker, useNSNull);
+		}
     return convertJSIObjectToNSDictionary(runtime, o, jsInvoker, useNSNull);
   }
 
@@ -534,11 +564,15 @@ jsi::Value ObjCTurboModule::convertReturnIdToJSIValue(
       returnValue = convertNSDictionaryToJSIObject(runtime, (NSDictionary *)result);
       break;
     }
-    case ArrayKind: {
-      returnValue = convertNSArrayToJSIArray(runtime, (NSArray *)result);
-      break;
-    }
-    case FunctionKind:
+		case ArrayKind: {
+			returnValue = convertNSArrayToJSIArray(runtime, (NSArray *)result);
+			break;
+		}
+		case ArrayBufferKind: {
+			returnValue = convertNSDataToJSIArrayBuffer(runtime, (NSData *)result);
+			break;
+		}
+		case FunctionKind:
       throw std::runtime_error("convertReturnIdToJSIValue: FunctionKind is not supported yet.");
     case PromiseKind:
       throw std::runtime_error("convertReturnIdToJSIValue: PromiseKind wasn't handled properly.");
@@ -829,6 +863,7 @@ jsi::Value ObjCTurboModule::invokeObjCMethod(
     case StringKind:
     case ObjectKind:
     case ArrayKind:
+		case ArrayBufferKind:
     case FunctionKind: {
       id result = performMethodInvocation(runtime, true, methodName, inv, retainedObjectsForInvocation);
       TurboModulePerfLogger::syncMethodCallReturnConversionStart(moduleName, methodName);

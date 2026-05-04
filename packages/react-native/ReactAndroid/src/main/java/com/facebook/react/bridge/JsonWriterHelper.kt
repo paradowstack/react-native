@@ -40,6 +40,7 @@ public object JsonWriterHelper {
         val array = value.asArray()
         readableArrayValue(writer, checkNotNull(array))
       }
+      ReadableType.ByteBuffer -> writer.value("TODOME")
     }
   }
 
@@ -64,6 +65,7 @@ public object JsonWriterHelper {
             val array = value.getArray(key)
             readableArrayValue(writer, checkNotNull(array))
           }
+          ReadableType.ByteBuffer -> writer.value(value.getByteBuffer(key).toString())
         }
       }
     } finally {
@@ -90,6 +92,7 @@ public object JsonWriterHelper {
             val array = value.getArray(i)
             readableArrayValue(writer, checkNotNull(array))
           }
+          ReadableType.ByteBuffer -> writer.value(value.getByteBuffer(i).toString())
         }
       }
     } finally {

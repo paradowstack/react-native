@@ -14,15 +14,17 @@
 #else // BUCK headers
 #include <AppSpecs/AppSpecsJSI.h>
 #endif
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
 namespace facebook::react {
 
-#pragma mark - Structs
+#pragma mark - Structs - Structs
 using ConstantsStruct =
     NativeCxxModuleExampleConstantsStruct<bool, int32_t, std::string>;
 
@@ -39,12 +41,22 @@ template <>
 struct Bridging<ObjectStruct>
     : NativeCxxModuleExampleObjectStructBridging<ObjectStruct> {};
 
-using ValueStruct =
-    NativeCxxModuleExampleValueStruct<double, std::string, ObjectStruct>;
+using ValueStruct = NativeCxxModuleExampleValueStruct<
+    double,
+    std::string,
+    ObjectStruct,
+    jsi::ArrayBuffer>;
 
 template <>
 struct Bridging<ValueStruct>
     : NativeCxxModuleExampleValueStructBridging<ValueStruct> {};
+
+using BufferStruct =
+    NativeCxxModuleExampleBufferStruct<std::string, jsi::ArrayBuffer>;
+
+template <>
+struct Bridging<BufferStruct>
+    : NativeCxxModuleExampleBufferStructBridging<BufferStruct> {};
 
 #pragma mark - enums
 enum class CustomEnumInt : int32_t { A = 23, B = 42 };
@@ -126,11 +138,139 @@ template <>
 struct Bridging<CustomDeviceEvent>
     : NativeCxxModuleExampleCustomDeviceEventBridging<CustomDeviceEvent> {};
 
+class NSDataMutableBuffer : public facebook::jsi::MutableBuffer {
+ public:
+  NSDataMutableBuffer(uint8_t* data, size_t size) : _data(data), _size(size) {}
+  NSDataMutableBuffer(const NSDataMutableBuffer& other)
+      : _data(other._data), _size(other._size) {}
+
+  NSDataMutableBuffer(NSDataMutableBuffer&& other) noexcept
+      : _data(other._data), _size(other._size) {
+    other._data = nullptr;
+    other._size = 0;
+  }
+
+  NSDataMutableBuffer& operator=(const NSDataMutableBuffer& other) {
+    if (this != &other) {
+      _data = other._data;
+      _size = other._size;
+    }
+    return *this;
+  }
+
+  NSDataMutableBuffer& operator=(NSDataMutableBuffer&& other) noexcept {
+    if (this != &other) {
+      _data = other._data;
+      _size = other._size;
+      other._data = nullptr;
+      other._size = 0;
+    }
+    return *this;
+  }
+  uint8_t* data() override {
+    return _data;
+  }
+  size_t size() const override {
+    return _size;
+  }
+
+ private:
+  uint8_t* _data;
+  size_t _size;
+};
+
 #pragma mark - implementation
 class NativeCxxModuleExample
     : public NativeCxxModuleExampleCxxSpec<NativeCxxModuleExample> {
  public:
   NativeCxxModuleExample(std::shared_ptr<CallInvoker> jsInvoker);
+
+  void processBufferUnion(jsi::Runtime& rt, jsi::Object arg) {
+    if (arg.hasProperty(rt, "value")) {
+      auto value = arg.getProperty(rt, "value").asNumber();
+      std::cout << "[C++] Received union with value: " << value << std::endl;
+    } else if (arg.hasProperty(rt, "buffer")) {
+      auto buffer =
+          arg.getProperty(rt, "buffer").asObject(rt).asArrayBuffer(rt);
+      std::cout << "[C++] Received union with buffer size: " << buffer.size(rt)
+                << std::endl;
+
+    } else {
+      throw jsi::JSError(rt, "Invalid union object");
+    }
+  }
+  BufferStruct getBufferStruct(jsi::Runtime& rt) {
+    return {"text", getBuffer(rt)};
+  }
+  void processBufferStruct(jsi::Runtime& rt, BufferStruct arg) {
+    std::cout << "[C++] Received struct with text: " << arg.text
+              << " and buffer size: " << arg.value.size(rt) << std::endl;
+  }
+
+  std::string printBuffer(jsi::Runtime& rt, jsi::ArrayBuffer& buffer) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < buffer.size(rt); ++i) {
+      oss << static_cast<int>(buffer.data(rt)[i]);
+      if (i < buffer.size(rt) - 1) {
+        oss << ", ";
+      }
+    }
+    oss << "]";
+    return oss.str();
+  }
+
+  jsi::ArrayBuffer createBuffer(jsi::Runtime& rt, int length = 8) {
+    auto data = new uint8_t[length];
+    for (size_t i = 0; i < length; ++i) {
+      data[i] = static_cast<uint8_t>(rand() % 256);
+    }
+    auto mutableBuffer = std::make_shared<NSDataMutableBuffer>(data, length);
+    auto arrayBuffer = jsi::ArrayBuffer(rt, mutableBuffer);
+    return arrayBuffer;
+  }
+  jsi::ArrayBuffer getBuffer(jsi::Runtime& rt) {
+    return createBuffer(rt);
+  }
+
+  AsyncPromise<jsi::ArrayBuffer> returningBuffer(jsi::Runtime& rt) {
+    auto promise = AsyncPromise<jsi::ArrayBuffer>(rt, jsInvoker_);
+    auto length = 8;
+    auto data = new uint8_t[length];
+    for (size_t i = 0; i < length; ++i) {
+      data[i] = static_cast<uint8_t>(rand() % 256);
+    }
+    auto mutableBuffer = std::make_shared<NSDataMutableBuffer>(data, length);
+    auto arrayBuffer = jsi::ArrayBuffer(rt, mutableBuffer);
+
+    std::cout << "[C++] Sending buffer: " << printBuffer(rt, arrayBuffer)
+              << std::endl;
+    promise.resolve(std::move(arrayBuffer));
+    return promise;
+  }
+  void takingBuffer(jsi::Runtime& rt, jsi::ArrayBuffer buffer) {
+    std::cout << "[C++] Received buffer: " << printBuffer(rt, buffer);
+    std::cout << "]" << std::endl;
+  }
+
+  std::optional<jsi::ArrayBuffer> getOptionalBuffer(
+      jsi::Runtime& rt,
+      int size) {
+    if (size % 2) {
+      return createBuffer(rt, size);
+    }
+    return {};
+  }
+  void takingOptionalBuffer(
+      jsi::Runtime& rt,
+      std::optional<jsi::ArrayBuffer> buffer) {
+    if (buffer) {
+      std::cout << "[C++] Received optional buffer with size: "
+                << buffer->size(rt) << std::endl;
+    } else {
+      std::cout << "[C++] Received null optional buffer" << std::endl;
+    }
+  }
 
   void getValueWithCallback(
       jsi::Runtime& rt,
@@ -153,6 +293,9 @@ class NativeCxxModuleExample
   std::shared_ptr<CustomHostObject> getCustomHostObject(jsi::Runtime& rt);
 
   std::string consumeCustomHostObject(
+      jsi::Runtime& rt,
+      std::shared_ptr<CustomHostObject> arg);
+  std::string vomitCustomHostObject(
       jsi::Runtime& rt,
       std::shared_ptr<CustomHostObject> arg);
 
@@ -183,8 +326,12 @@ class NativeCxxModuleExample
   std::string
   getUnion(jsi::Runtime& rt, float x, const std::string& y, jsi::Object z);
 
-  ValueStruct
-  getValue(jsi::Runtime& rt, double x, std::string y, ObjectStruct z);
+  ValueStruct getValue(
+      jsi::Runtime& rt,
+      double x,
+      std::string y,
+      ObjectStruct z,
+      jsi::ArrayBuffer a);
 
   AsyncPromise<std::string> getValueWithPromise(jsi::Runtime& rt, bool error);
 
@@ -211,6 +358,8 @@ class NativeCxxModuleExample
   ObjectStruct getObjectAssert(jsi::Runtime& rt, const ObjectStruct& arg);
 
   AsyncPromise<> promiseAssert(jsi::Runtime& rt);
+
+  void a();
 
  private:
   std::optional<AsyncCallback<std::string>> valueCallback_;

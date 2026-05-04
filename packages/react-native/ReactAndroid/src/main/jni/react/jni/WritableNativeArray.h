@@ -40,6 +40,7 @@ struct WritableNativeArray
   void pushString(jstring value);
   void pushNativeArray(ReadableNativeArray* otherArray);
   void pushNativeMap(ReadableNativeMap* map);
+  void pushNativeByteBuffer(jobject value);
 
   static void registerNatives();
 };

@@ -11,10 +11,14 @@
 'use strict';
 
 import type {RNTesterModuleExample} from '../../types/RNTesterTypes';
+import manager from '../../../NativeModuleExample/NativeScreenshotManager';
 
 const {RNTesterThemeContext} = require('../../components/RNTesterTheme');
 const React = require('react');
 const {Alert, Button, StyleSheet, View} = require('react-native');
+
+// import {TurboModuleRegistry} from 'react-native';
+// const manager = TurboModuleRegistry.get<Spec>('ScreenshotManager1');
 
 function onButtonPress(buttonName: string) {
   Alert.alert(`Your application has been ${buttonName}!`);
@@ -33,7 +37,16 @@ exports.examples = [
     render: function (): React.Node {
       return (
         <Button
-          onPress={() => onButtonPress('submitted')}
+          onPress={() => {
+            const buffer = new ArrayBuffer(16);
+            const uint8View = new Uint8Array(buffer);
+
+            for (let i = 0; i < uint8View.length; i++) {
+              uint8View[i] = Math.floor(Math.random() * 256);
+            }
+
+            onButtonPress(new Uint8Array(manager.getBuffer()));
+          }}
           testID="button_default_styling"
           title="Submit Application"
           accessibilityLabel="Press to submit your application!"

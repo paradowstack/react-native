@@ -37,6 +37,8 @@ type State = {
 };
 
 type Examples =
+  | 'returningBuffer'
+  | 'takingBuffer'
   | 'callback'
   | 'callbackWithSubscription'
   | 'getArray'
@@ -82,6 +84,23 @@ class NativeCxxModuleExampleExample extends React.Component<{}, State> {
   // Add calls to methods in TurboModule here
   // $FlowFixMe[missing-local-annot]
   _tests = {
+    returningBuffer: () =>
+      NativeCxxModuleExample?.returningBuffer().then(valuePromise => {
+        const uint8View = new Uint8Array(valuePromise);
+        console.log('returningBuffer', uint8View);
+        this._setResult('returningBuffer', uint8View);
+      }),
+
+    takingBuffer: () => {
+      const buffer = new ArrayBuffer(16);
+      const uint8View = new Uint8Array(buffer);
+      for (let i = 0; i < uint8View.length; i++) {
+        uint8View[i] = Math.floor(Math.random() * 256);
+      }
+      // console.log(typeof uint8View, uint8View, uint8View instanceof ArrayBuffer);
+      NativeCxxModuleExample?.takingBuffer(buffer);
+      return uint8View;
+    },
     callback: () =>
       NativeCxxModuleExample?.getValueWithCallback(callbackValue =>
         this._setResult('callback', callbackValue),
@@ -128,8 +147,23 @@ class NativeCxxModuleExampleExample extends React.Component<{}, State> {
     getSet: () => NativeCxxModuleExample?.getSet([1, 1.1, 1.1, 1.1, 2]),
     getString: () => NativeCxxModuleExample?.getString('Hello'),
     getUnion: () => NativeCxxModuleExample?.getUnion(1.44, 'Two', {low: '12'}),
-    getValue: () =>
-      NativeCxxModuleExample?.getValue(5, 'test', {a: 1, b: 'foo'}),
+    getValue: () => {
+      const buffer = new ArrayBuffer(16);
+      const uint8View = new Uint8Array(buffer);
+      for (let i = 0; i < uint8View.length; i++) {
+        uint8View[i] = Math.floor(Math.random() * 256);
+      }
+
+      const r = NativeCxxModuleExample?.getValue(
+        5,
+        'test',
+        {a: 1, b: 'foo'},
+        buffer,
+      );
+
+      const uint8View2 = new Uint8Array(r.buffer);
+      return uint8View2;
+    },
     promise: () =>
       NativeCxxModuleExample?.getValueWithPromise(false).then(valuePromise =>
         this._setResult('promise', valuePromise),
@@ -241,7 +275,8 @@ class NativeCxxModuleExampleExample extends React.Component<{}, State> {
       | {[key: string]: ?number}
       | Promise<mixed>
       | number
-      | string,
+      | string
+      | ArrayBuffer,
   ) {
     this.setState(({testResults}) => ({
       testResults: {

@@ -2767,6 +2767,158 @@ const STRING_LITERALS: SchemaType = {
   },
 };
 
+const ARRAY_BUFFER_MODULES: SchemaType = {
+  modules: {
+    NativeSampleTurboModule: {
+      type: 'NativeModule',
+      aliasMap: {
+        BufferStruct: {
+          type: 'ObjectTypeAnnotation',
+          properties: [
+            {
+              name: 'requiredBuffer',
+              optional: false,
+              typeAnnotation: {
+                type: 'ArrayBufferTypeAnnotation',
+              },
+            },
+            {
+              name: 'optionalBuffer',
+              optional: true,
+              typeAnnotation: {
+                type: 'ArrayBufferTypeAnnotation',
+              },
+            },
+            {
+              name: 'nullableBuffer',
+              optional: false,
+              typeAnnotation: {
+                type: 'NullableTypeAnnotation',
+                typeAnnotation: {
+                  type: 'ArrayBufferTypeAnnotation',
+                },
+              },
+            },
+          ],
+        },
+      },
+      enumMap: {},
+      spec: {
+        eventEmitters: [
+          {
+            name: 'onBuffer',
+            optional: false,
+            typeAnnotation: {
+              type: 'EventEmitterTypeAnnotation',
+              typeAnnotation: {
+                type: 'ArrayBufferTypeAnnotation',
+              },
+            },
+          },
+        ],
+        methods: [
+          {
+            name: 'getArrayBuffer',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'ArrayBufferTypeAnnotation',
+              },
+              params: [],
+            },
+          },
+          {
+            name: 'getNullableArrayBuffer',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'NullableTypeAnnotation',
+                typeAnnotation: {
+                  type: 'ArrayBufferTypeAnnotation',
+                },
+              },
+              params: [],
+            },
+          },
+          {
+            name: 'takesArrayBuffer',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'VoidTypeAnnotation',
+              },
+              params: [
+                {
+                  name: 'buffer',
+                  optional: false,
+                  typeAnnotation: {
+                    type: 'ArrayBufferTypeAnnotation',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            name: 'takesOptionalArrayBuffer',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'VoidTypeAnnotation',
+              },
+              params: [
+                {
+                  name: 'buffer',
+                  optional: true,
+                  typeAnnotation: {
+                    type: 'ArrayBufferTypeAnnotation',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            name: 'getBufferStruct',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'TypeAliasTypeAnnotation',
+                name: 'BufferStruct',
+              },
+              params: [],
+            },
+          },
+          {
+            name: 'takesBufferStruct',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'VoidTypeAnnotation',
+              },
+              params: [
+                {
+                  name: 'bufferStruct',
+                  optional: false,
+                  typeAnnotation: {
+                    type: 'TypeAliasTypeAnnotation',
+                    name: 'BufferStruct',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      moduleName: 'SampleTurboModule',
+    },
+  },
+};
+
 module.exports = {
   complex_objects: COMPLEX_OBJECTS,
   two_modules_different_files: TWO_MODULES_DIFFERENT_FILES,
@@ -2779,4 +2931,5 @@ module.exports = {
   SampleWithUppercaseName: SAMPLE_WITH_UPPERCASE_NAME,
   union_module: UNION_MODULE,
   string_literals: STRING_LITERALS,
+  array_buffer_modules: ARRAY_BUFFER_MODULES,
 };

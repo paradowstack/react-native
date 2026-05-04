@@ -7,6 +7,7 @@
 
 package com.facebook.react.bridge
 
+import java.nio.ByteBuffer
 import java.util.ArrayList
 
 /**
@@ -15,6 +16,8 @@ import java.util.ArrayList
  */
 public interface ReadableArray {
   public fun getArray(index: Int): ReadableArray?
+
+  public fun getByteBuffer(index: Int): ByteBuffer?
 
   public fun getBoolean(index: Int): Boolean
 

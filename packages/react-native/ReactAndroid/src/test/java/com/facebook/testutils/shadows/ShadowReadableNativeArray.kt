@@ -15,6 +15,7 @@ import com.facebook.react.bridge.ReadableType
 import java.util.ArrayList
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import java.nio.ByteBuffer
 
 @Implements(ReadableNativeArray::class)
 open class ShadowReadableNativeArray : ShadowNativeArray(), ReadableArray {
@@ -34,6 +35,9 @@ open class ShadowReadableNativeArray : ShadowNativeArray(), ReadableArray {
   @Implementation override fun getString(index: Int): String? = backingArray.getString(index)
 
   @Implementation override fun getArray(index: Int): ReadableArray? = backingArray.getArray(index)
+
+
+  @Implementation override fun getByteBuffer(index: Int): ByteBuffer? = backingArray.getByteBuffer(index)
 
   @Implementation override fun getMap(index: Int): ReadableMap? = backingArray.getMap(index)
 

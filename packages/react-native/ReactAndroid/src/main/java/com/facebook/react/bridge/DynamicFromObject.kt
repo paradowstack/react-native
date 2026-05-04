@@ -9,6 +9,7 @@ package com.facebook.react.bridge
 
 import com.facebook.common.logging.FLog
 import com.facebook.react.common.ReactConstants
+import java.nio.ByteBuffer
 
 /** Implementation of Dynamic wrapping a ReadableArray. */
 public class DynamicFromObject(private val value: Any?) : Dynamic {
@@ -55,6 +56,12 @@ public class DynamicFromObject(private val value: Any?) : Dynamic {
     throw ClassCastException("Dynamic value from Object is not a ReadableArray")
   }
 
+  override fun asByteBuffer(): ByteBuffer? {
+    if (value is ByteBuffer) {
+      return value
+    }
+    throw ClassCastException("Dynamic value from Object is not a ByteBuffer")
+  }
   override fun asMap(): ReadableMap {
     if (value is ReadableMap) {
       return value

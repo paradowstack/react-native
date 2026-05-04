@@ -8,6 +8,7 @@
 package com.facebook.react.bridge
 
 import com.facebook.react.bridge.JavaOnlyMap.Companion.deepClone
+import java.nio.ByteBuffer
 import java.util.ArrayList
 
 /**
@@ -43,6 +44,7 @@ public class JavaOnlyArray : ReadableArray, WritableArray {
           ReadableType.String -> res.pushString(array.getString(i))
           ReadableType.Map -> res.pushMap(deepClone(array.getMap(i)))
           ReadableType.Array -> res.pushArray(deepClone(array.getArray(i)))
+            ReadableType.ByteBuffer -> res.pushByteBuffer(array.getByteBuffer(i)?.let { it.duplicate() })
         }
       }
       return res
@@ -76,6 +78,9 @@ public class JavaOnlyArray : ReadableArray, WritableArray {
   override fun getString(index: Int): String? = backingList[index] as String?
 
   override fun getArray(index: Int): ReadableArray? = backingList[index] as ReadableArray?
+
+
+  override fun getByteBuffer(index: Int): ByteBuffer? = backingList[index] as ByteBuffer?
 
   override fun getBoolean(index: Int): Boolean = backingList[index] as Boolean
 
@@ -120,6 +125,10 @@ public class JavaOnlyArray : ReadableArray, WritableArray {
 
   override fun pushArray(array: ReadableArray?) {
     backingList.add(array)
+  }
+
+  override fun pushByteBuffer(value: ByteBuffer?) {
+    backingList.add(value)
   }
 
   override fun pushMap(map: ReadableMap?) {

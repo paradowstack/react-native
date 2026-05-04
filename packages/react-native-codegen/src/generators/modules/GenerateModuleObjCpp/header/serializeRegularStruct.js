@@ -125,6 +125,8 @@ function toObjCType(
         )}>`,
         isRequired,
       );
+    case 'ArrayBufferTypeAnnotation':
+      return wrapObjCOptional('NSMutableData *', isRequired);
     case 'TypeAliasTypeAnnotation':
       const structName = capitalize(typeAnnotation.name);
       const namespacedStructName = getNamespacedStructName(
@@ -217,6 +219,8 @@ function toObjCValue(
         'Vec',
         `^${elementObjCType}(id ${localVarName}) { return ${elementObjCValue}; }`,
       );
+    case 'ArrayBufferTypeAnnotation':
+      return value;
     case 'TypeAliasTypeAnnotation':
       const structName = capitalize(typeAnnotation.name);
       const namespacedStructName = getNamespacedStructName(

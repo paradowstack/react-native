@@ -151,6 +151,8 @@ function translateEventEmitterTypeToJavaType(
     case 'ArrayTypeAnnotation':
       imports.add('com.facebook.react.bridge.ReadableArray');
       return 'ReadableArray';
+    case 'ArrayBufferTypeAnnotation':
+      return 'java.nio.ByteBuffer';
     case 'DoubleTypeAnnotation':
     case 'FloatTypeAnnotation':
     case 'Int32TypeAnnotation':
@@ -250,6 +252,8 @@ function translateFunctionParamToJavaType(
     case 'FunctionTypeAnnotation':
       imports.add('com.facebook.react.bridge.Callback');
       return wrapOptional('Callback', isRequired);
+    case 'ArrayBufferTypeAnnotation':
+      return wrapOptional('java.nio.ByteBuffer', isRequired);
     default:
       (realTypeAnnotation.type: 'MixedTypeAnnotation');
       throw new Error(createErrorMessage(realTypeAnnotation.type));
@@ -342,6 +346,8 @@ function translateFunctionReturnTypeToJavaType(
     case 'ArrayTypeAnnotation':
       imports.add('com.facebook.react.bridge.WritableArray');
       return wrapOptional('WritableArray', isRequired);
+    case 'ArrayBufferTypeAnnotation':
+      return wrapOptional('java.nio.ByteBuffer', isRequired);
     default:
       (realTypeAnnotation.type: 'MixedTypeAnnotation');
       throw new Error(createErrorMessage(realTypeAnnotation.type));

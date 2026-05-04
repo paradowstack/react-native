@@ -8,6 +8,7 @@
 package com.facebook.react.bridge
 
 import androidx.core.util.Pools
+import java.nio.ByteBuffer
 
 /** Implementation of Dynamic wrapping a ReadableArray. */
 internal class DynamicFromArray private constructor() : Dynamic {
@@ -30,6 +31,10 @@ internal class DynamicFromArray private constructor() : Dynamic {
 
   override fun asArray(): ReadableArray =
       array?.getArray(index) ?: throw IllegalStateException("This dynamic value has been recycled")
+
+
+  override fun asByteBuffer(): ByteBuffer? =
+    array?.getByteBuffer(index) ?: throw IllegalStateException("This dynamic value has been recycled")
 
   override fun asBoolean(): Boolean =
       array?.getBoolean(index)

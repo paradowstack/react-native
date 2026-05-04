@@ -7,6 +7,7 @@
 
 package com.facebook.react.bridge
 
+import java.nio.ByteBuffer
 import java.util.HashMap
 import kotlin.collections.Iterator
 import kotlin.collections.Map
@@ -44,7 +45,8 @@ public class JavaOnlyMap() : ReadableMap, WritableMap {
           ReadableType.String -> res.putString(propKey, map.getString(propKey))
           ReadableType.Map -> res.putMap(propKey, deepClone(map.getMap(propKey)))
           ReadableType.Array ->
-              res.putArray(propKey, JavaOnlyArray.deepClone(map.getArray(propKey)))
+            res.putArray(propKey, JavaOnlyArray.deepClone(map.getArray(propKey)))
+          ReadableType.ByteBuffer -> res.putByteBuffer(propKey, map.getByteBuffer(propKey))
         }
       }
       return res
@@ -84,6 +86,8 @@ public class JavaOnlyMap() : ReadableMap, WritableMap {
 
   override fun getArray(name: String): ReadableArray? = backingMap[name] as ReadableArray?
 
+  override fun getByteBuffer(name: String): ByteBuffer? = backingMap[name] as ByteBuffer?
+
   override fun getDynamic(name: String): Dynamic = DynamicFromMap.create(this, name)
 
   override fun getType(name: String): ReadableType {
@@ -95,6 +99,7 @@ public class JavaOnlyMap() : ReadableMap, WritableMap {
       value is Boolean -> ReadableType.Boolean
       value is ReadableMap -> ReadableType.Map
       value is ReadableArray -> ReadableType.Array
+      value is ByteBuffer -> ReadableType.ByteBuffer
       value is Dynamic -> value.type
       else -> {
         throw IllegalArgumentException(
@@ -156,6 +161,10 @@ public class JavaOnlyMap() : ReadableMap, WritableMap {
   }
 
   override fun putArray(key: String, value: ReadableArray?) {
+    backingMap[key] = value
+  }
+
+  override fun putByteBuffer(key: String, value: ByteBuffer?) {
     backingMap[key] = value
   }
 

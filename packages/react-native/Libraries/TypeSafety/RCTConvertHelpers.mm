@@ -49,3 +49,11 @@ NSArray *RCTBridgingToArray(id value)
 {
   return [RCTConvert NSArray:value];
 }
+
+NSMutableData * RCTBridgingToMutableData(id value) {
+	return value;
+}
+
+NSMutableData * RCTBridgingToOptionalMutableData(id value) {
+	return RCTBridgingToMutableData(value);
+}

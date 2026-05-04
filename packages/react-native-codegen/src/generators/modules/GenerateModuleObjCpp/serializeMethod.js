@@ -50,6 +50,7 @@ type ReturnJSType =
   | 'PromiseKind'
   | 'ObjectKind'
   | 'ArrayKind'
+  | 'ArrayBufferKind'
   | 'NumberKind'
   | 'StringKind';
 
@@ -286,6 +287,8 @@ function getParamObjCType(
       }
     case 'GenericObjectTypeAnnotation':
       return notStruct(wrapOptional('NSDictionary *', !nullable));
+    case 'ArrayBufferTypeAnnotation':
+      return notStruct(wrapOptional('NSMutableData *', !nullable));
     default:
       (structTypeAnnotation.type: empty);
       throw new Error(
@@ -322,6 +325,8 @@ function getReturnObjCType(
         )}> *`,
         isRequired,
       );
+    case 'ArrayBufferTypeAnnotation':
+      return wrapOptional('NSMutableData *', isRequired);
     case 'ReservedTypeAnnotation':
       switch (typeAnnotation.name) {
         case 'RootTag':
@@ -408,6 +413,8 @@ function getReturnJSType(
       return 'ObjectKind';
     case 'ArrayTypeAnnotation':
       return 'ArrayKind';
+    case 'ArrayBufferTypeAnnotation':
+      return 'ArrayBufferKind';
     case 'ReservedTypeAnnotation':
       return 'NumberKind';
     case 'StringTypeAnnotation':
