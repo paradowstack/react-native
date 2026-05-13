@@ -366,14 +366,17 @@ jni::local_ref<jobject> getProps(
   }
   if (ReactNativeFeatureFlags::enableAccumulatedUpdatesInRawPropsAndroid()) {
     if (oldProps == nullptr) {
-      auto context = DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
+      auto context = DynamicResolveContext(
+          newShadowView.layoutMetrics, layoutContextForRaw);
       auto resolver = DynamicResolver{newProps->calcExpressions, context};
       folly::dynamic props = newProps->getResolvedProps(resolver);
       return ReadableNativeMap::newObjectCxxArgs(std::move(props));
     } else {
-      auto newContext = DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
+      auto newContext = DynamicResolveContext(
+          newShadowView.layoutMetrics, layoutContextForRaw);
       auto newResolver = DynamicResolver{newProps->calcExpressions, newContext};
-      auto oldContext = DynamicResolveContext(oldShadowView.layoutMetrics, layoutContextForRaw);
+      auto oldContext = DynamicResolveContext(
+          oldShadowView.layoutMetrics, layoutContextForRaw);
       auto oldResolver = DynamicResolver{oldProps->calcExpressions, oldContext};
       auto diff = diffDynamicProps(
           oldProps->getResolvedProps(oldResolver),
@@ -381,7 +384,8 @@ jni::local_ref<jobject> getProps(
       return ReadableNativeMap::newObjectCxxArgs(std::move(diff));
     }
   }
-  auto context = DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
+  auto context =
+      DynamicResolveContext(newShadowView.layoutMetrics, layoutContextForRaw);
   auto resolver = DynamicResolver{newProps->calcExpressions, context};
   folly::dynamic raw = newProps->getResolvedProps(resolver);
   return ReadableNativeMap::newObjectCxxArgs(std::move(raw));
@@ -445,11 +449,16 @@ inline void writeCreateMountItem(
 
   auto componentName = getPlatformComponentName(mountItem.newChildShadowView);
 
-  jni::local_ref<jobject> props = getProps(
-      mountItem.oldChildShadowView,
-      mountItem.newChildShadowView,
-      layoutContext);
-
+  jni::local_ref<jobject> props;
+  if (!mountItem.newChildShadowView.traits.check(
+          ShadowNodeTraits::Trait::CreatedWithResolvableProperties)) {
+    props = getProps(
+        mountItem.oldChildShadowView,
+        mountItem.newChildShadowView,
+        layoutContext);
+  } else {
+    props = ReadableNativeMap::newObjectCxxArgs(folly::dynamic::object());
+  }
   // Do not hold onto Java object from C
   // We DO want to hold onto C object from Java, since we don't know the
   // lifetime of the Java object
@@ -502,10 +511,12 @@ inline void writeUpdatePropsMountItem(
     InstructionBuffer& buffer,
     const CppMountItem& mountItem,
     const std::optional<LayoutContext>& layoutContext) {
-  [[maybe_unused]] auto oldProps = folly::toJson(mountItem.oldChildShadowView.props->rawProps);
-  [[maybe_unused]] auto newProps = folly::toJson(mountItem.oldChildShadowView.props->rawProps);
-  std::cerr << "Was: " << oldProps << std::endl;
-  std::cerr << "Is: " << newProps << std::endl;
+  //  [[maybe_unused]] auto oldProps =
+  //  folly::toJson(mountItem.oldChildShadowView.props->rawProps);
+  //  [[maybe_unused]] auto newProps =
+  //  folly::toJson(mountItem.newChildShadowView.props->rawProps); std::cerr <<
+  //  "Was: " << oldProps << std::endl; std::cerr << "Is: " << newProps <<
+  //  std::endl;
   buffer.writeInt(mountItem.newChildShadowView.tag);
   buffer.writeObject(getProps(
                          mountItem.oldChildShadowView,
@@ -850,6 +861,14 @@ void FabricMountingManager::executeMount(
                   CppMountItem::UpdateEventEmitterMountItem(
                       mutation.newChildShadowView));
 
+          if (newChildShadowView.traits.check(
+                  ShadowNodeTraits::Trait::CreatedWithResolvableProperties)) {
+            (maintainMutationOrder ? cppCommonMountItems
+                                   : cppUpdatePropsMountItems)
+                .push_back(
+                    CppMountItem::UpdatePropsMountItem(
+                        oldChildShadowView, newChildShadowView));
+          }
           break;
         }
         default: {
@@ -1176,8 +1195,14 @@ void FabricMountingManager::preallocateShadowView(
   if (layoutContextProvider_) {
     layoutContextForPreallocate = layoutContextProvider_(shadowView.surfaceId);
   }
-  jni::local_ref<jobject> props =
-      getProps({}, shadowView, layoutContextForPreallocate);
+
+  jni::local_ref<jobject> props;
+  if (!shadowView.traits.check(
+          ShadowNodeTraits::Trait::CreatedWithResolvableProperties)) {
+    props = getProps({}, shadowView, layoutContextForPreallocate);
+  } else {
+    props = ReadableNativeMap::newObjectCxxArgs(folly::dynamic::object());
+  }
 
   auto component = getPlatformComponentName(shadowView);
 

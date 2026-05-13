@@ -86,11 +86,11 @@ inline std::optional<NumericValue<T>> parseNumericValue(
     }
   } else if constexpr (std::same_as<T, NumericValueLength>) {
     if (cssCalc.isUnitless() || cssCalc.percent != 0.0f) {
-      return std::nullopt;
+      return NumericValue<T>::invalid();
     }
   } else if constexpr (SupportsLength<T> || SupportsPercentage<T>) {
     if (cssCalc.isUnitless()) {
-      return std::nullopt;
+      return NumericValue<T>::invalid();
     }
   }
 

@@ -49,12 +49,12 @@ Float DynamicResolver::resolveNumber(const UntypedNumericValue& value) const {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
         !std::holds_alternative<NumberCalcEntry>(it->second)) {
-      return std::numeric_limits<Float>::quiet_NaN();
+			return 0.0f;
     }
     return resolveCalcEntry(it->second, 0.0f);
   }
   if (value.kind() != NumericValueKind::Number) {
-    return std::numeric_limits<Float>::quiet_NaN();
+		return 0.0f;
   }
   return value.resolve(0.0f);
 }
@@ -64,12 +64,12 @@ Float DynamicResolver::resolveLength(const UntypedNumericValue& value) const {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
         !std::holds_alternative<LengthCalcEntry>(it->second)) {
-      return std::numeric_limits<Float>::quiet_NaN();
+			return 0.0f;
     }
     return resolveCalcEntry(it->second, 0.0f);
   }
   if (value.kind() != NumericValueKind::Length) {
-    return std::numeric_limits<Float>::quiet_NaN();
+		return 0.0f;
   }
   return value.resolve(0.0f);
 }
@@ -81,13 +81,13 @@ Float DynamicResolver::resolveLengthOrPercentage(
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
         !std::holds_alternative<LengthOrPercentageCalcEntry>(it->second)) {
-      return std::numeric_limits<Float>::quiet_NaN();
+			return 0.0f;
     }
     return resolveCalcEntry(it->second, percentRef);
   }
   auto k = value.kind();
   if (k != NumericValueKind::Length && k != NumericValueKind::Percentage) {
-    return std::numeric_limits<Float>::quiet_NaN();
+		return 0.0f;
   }
   return value.resolve(percentRef);
 }
@@ -113,14 +113,13 @@ LengthPercentageValue DynamicResolver::resolveLengthPercentage(
               0.0f, context.viewportWidth(), context.viewportHeight());
           return LengthPercentageValue::length(resolved);
         } else if constexpr (std::is_same_v<E, LengthOrPercentageCalcEntry>) {
-          if (calc.percent != 0.0f && percentRef <= 0.0f) {
+          if (calc.isPercentOnly()) {
+            return LengthPercentageValue::percentage(calc.percent);
+          } else if (calc.percent != 0.0f && percentRef <= 0.0f) {
             return value; // still dynamic – no layout yet
           }
           auto resolved = calc.resolve(
               percentRef, context.viewportWidth(), context.viewportHeight());
-          if (calc.isPercentOnly()) {
-            return LengthPercentageValue::percentage(resolved);
-          }
           return LengthPercentageValue::length(resolved);
         } else {
           return LengthPercentageValue{};
@@ -226,6 +225,9 @@ folly::dynamic DynamicResolver::toDynamicById(
 
 folly::dynamic DynamicResolver::toDynamicNumber(
     const UntypedNumericValue& value) const {
+  if (value.isInvalid()) {
+    return 0.0f;
+  }
   if (value.isDynamic()) {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
@@ -242,6 +244,9 @@ folly::dynamic DynamicResolver::toDynamicNumber(
 
 folly::dynamic DynamicResolver::toDynamicLength(
     const UntypedNumericValue& value) const {
+  if (value.isInvalid()) {
+    return 0.0f;
+  }
   if (value.isDynamic()) {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||

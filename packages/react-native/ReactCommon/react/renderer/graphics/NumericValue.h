@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstdint>
 #include <limits>
+#include <numeric>
 #include <string>
 #include <variant>
 
@@ -19,6 +20,8 @@
 namespace facebook::react {
 
 using NumericValueDynamicId = uint32_t;
+inline constexpr NumericValueDynamicId NumericValueInvalidDynamicId =
+    std::numeric_limits<NumericValueDynamicId>::max();
 
 enum class NumericValueKind : uint8_t {
   Undefined,
@@ -74,6 +77,10 @@ struct NumericValueDynamic {
 
   constexpr bool operator==(const NumericValueDynamic& other) const = default;
 };
+struct NumericValueInvalidDynamic {
+  constexpr bool operator==(const NumericValueInvalidDynamic& other) const =
+      default;
+};
 
 template <typename T>
 concept NumericValueConcreteType = std::same_as<T, NumericValueNumber> ||
@@ -102,7 +109,11 @@ class NumericValue {
   template <NumericValueConcreteType OtherT>
   friend class NumericValue;
 
-  using Storage = std::variant<std::monostate, NumericValueDynamic, T>;
+  using Storage = std::variant<
+      std::monostate,
+      NumericValueDynamic,
+      NumericValueInvalidDynamic,
+      T>;
 
   constexpr NumericValue() = default;
 
@@ -111,6 +122,9 @@ class NumericValue {
 
   constexpr explicit NumericValue(NumericValueDynamic dynamicValue)
       : storage_(dynamicValue) {}
+
+  constexpr explicit NumericValue(NumericValueInvalidDynamic invalidValue)
+      : storage_(invalidValue) {}
 
   template <typename U>
     requires std::constructible_from<T, U> &&
@@ -152,8 +166,13 @@ class NumericValue {
   constexpr bool isUndefined() const {
     return is_undefined();
   }
+
   constexpr bool isDynamic() const {
     return is_dynamic();
+  }
+
+  constexpr bool isInvalid() const {
+    return is_dynamic() && asDynamicId() == NumericValueInvalidDynamicId;
   }
 
   constexpr bool isNumber() const
@@ -291,6 +310,10 @@ class NumericValue {
 
   static constexpr NumericValue dynamic(NumericValueDynamicId id) {
     return NumericValue{NumericValueDynamic{id}};
+  }
+
+  static constexpr NumericValue invalid() {
+    return NumericValue{NumericValueDynamic{NumericValueInvalidDynamicId}};
   }
 
   constexpr NumericValueKind kind() const {
