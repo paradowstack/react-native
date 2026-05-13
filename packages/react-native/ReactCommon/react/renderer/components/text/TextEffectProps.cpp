@@ -35,7 +35,10 @@ ComponentName TextEffectProps::getDiffPropsImplementationTarget() const {
   return "TextEffect";
 }
 
-folly::dynamic TextEffectProps::getDiffProps(const Props* prevProps) const {
+folly::dynamic TextEffectProps::getDiffProps(
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   folly::dynamic result = folly::dynamic::object();
 
   static const auto defaultProps = TextEffectProps();
