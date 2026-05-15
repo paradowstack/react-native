@@ -574,8 +574,52 @@ folly::dynamic YogaStylableProps::getResolvedProps(
     const DynamicResolver& resolver) const {
   auto props = rawProps;
   if (yogaStyle.dimension(yoga::Dimension::Width).isDynamic()) {
-    props["width"] = resolver.toDynamic(yogaStyle.dimension(yoga::Dimension::Width), resolver.context.frameWidth());
+    props["width"] = resolver.toDynamic(
+        yogaStyle.dimension(yoga::Dimension::Width),
+        resolver.context.frameWidth());
   }
+  if (yogaStyle.dimension(yoga::Dimension::Height).isDynamic()) {
+    props["height"] = resolver.toDynamic(
+        yogaStyle.dimension(yoga::Dimension::Height),
+        resolver.context.frameHeight());
+  }
+  if (yogaStyle.border(yoga::Edge::All).isDynamic()) {
+    props["borderWidth"] =
+        resolver.toDynamic(yogaStyle.border(yoga::Edge::All));
+  }
+  if (yogaStyle.border(yoga::Edge::Left).isDynamic()) {
+    props["borderLeftWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Left));
+  }
+  if (yogaStyle.border(yoga::Edge::Right).isDynamic()) {
+    props["borderRightWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Right));
+  }
+  if (yogaStyle.border(yoga::Edge::Top).isDynamic()) {
+    props["borderTopWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Top));
+  }
+  if (yogaStyle.border(yoga::Edge::Bottom).isDynamic()) {
+    props["borderBottomWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Bottom));
+  }
+  if (yogaStyle.border(yoga::Edge::Start).isDynamic()) {
+    props["borderStartWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Start));
+  }
+  if (yogaStyle.border(yoga::Edge::End).isDynamic()) {
+    props["borderEndWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::End));
+  }
+  if (yogaStyle.border(yoga::Edge::Horizontal).isDynamic()) {
+    props["borderHorizontalWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Horizontal));
+  }
+  if (yogaStyle.border(yoga::Edge::Vertical).isDynamic()) {
+    props["borderVerticalWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Vertical));
+  }
+
   return props;
 }
 #endif

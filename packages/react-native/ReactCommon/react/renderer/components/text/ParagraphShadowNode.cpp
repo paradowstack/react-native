@@ -38,29 +38,6 @@ using Content = ParagraphShadowNode::Content;
 // NOLINTNEXTLINE(facebook-hte-CArray, modernize-avoid-c-arrays)
 const char ParagraphComponentName[] = "Paragraph";
 
-void ParagraphShadowNode::initialize() noexcept {
-#ifdef ANDROID
-  if (getConcreteProps().isSelectable) {
-    traits_.set(ShadowNodeTraits::Trait::KeyboardFocusable);
-  }
-#endif
-}
-
-ParagraphShadowNode::ParagraphShadowNode(
-    const ShadowNodeFragment& fragment,
-    const ShadowNodeFamily::Shared& family,
-    ShadowNodeTraits traits)
-    : ConcreteViewShadowNode(fragment, family, traits) {
-  initialize();
-}
-
-ParagraphShadowNode::ParagraphShadowNode(
-    const ShadowNode& sourceShadowNode,
-    const ShadowNodeFragment& fragment)
-    : ConcreteViewShadowNode(sourceShadowNode, fragment) {
-  initialize();
-}
-
 bool ParagraphShadowNode::shouldNewRevisionDirtyMeasurement(
     const ShadowNode& /*sourceShadowNode*/,
     const ShadowNodeFragment& fragment) const {

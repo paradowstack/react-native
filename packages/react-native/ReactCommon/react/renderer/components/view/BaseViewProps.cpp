@@ -904,11 +904,11 @@ void BaseViewProps::resolveProperties(const DynamicResolver& resolver) {
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic BaseViewProps::getResolvedProps(
     const DynamicResolver& resolver) const {
-  folly::dynamic props = rawProps;
   if (!needsToResolveStyleValues) {
-    return props;
+    return rawProps;
   }
 
+  auto props = YogaStylableProps::getResolvedProps(resolver);
   [[maybe_unused]] auto before = folly::toJson(rawProps);
   if (opacity.isDynamic()) {
     props["opacity"] = resolver.toDynamicNumber(opacity);
@@ -1060,35 +1060,6 @@ folly::dynamic BaseViewProps::getResolvedProps(
         props["experimental_backgroundImage"][i] = bgImageEntry;
       }
     }
-  }
-
-  auto borderWidths = getBorderWidths(resolver.context.layoutContext);
-  if (borderWidths.all.has_value()) {
-    props["borderWidth"] = borderWidths.all.value();
-  }
-  if (borderWidths.left.has_value()) {
-    props["borderLeftWidth"] = borderWidths.left.value();
-  }
-  if (borderWidths.right.has_value()) {
-    props["borderRightWidth"] = borderWidths.right.value();
-  }
-  if (borderWidths.top.has_value()) {
-    props["borderTopWidth"] = borderWidths.top.value();
-  }
-  if (borderWidths.bottom.has_value()) {
-    props["borderBottomWidth"] = borderWidths.bottom.value();
-  }
-  if (borderWidths.start.has_value()) {
-    props["borderStartWidth"] = borderWidths.start.value();
-  }
-  if (borderWidths.end.has_value()) {
-    props["borderEndWidth"] = borderWidths.end.value();
-  }
-  if (borderWidths.horizontal.has_value()) {
-    props["borderHorizontalWidth"] = borderWidths.horizontal.value();
-  }
-  if (borderWidths.vertical.has_value()) {
-    props["borderVerticalWidth"] = borderWidths.vertical.value();
   }
 
   if (borderRadii.all.has_value() && borderRadii.all.value().isDynamic()) {

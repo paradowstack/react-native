@@ -32,13 +32,6 @@ class ParagraphShadowNode
  public:
   using ConcreteViewShadowNode::ConcreteViewShadowNode;
 
-  ParagraphShadowNode(
-      const ShadowNodeFragment &fragment,
-      const ShadowNodeFamily::Shared &family,
-      ShadowNodeTraits traits);
-
-  ParagraphShadowNode(const ShadowNode &sourceShadowNode, const ShadowNodeFragment &fragment);
-
   static ShadowNodeTraits BaseTraits()
   {
     auto traits = ConcreteViewShadowNode::BaseTraits();
@@ -88,7 +81,6 @@ class ParagraphShadowNode
       const override;
 
  private:
-  void initialize() noexcept;
   /*
    * Builds (if needed) and returns a reference to a `Content` object.
    */

@@ -93,10 +93,6 @@ void ViewShadowNode::initialize() noexcept {
   } else {
     traits_.unset(ShadowNodeTraits::Trait::ChildrenFormStackingContext);
   }
-
-  if (!viewProps.calcExpressions.empty()) {
-    traits_.set(ShadowNodeTraits::Trait::CreatedWithResolvableProperties);
-  }
 }
 
 } // namespace facebook::react

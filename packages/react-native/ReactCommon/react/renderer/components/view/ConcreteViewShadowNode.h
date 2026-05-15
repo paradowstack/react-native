@@ -119,6 +119,10 @@ class ConcreteViewShadowNode : public ConcreteShadowNode<
     } else {
       BaseShadowNode::traits_.unset(ShadowNodeTraits::Trait::KeyboardFocusable);
     }
+
+    if (!props.calcExpressions.empty()) {
+      BaseShadowNode::traits_.set(ShadowNodeTraits::Trait::CreatedWithResolvableProperties);
+    }
   }
 };
 
