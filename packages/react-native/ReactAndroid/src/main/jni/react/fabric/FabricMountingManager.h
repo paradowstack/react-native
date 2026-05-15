@@ -15,7 +15,6 @@
 
 #include <fbjni/fbjni.h>
 #include <react/fabric/JFabricUIManager.h>
-#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/uimanager/primitives.h>
 
 namespace facebook::react {
@@ -28,14 +27,6 @@ class FabricMountingManager final {
   FabricMountingManager(jni::global_ref<JFabricUIManager::javaobject> &javaUIManager);
   FabricMountingManager(const FabricMountingManager &) = delete;
   ~FabricMountingManager();
-
-  /*
-   * Supplies the same `LayoutContext` as C++ layout / `SurfaceHandler` (viewport,
-   * font scale, RTL flags) for resolving `calc()` in props when serializing to
-   * the Android host (e.g. `outlineWidth`). Set from `FabricUIManagerBinding`.
-   */
-  void setLayoutContextProvider(
-      std::function<LayoutContext(SurfaceId)> layoutContextProvider);
 
   void onSurfaceStart(SurfaceId surfaceId);
 
@@ -91,8 +82,6 @@ class FabricMountingManager final {
   bool isOnMainThread();
 
   jni::global_ref<JFabricUIManager::javaobject> javaUIManager_;
-
-  std::function<LayoutContext(SurfaceId)> layoutContextProvider_{nullptr};
 
   std::recursive_mutex commitMutex_;
 

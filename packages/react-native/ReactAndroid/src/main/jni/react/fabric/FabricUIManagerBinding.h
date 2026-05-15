@@ -147,9 +147,6 @@ class FabricUIManagerBinding : public jni::HybridClass<FabricUIManagerBinding>,
 
   std::shared_ptr<FabricMountingManager> getMountingManager(const char *locationHint);
 
-  /** Same source as iOS `SurfaceHandler::getLayoutContext()` for prop resolution (e.g. calc). */
-  LayoutContext getLayoutContextForSurface(SurfaceId surfaceId);
-
   // LayoutAnimations
   void onAnimationStarted() override;
   void onAllAnimationsComplete() override;
