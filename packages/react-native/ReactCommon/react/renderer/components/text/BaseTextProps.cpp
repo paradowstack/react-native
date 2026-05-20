@@ -38,13 +38,13 @@ static TextAttributes convertRawProp(
       "fontFamily",
       sourceTextAttributes.fontFamily,
       defaultTextAttributes.fontFamily);
-  textAttributes.fontSize = convertRawProp(
+  textAttributes.fontSize = convertRawPropWithCalc(
       context,
       rawProps,
       "fontSize",
       sourceTextAttributes.fontSize,
       defaultTextAttributes.fontSize);
-  textAttributes.fontSizeMultiplier = convertRawProp(
+  textAttributes.fontSizeMultiplier = convertRawPropWithCalc(
       context,
       rawProps,
       "fontSizeMultiplier",
@@ -74,7 +74,7 @@ static TextAttributes convertRawProp(
       "allowFontScaling",
       sourceTextAttributes.allowFontScaling,
       defaultTextAttributes.allowFontScaling);
-  textAttributes.maxFontSizeMultiplier = convertRawProp(
+  textAttributes.maxFontSizeMultiplier = convertRawPropWithCalc(
       context,
       rawProps,
       "maxFontSizeMultiplier",
@@ -86,7 +86,7 @@ static TextAttributes convertRawProp(
       "dynamicTypeRamp",
       sourceTextAttributes.dynamicTypeRamp,
       defaultTextAttributes.dynamicTypeRamp);
-  textAttributes.letterSpacing = convertRawProp(
+  textAttributes.letterSpacing = convertRawPropWithCalc(
       context,
       rawProps,
       "letterSpacing",
@@ -100,7 +100,7 @@ static TextAttributes convertRawProp(
       defaultTextAttributes.textTransform);
 
   // Paragraph
-  textAttributes.lineHeight = convertRawProp(
+  textAttributes.lineHeight = convertRawPropWithCalc(
       context,
       rawProps,
       "lineHeight",
@@ -158,7 +158,7 @@ static TextAttributes convertRawProp(
       "textShadowOffset",
       sourceTextAttributes.textShadowOffset,
       defaultTextAttributes.textShadowOffset);
-  textAttributes.textShadowRadius = convertRawProp(
+  textAttributes.textShadowRadius = convertRawPropWithCalc(
       context,
       rawProps,
       "textShadowRadius",
@@ -349,8 +349,9 @@ void BaseTextProps::resolveProperties(const DynamicResolver& resolver) {
   textAttributes.resolveProperties(resolver);
 }
 void BaseTextProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  textAttributes.collectLiveResolvableIds(ids);
+  textAttributes.collectLiveResolvableIds(map, ids);
 }
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -381,14 +382,13 @@ void BaseTextProps::appendTextAttributesProps(
 
   if (!floatEquality(
           textAttributes.fontSize, oldProps->textAttributes.fontSize)) {
-    result["fontSize"] = textAttributes.fontSize.toDynamic();
+    result["fontSize"] = textAttributes.fontSize;
   }
 
   if (!floatEquality(
           textAttributes.fontSizeMultiplier,
           oldProps->textAttributes.fontSizeMultiplier)) {
-    result["fontSizeMultiplier"] =
-        textAttributes.fontSizeMultiplier.toDynamic();
+    result["fontSizeMultiplier"] = textAttributes.fontSizeMultiplier;
   }
 
   if (textAttributes.fontWeight != oldProps->textAttributes.fontWeight) {
@@ -419,8 +419,7 @@ void BaseTextProps::appendTextAttributesProps(
   if (!floatEquality(
           textAttributes.maxFontSizeMultiplier,
           oldProps->textAttributes.maxFontSizeMultiplier)) {
-    result["maxFontSizeMultiplier"] =
-        textAttributes.maxFontSizeMultiplier.toDynamic();
+    result["maxFontSizeMultiplier"] = textAttributes.maxFontSizeMultiplier;
   }
 
   if (textAttributes.dynamicTypeRamp !=
@@ -433,7 +432,7 @@ void BaseTextProps::appendTextAttributesProps(
   if (!floatEquality(
           textAttributes.letterSpacing,
           oldProps->textAttributes.letterSpacing)) {
-    result["letterSpacing"] = textAttributes.letterSpacing.toDynamic();
+    result["letterSpacing"] = textAttributes.letterSpacing;
   }
 
   if (textAttributes.textTransform != oldProps->textAttributes.textTransform) {
@@ -444,7 +443,7 @@ void BaseTextProps::appendTextAttributesProps(
 
   if (!floatEquality(
           textAttributes.lineHeight, oldProps->textAttributes.lineHeight)) {
-    result["lineHeight"] = textAttributes.lineHeight.toDynamic();
+    result["lineHeight"] = textAttributes.lineHeight;
   }
 
   if (textAttributes.alignment != oldProps->textAttributes.alignment) {
@@ -506,7 +505,7 @@ void BaseTextProps::appendTextAttributesProps(
   if (!floatEquality(
           textAttributes.textShadowRadius,
           oldProps->textAttributes.textShadowRadius)) {
-    result["textShadowRadius"] = textAttributes.textShadowRadius.toDynamic();
+    result["textShadowRadius"] = textAttributes.textShadowRadius;
   }
 
   if (textAttributes.textShadowColor !=

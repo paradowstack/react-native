@@ -28,6 +28,11 @@ folly::dynamic numericValueToDynamic(const T& value) {
   return value.asFloat();
 }
 
+template <>
+folly::dynamic numericValueToDynamic(const ValueUnit& value) {
+  return value.value;
+}
+
 template <typename T>
 std::string numericValueUnitToString(const T& value) {
   switch (value.kind()) {
@@ -74,10 +79,6 @@ void packBorderRadii(
   packBorderRadiusCorner(dyn, "borderStartEndRadius", borderRadii.startEnd);
   packBorderRadiusCorner(dyn, "borderEndStartRadius", borderRadii.endStart);
   packBorderRadiusCorner(dyn, "borderEndEndRadius", borderRadii.endEnd);
-
-  if (borderRadii.all.has_value()) {
-    dyn.insert("borderRadius", numericValueToDynamic(borderRadii.all.value()));
-  }
 }
 
 void packOpacity(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
@@ -499,10 +500,10 @@ void packBoxShadow(folly::dynamic& dyn, const AnimatedPropBase& animatedProp) {
   auto shadowArray = folly::dynamic::array();
   for (const auto& shadow : boxShadows) {
     folly::dynamic shadowObj = folly::dynamic::object();
-    shadowObj["offsetX"] = shadow.offsetX.asFloat();
-    shadowObj["offsetY"] = shadow.offsetY.asFloat();
-    shadowObj["blurRadius"] = shadow.blurRadius.asFloat();
-    shadowObj["spreadDistance"] = shadow.spreadDistance.asFloat();
+    shadowObj["offsetX"] = shadow.offsetX;
+    shadowObj["offsetY"] = shadow.offsetY;
+    shadowObj["blurRadius"] = shadow.blurRadius;
+    shadowObj["spreadDistance"] = shadow.spreadDistance;
     shadowObj["inset"] = shadow.inset;
     if (shadow.color) {
       shadowObj["color"] = static_cast<int32_t>(*shadow.color);

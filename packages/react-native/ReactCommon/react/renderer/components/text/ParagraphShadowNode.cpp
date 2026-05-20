@@ -53,15 +53,23 @@ const Content& ParagraphShadowNode::getContent(
   ensureUnsealed();
 
   auto textAttributes = TextAttributes::defaultTextAttributes();
-  textAttributes.fontSizeMultiplier =
-      NumberValue::number(layoutContext.fontSizeMultiplier);
+  textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
   //			if
   //(getConcreteProps().textAttributes.fontSize.isDynamic()) {
   //				textAttributes.fontSize =
-  //props_->calcExpressions.at(getConcreteProps().textAttributes.fontSize.asDynamicId()).resolve(0.0f,
-  //layoutContext.viewportSize.width, layoutContext.viewportSize.height);
+  // props_->calcExpressions.at(getConcreteProps().textAttributes.fontSize.asDynamicId()).resolve(0.0f,
+  // layoutContext.viewportSize.width, layoutContext.viewportSize.height);
   //			}
-  textAttributes.apply(getConcreteProps().textAttributes);
+  auto att = getConcreteProps().textAttributes;
+  DynamicResolver resolver(
+      props_->calcExpressions, DynamicResolveContext{{}, layoutContext});
+  resolver.resolve(fnv1a("fontSize"), att.fontSize);
+  if (getConcreteProps().calcExpressions.contains(fnv1a("letterSpacing"))) {
+    DynamicResolver resolver(
+        props_->calcExpressions, DynamicResolveContext{{}, layoutContext});
+    att.letterSpacing = resolver.resolveNumber(fnv1a("letterSpacing"));
+  }
+  textAttributes.apply(att);
   textAttributes.layoutDirection =
       YGNodeLayoutGetDirection(&yogaNode_) == YGDirectionRTL
       ? LayoutDirection::RightToLeft

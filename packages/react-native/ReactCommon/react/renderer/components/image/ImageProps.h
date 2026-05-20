@@ -10,7 +10,7 @@
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/graphics/Color.h>
-#include <react/renderer/graphics/NumericValue.h>
+#include <react/renderer/graphics/Float.h>
 #include <react/renderer/imagemanager/primitives.h>
 
 namespace facebook::react {
@@ -36,15 +36,15 @@ class ImageProps final : public ViewProps {
   ImageSource defaultSource{};
   ImageSource loadingIndicatorSource{};
   ImageResizeMode resizeMode{ImageResizeMode::Stretch};
-  LengthValue blurRadius{LengthValue::length(0.0f)};
+  Float blurRadius{0.0f};
   EdgeInsets capInsets{};
   SharedColor tintColor{};
   std::string internal_analyticTag{};
   std::string resizeMethod{"auto"};
-  NumberValue resizeMultiplier{NumberValue::number(1.0f)};
+  Float resizeMultiplier{1.0f};
   bool shouldNotifyLoadEvents{};
   SharedColor overlayColor{};
-  NumberValue fadeDuration{NumberValue::number(300.0f)};
+  Float fadeDuration{300.0f};
   bool progressiveRenderingEnabled{};
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -61,6 +61,7 @@ class ImageProps final : public ViewProps {
 
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE

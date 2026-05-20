@@ -109,6 +109,16 @@ inline static CGFloat RCTCGFloatFromNumericValue(const UntypedNumericValue &valu
   return static_cast<CGFloat>(value.asFloat());
 }
 
+inline static bool RCTIsNan(Float value)
+{
+  return std::isnan(value);
+}
+
+inline static CGFloat RCTCGFloatFromNumericValue(Float value)
+{
+  return static_cast<CGFloat>(value);
+}
+
 inline static CGFloat RCTEffectiveFontSizeMultiplierFromTextAttributes(const TextAttributes &textAttributes)
 {
   if (textAttributes.allowFontScaling.value_or(true)) {
@@ -205,9 +215,9 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
   }
 
   // Kerning
-  if (!RCTIsNan(textAttributes.letterSpacing)) {
-    attributes[NSKernAttributeName] = @(RCTCGFloatFromNumericValue(textAttributes.letterSpacing));
-  }
+	if (!isnan(textAttributes.letterSpacing)) {
+		attributes[NSKernAttributeName] = @((CGFloat)textAttributes.letterSpacing);
+	}
 
   // Paragraph Style
   NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];

@@ -118,6 +118,17 @@ void fromRawValue(
 }
 
 template <typename T>
+void fromRawValueWithCalc(
+    DynamicPropertyPath& path,
+    const PropsParserContext& context,
+    const RawValue& rawValue,
+    std::optional<T>& result) {
+  T resultValue;
+  fromRawValueWithCalc(path, context, rawValue, resultValue);
+  result = std::optional<T>{std::move(resultValue)};
+}
+
+template <typename T>
 void fromRawValue(
     const PropsParserContext& context,
     const RawValue& rawValue,
@@ -191,6 +202,34 @@ inline void fromRawValue(
   }
 }
 
+inline void fromRawValueWithCalc(
+    DynamicPropertyPath& path,
+    const PropsParserContext& context,
+    const RawValue& value,
+    Float& result) {
+  if (value.hasType<Float>()) {
+    result = (Float)value;
+    return;
+  }
+  if (!value.hasType<std::string>()) {
+    return;
+  }
+
+  auto calc = parseCSSProperty<CSSCalc>((std::string)value);
+  if (std::holds_alternative<CSSCalc>(calc)) {
+    auto cssCalc = std::get<CSSCalc>(calc);
+    if (cssCalc.isUnitless() || cssCalc.isPointsOnly()) {
+      result = (Float)cssCalc.px;
+      return;
+    }
+
+    if (context.calcMap) {
+      context.calcMap->insert_or_assign(
+          fnv1a(path.to_string()), NumberCalcEntry{cssCalc});
+    }
+  }
+}
+
 template <typename T, typename U = T>
 T convertRawProp(
     const PropsParserContext& context,
@@ -214,6 +253,46 @@ T convertRawProp(
   try {
     T result;
     fromRawValue(context, *rawValue, result);
+    return result;
+  } catch (const std::exception& e) {
+    // In case of errors, log the error and fall back to the default
+    RawPropsKey key{.prefix = namePrefix, .name = name, .suffix = nameSuffix};
+    // TODO: report this using ErrorUtils so it's more visible to the user
+    LOG(ERROR) << "Error while converting prop '"
+               << static_cast<std::string>(key) << "': " << e.what();
+    return defaultValue;
+  }
+}
+
+template <typename T, typename U = T>
+T convertRawPropWithCalc(
+    const PropsParserContext& context,
+    const RawProps& rawProps,
+    const char* name,
+    const T& sourceValue,
+    const U& defaultValue,
+    const char* namePrefix = nullptr,
+    const char* nameSuffix = nullptr) {
+  const auto* rawValue = rawProps.at(name, namePrefix, nameSuffix);
+  if (rawValue == nullptr) [[likely]] {
+    return sourceValue;
+  }
+
+  // Special case: `null` always means "the prop was removed, use default
+  // value".
+  if (!rawValue->hasValue()) [[unlikely]] {
+    return defaultValue;
+  }
+
+  try {
+    DynamicPropertyPath path;
+    DynamicPropertyPath::ScopedLevel level{
+        path,
+        std::string(namePrefix != nullptr ? namePrefix : "") +
+            std::string(name) +
+            std::string(nameSuffix != nullptr ? nameSuffix : "")};
+    T result;
+    fromRawValueWithCalc(path, context, *rawValue, result);
     return result;
   } catch (const std::exception& e) {
     // In case of errors, log the error and fall back to the default

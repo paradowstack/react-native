@@ -69,6 +69,7 @@ class Props : public virtual Sealable,
 
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
   void sweepCalcExpressions();
 

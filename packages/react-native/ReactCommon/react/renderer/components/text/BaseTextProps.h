@@ -21,10 +21,16 @@ namespace facebook::react {
 class BaseTextProps : public DynamicPropertiesHolder {
  public:
   BaseTextProps() = default;
-  BaseTextProps(const PropsParserContext &context, const BaseTextProps &sourceProps, const RawProps &rawProps);
+  BaseTextProps(
+      const PropsParserContext& context,
+      const BaseTextProps& sourceProps,
+      const RawProps& rawProps);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
 #pragma mark - Props
 
@@ -36,12 +42,17 @@ class BaseTextProps : public DynamicPropertiesHolder {
   SharedDebugStringConvertibleList getDebugProps() const;
 #endif
 
-  void resolveProperties(const DynamicResolver &resolver) override;
-  void collectLiveResolvableIds(std::unordered_set<DynamicPropertyId> &ids) const override;
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic getResolvedProps(const DynamicResolver &resolver) const override;
-  void appendTextAttributesProps(folly::dynamic &result, const BaseTextProps *prevProps) const;
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
+  void appendTextAttributesProps(
+      folly::dynamic& result,
+      const BaseTextProps* prevProps) const;
 #endif
 };
 

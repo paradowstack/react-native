@@ -42,7 +42,8 @@ inline GradientKeyword parseGradientKeyword(const std::string& keyword) {
 void parseProcessedBackgroundImage(
     const PropsParserContext& context,
     const RawValue& value,
-    std::vector<BackgroundImage>& result) {
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path) {
   react_native_expect(value.hasType<RawValueList>());
   if (!value.hasType<RawValueList>()) {
     result = {};
@@ -67,6 +68,9 @@ void parseProcessedBackgroundImage(
       continue;
     }
 
+    DynamicPropertyPath::ScopedLevel level{
+        path, std::to_string(backgroundImage.size())};
+
     std::string type = (std::string)(typeIt->second);
     std::vector<ColorStop> colorStops;
 
@@ -74,6 +78,8 @@ void parseProcessedBackgroundImage(
     if (colorStopsIt != rawBackgroundImageMap.end() &&
         colorStopsIt->second.hasType<RawValueList>()) {
       auto rawColorStops = static_cast<RawValueList>(colorStopsIt->second);
+      DynamicPropertyPath::ScopedLevel level{path, "colorStops"};
+
       for (const auto& stop : rawColorStops) {
         if (stop.hasType<RawValueMap>()) {
           auto stopMap = static_cast<RawValueMap>(stop);
@@ -81,10 +87,12 @@ void parseProcessedBackgroundImage(
           auto colorIt = stopMap.find("color");
 
           if (positionIt != stopMap.end() && colorIt != stopMap.end()) {
+            DynamicPropertyPath::ScopedLevel level{
+                path, std::to_string(colorStops.size())};
             ColorStop colorStop;
             if (positionIt->second.hasValue()) {
               auto value = parseNumericValue<NumericValueLengthPercentage>(
-                  context, positionIt->second);
+                  context, positionIt->second, path);
               if (!value) {
                 result = {};
                 return;
@@ -168,14 +176,16 @@ void parseProcessedBackgroundImage(
           auto sizeMap = static_cast<RawValueMap>(sizeIt->second);
           auto xIt = sizeMap.find("x");
           auto yIt = sizeMap.find("y");
+          DynamicPropertyPath::ScopedLevel level{path, "size"};
+
           if (xIt != sizeMap.end() && yIt != sizeMap.end()) {
             radialGradient.size = RadialGradientSize{
                 .value = RadialGradientSize::Dimensions{
                     .x = parseNumericValueAs<NumericValueLengthPercentage>(
-                             context, xIt->second)
+                             context, xIt->second, path.node("x"))
                              .value_or(LengthPercentageValue{}),
                     .y = parseNumericValueAs<NumericValueLengthPercentage>(
-                             context, yIt->second)
+                             context, yIt->second, path.node("y"))
                              .value_or(LengthPercentageValue{})}};
           }
         }
@@ -192,25 +202,25 @@ void parseProcessedBackgroundImage(
 
           if (topIt != positionMap.end()) {
             auto topValue = parseNumericValueAs<NumericValueLengthPercentage>(
-                                context, topIt->second)
+                                context, topIt->second, path.node("top"))
                                 .value_or(LengthPercentageValue{});
             radialGradient.position.top = topValue;
           } else if (bottomIt != positionMap.end()) {
             auto bottomValue =
                 parseNumericValueAs<NumericValueLengthPercentage>(
-                    context, bottomIt->second)
+                    context, bottomIt->second, path.node("bottom"))
                     .value_or(LengthPercentageValue{});
             radialGradient.position.bottom = bottomValue;
           }
 
           if (leftIt != positionMap.end()) {
             auto leftValue = parseNumericValueAs<NumericValueLengthPercentage>(
-                                 context, leftIt->second)
+                                 context, leftIt->second, path.node("left"))
                                  .value_or(LengthPercentageValue{});
             radialGradient.position.left = leftValue;
           } else if (rightIt != positionMap.end()) {
             auto rightValue = parseNumericValueAs<NumericValueLengthPercentage>(
-                                  context, rightIt->second)
+                                  context, rightIt->second, path.node("right"))
                                   .value_or(LengthPercentageValue{});
             radialGradient.position.right = rightValue;
           }
@@ -231,7 +241,8 @@ void parseProcessedBackgroundImage(
 void parseUnprocessedBackgroundImageList(
     const PropsParserContext& context,
     const std::vector<RawValue>& value,
-    std::vector<BackgroundImage>& result) {
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path) {
   std::vector<BackgroundImage> backgroundImage{};
   for (const auto& rawBackgroundImageValue : value) {
     bool isMap = rawBackgroundImageValue.hasType<RawValueMap>();
@@ -249,6 +260,8 @@ void parseUnprocessedBackgroundImageList(
         !typeIt->second.hasType<std::string>()) {
       continue;
     }
+    DynamicPropertyPath::ScopedLevel level{
+        path, std::to_string(backgroundImage.size())};
 
     std::string type = (std::string)(typeIt->second);
     std::vector<ColorStop> colorStops;
@@ -632,7 +645,8 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
 void parseUnprocessedBackgroundImageString(
     const PropsParserContext& context,
     const std::string& value,
-    std::vector<BackgroundImage>& result) {
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path) {
   auto backgroundImageList = parseCSSProperty<CSSBackgroundImageList>(value);
   if (!std::holds_alternative<CSSBackgroundImageList>(backgroundImageList)) {
     result = {};
@@ -642,6 +656,8 @@ void parseUnprocessedBackgroundImageString(
   std::vector<BackgroundImage> backgroundImages;
   for (const auto& cssBackgroundImage :
        std::get<CSSBackgroundImageList>(backgroundImageList)) {
+    DynamicPropertyPath::ScopedLevel level{
+        path, std::to_string(backgroundImages.size())};
     if (auto backgroundImage =
             fromCSSBackgroundImage(context, cssBackgroundImage)) {
       backgroundImages.push_back(std::move(*backgroundImage));

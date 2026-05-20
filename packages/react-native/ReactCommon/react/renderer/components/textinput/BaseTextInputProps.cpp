@@ -230,7 +230,7 @@ void BaseTextInputProps::setProp(
 TextAttributes BaseTextInputProps::getEffectiveTextAttributes(
     Float fontSizeMultiplier) const {
   auto result = TextAttributes::defaultTextAttributes();
-  result.fontSizeMultiplier = NumberValue::number(fontSizeMultiplier);
+  result.fontSizeMultiplier = fontSizeMultiplier;
   result.apply(textAttributes);
 
   /*
@@ -261,10 +261,11 @@ void BaseTextInputProps::resolveProperties(const DynamicResolver& resolver) {
   paragraphAttributes.resolveProperties(resolver);
 }
 void BaseTextInputProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  ViewProps::collectLiveResolvableIds(ids);
-  BaseTextProps::collectLiveResolvableIds(ids);
-  paragraphAttributes.collectLiveResolvableIds(ids);
+  ViewProps::collectLiveResolvableIds(map, ids);
+  BaseTextProps::collectLiveResolvableIds(map, ids);
+  paragraphAttributes.collectLiveResolvableIds(map, ids);
 }
 
 #ifdef RN_SERIALIZABLE_STATE

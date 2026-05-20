@@ -80,39 +80,36 @@ SharedDebugStringConvertibleList ParagraphAttributes::getDebugProps() const {
 #endif
 
 void ParagraphAttributes::resolveProperties(const DynamicResolver& resolver) {
-  minimumFontSize =
-      LengthValue::length(resolver.resolveLength(minimumFontSize));
-  maximumFontSize =
-      LengthValue::length(resolver.resolveLength(maximumFontSize));
-  minimumFontScale =
-      NumberValue::number(resolver.resolveNumber(minimumFontScale));
+  resolver.resolve(fnv1a("minimumFontSize"), minimumFontSize);
+  resolver.resolve(fnv1a("maximumFontSize"), maximumFontSize);
+  resolver.resolve(fnv1a("minimumFontScale"), minimumFontScale);
 }
 
 void ParagraphAttributes::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  if (minimumFontSize.isDynamic()) {
-    ids.insert(minimumFontSize.asDynamicId());
-  }
-  if (maximumFontSize.isDynamic()) {
-    ids.insert(maximumFontSize.asDynamicId());
-  }
-  if (minimumFontScale.isDynamic()) {
-    ids.insert(minimumFontScale.asDynamicId());
-  }
+  auto addById = [&](auto id) {
+    if (map.contains(id))
+      ids.insert(id);
+  };
+  addById(fnv1a("minimumFontSize"));
+  addById(fnv1a("maximumFontSize"));
+  addById(fnv1a("minimumFontScale"));
 }
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic ParagraphAttributes::getResolvedProps(
     const DynamicResolver& resolver) const {
   folly::dynamic props = folly::dynamic::object();
-  if (minimumFontSize.isDynamic()) {
-    props["minimumFontSize"] = resolver.toDynamicLength(minimumFontSize);
+  if (resolver.propertiesMap.contains(fnv1a("minimumFontSize"))) {
+    props["minimumFontSize"] = resolver.resolveNumber(fnv1a("minimumFontSize"));
   }
-  if (maximumFontSize.isDynamic()) {
-    props["maximumFontSize"] = resolver.toDynamicLength(maximumFontSize);
+  if (resolver.propertiesMap.contains(fnv1a("maximumFontSize"))) {
+    props["maximumFontSize"] = resolver.resolveNumber(fnv1a("maximumFontSize"));
   }
-  if (minimumFontScale.isDynamic()) {
-    props["minimumFontScale"] = resolver.toDynamicNumber(minimumFontScale);
+  if (resolver.propertiesMap.contains(fnv1a("minimumFontScale"))) {
+    props["minimumFontScale"] =
+        resolver.resolveNumber(fnv1a("minimumFontScale"));
   }
   return props;
 }

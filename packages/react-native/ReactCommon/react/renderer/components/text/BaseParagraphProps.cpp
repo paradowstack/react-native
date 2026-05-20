@@ -169,11 +169,12 @@ void BaseParagraphProps::resolveProperties(const DynamicResolver& resolver) {
 }
 
 void BaseParagraphProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  ViewProps::collectLiveResolvableIds(ids);
+  ViewProps::collectLiveResolvableIds(map, ids);
 
-  paragraphAttributes.collectLiveResolvableIds(ids);
-  textAttributes.collectLiveResolvableIds(ids);
+  paragraphAttributes.collectLiveResolvableIds(map, ids);
+  textAttributes.collectLiveResolvableIds(map, ids);
 }
 
 #ifdef RN_SERIALIZABLE_STATE

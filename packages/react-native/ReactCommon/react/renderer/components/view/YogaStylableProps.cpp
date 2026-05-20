@@ -530,8 +530,9 @@ void YogaStylableProps::convertRawPropAliases(
 }
 
 void YogaStylableProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  Props::collectLiveResolvableIds(ids);
+  Props::collectLiveResolvableIds(map, ids);
 
   for (auto dim : {yoga::Dimension::Width, yoga::Dimension::Height}) {
     if (auto id = yogaStyle.dimension(dim).callbackId())

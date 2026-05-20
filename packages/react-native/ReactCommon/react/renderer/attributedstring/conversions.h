@@ -1052,19 +1052,19 @@ inline ParagraphAttributes convertRawProp(
       "adjustsFontSizeToFit",
       sourceParagraphAttributes.adjustsFontSizeToFit,
       defaultParagraphAttributes.adjustsFontSizeToFit);
-  paragraphAttributes.minimumFontScale = convertRawProp(
+  paragraphAttributes.minimumFontScale = convertRawPropWithCalc(
       context,
       rawProps,
       "minimumFontScale",
       sourceParagraphAttributes.minimumFontScale,
       defaultParagraphAttributes.minimumFontScale);
-  paragraphAttributes.minimumFontSize = convertRawProp(
+  paragraphAttributes.minimumFontSize = convertRawPropWithCalc(
       context,
       rawProps,
       "minimumFontSize",
       sourceParagraphAttributes.minimumFontSize,
       defaultParagraphAttributes.minimumFontSize);
-  paragraphAttributes.maximumFontSize = convertRawProp(
+  paragraphAttributes.maximumFontSize = convertRawPropWithCalc(
       context,
       rawProps,
       "maximumFontSize",
@@ -1199,9 +1199,9 @@ inline MapBuffer toMapBuffer(const ParagraphAttributes& paragraphAttributes) {
         toString(*paragraphAttributes.textAlignVertical));
   }
   builder.putDouble(
-      PA_KEY_MINIMUM_FONT_SIZE, paragraphAttributes.minimumFontSize.asFloat());
+      PA_KEY_MINIMUM_FONT_SIZE, paragraphAttributes.minimumFontSize);
   builder.putDouble(
-      PA_KEY_MAXIMUM_FONT_SIZE, paragraphAttributes.maximumFontSize.asFloat());
+      PA_KEY_MAXIMUM_FONT_SIZE, paragraphAttributes.maximumFontSize);
 
   return builder.build();
 }
@@ -1304,13 +1304,12 @@ inline MapBuffer toMapBuffer(const TextAttributes& textAttributes) {
   if (!textAttributes.fontFamily.empty()) {
     builder.putString(TA_KEY_FONT_FAMILY, textAttributes.fontFamily);
   }
-  if (!textAttributes.fontSize.isNan()) {
-    builder.putDouble(TA_KEY_FONT_SIZE, textAttributes.fontSize.asFloat());
+  if (!std::isnan(textAttributes.fontSize)) {
+    builder.putDouble(TA_KEY_FONT_SIZE, textAttributes.fontSize);
   }
-  if (!textAttributes.fontSizeMultiplier.isNan()) {
+  if (!std::isnan(textAttributes.fontSizeMultiplier)) {
     builder.putDouble(
-        TA_KEY_FONT_SIZE_MULTIPLIER,
-        textAttributes.fontSizeMultiplier.asFloat());
+        TA_KEY_FONT_SIZE_MULTIPLIER, textAttributes.fontSizeMultiplier);
   }
   if (textAttributes.fontWeight.has_value()) {
     builder.putString(TA_KEY_FONT_WEIGHT, toString(*textAttributes.fontWeight));
@@ -1326,17 +1325,15 @@ inline MapBuffer toMapBuffer(const TextAttributes& textAttributes) {
     builder.putBool(
         TA_KEY_ALLOW_FONT_SCALING, *textAttributes.allowFontScaling);
   }
-  if (!textAttributes.maxFontSizeMultiplier.isNan()) {
+  if (!std::isnan(textAttributes.maxFontSizeMultiplier)) {
     builder.putDouble(
-        TA_KEY_MAX_FONT_SIZE_MULTIPLIER,
-        textAttributes.maxFontSizeMultiplier.asFloat());
+        TA_KEY_MAX_FONT_SIZE_MULTIPLIER, textAttributes.maxFontSizeMultiplier);
   }
-  if (!textAttributes.letterSpacing.isNan()) {
-    builder.putDouble(
-        TA_KEY_LETTER_SPACING, textAttributes.letterSpacing.asFloat());
+  if (!std::isnan(textAttributes.letterSpacing)) {
+    builder.putDouble(TA_KEY_LETTER_SPACING, textAttributes.letterSpacing);
   }
-  if (!textAttributes.lineHeight.isNan()) {
-    builder.putDouble(TA_KEY_LINE_HEIGHT, textAttributes.lineHeight.asFloat());
+  if (!std::isnan(textAttributes.lineHeight)) {
+    builder.putDouble(TA_KEY_LINE_HEIGHT, textAttributes.lineHeight);
   }
   if (textAttributes.alignment.has_value()) {
     builder.putString(TA_KEY_ALIGNMENT, toString(*textAttributes.alignment));
@@ -1374,9 +1371,9 @@ inline MapBuffer toMapBuffer(const TextAttributes& textAttributes) {
   }
 
   // Shadow
-  if (!textAttributes.textShadowRadius.isNan()) {
+  if (!std::isnan(textAttributes.textShadowRadius)) {
     builder.putDouble(
-        TA_KEY_TEXT_SHADOW_RADIUS, textAttributes.textShadowRadius.asFloat());
+        TA_KEY_TEXT_SHADOW_RADIUS, textAttributes.textShadowRadius);
   }
   if (textAttributes.textShadowColor) {
     builder.putInt(
@@ -1409,7 +1406,8 @@ inline MapBuffer toMapBuffer(const TextAttributes& textAttributes) {
     for (size_t i = 0; i < textAttributes.textEffects.size(); i++) {
       auto effectBuilder = MapBufferBuilder();
       effectBuilder.putString(TE_KEY_NAME, textAttributes.textEffects[i].name);
-      effectBuilder.putString(TE_KEY_PROPS, folly::toJson(textAttributes.textEffects[i].props));
+      effectBuilder.putString(
+          TE_KEY_PROPS, folly::toJson(textAttributes.textEffects[i].props));
       effectsBuilder.putMapBuffer(i, effectBuilder.build());
     }
     builder.putMapBuffer(TA_KEY_TEXT_EFFECTS, effectsBuilder.build());

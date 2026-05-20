@@ -34,10 +34,8 @@ static inline void interpolateViewProps(
   ViewProps* interpolatedProps = const_cast<ViewProps*>(
       static_cast<const ViewProps*>(interpolatedPropsShared.get()));
 
-  interpolatedProps->opacity = NumberValue::number(
-      oldViewProps->opacity.asFloat() +
-      (newViewProps->opacity.asFloat() - oldViewProps->opacity.asFloat()) *
-          animationProgress);
+  interpolatedProps->opacity = oldViewProps->opacity +
+      (newViewProps->opacity - oldViewProps->opacity) * animationProgress;
   interpolatedProps->transform = Transform::Interpolate(
       animationProgress,
       oldViewProps->transform,
@@ -53,8 +51,7 @@ static inline void interpolateViewProps(
   // be const again.
 #ifdef ANDROID
   if (!interpolatedProps->rawProps.isNull()) {
-    interpolatedProps->rawProps["opacity"] =
-        interpolatedProps->opacity.asFloat();
+    interpolatedProps->rawProps["opacity"] = interpolatedProps->opacity;
 
     interpolatedProps->rawProps["transform"] =
         (folly::dynamic)interpolatedProps->transform;

@@ -82,6 +82,7 @@ class YogaStylableProps : public Props {
 
  protected:
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
 };
 

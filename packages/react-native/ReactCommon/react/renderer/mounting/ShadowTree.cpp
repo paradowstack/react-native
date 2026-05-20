@@ -222,145 +222,145 @@ static std::shared_ptr<RootShadowNode> progressRootLayoutInfo(
  * Uses the same clone-on-write pattern as progressState().
  * Returns nullptr if no nodes needed resolution.
  */
-static std::shared_ptr<ShadowNode> progressCalc(
-    const ShadowNode& shadowNode,
-    const LayoutContext& layoutContext) {
-  auto areChildrenChanged = false;
-  auto newChildren = std::vector<std::shared_ptr<const ShadowNode>>{};
-
-  if (!shadowNode.getChildren().empty()) {
-    auto index = size_t{0};
-    for (const auto& childNode : shadowNode.getChildren()) {
-      auto newChildNode = progressCalc(*childNode, layoutContext);
-      if (newChildNode) {
-        if (!areChildrenChanged) {
-          newChildren = shadowNode.getChildren();
-        }
-        newChildren[index] = newChildNode;
-        areChildrenChanged = true;
-      }
-      index++;
-    }
-  }
-
-  auto needsCalcResolution = shadowNode.getProps()->hasResolvableStyleValues();
-
-  if (!areChildrenChanged && !needsCalcResolution) {
-    return nullptr;
-  }
-
-  Props::Shared resolvedProps = ShadowNodeFragment::propsPlaceholder();
-
-  if (needsCalcResolution) {
-    auto contextContainer = shadowNode.getContextContainer();
-    if (!contextContainer) {
-      contextContainer = std::make_shared<ContextContainer>();
-    }
-    PropsParserContext propsParserContext{
-        shadowNode.getSurfaceId(), *contextContainer};
-
-#ifdef RN_SERIALIZABLE_STATE
-    RawProps rawProps = (RawProps)shadowNode.getProps()->rawProps;
-#else
-    RawProps rawProps{};
-#endif
-
-    const auto* layoutable =
-        dynamic_cast<const LayoutableShadowNode*>(&shadowNode);
-    auto metrics =
-        layoutable ? layoutable->getLayoutMetrics() : EmptyLayoutMetrics;
-    auto resolveContext = DynamicResolveContext(metrics, layoutContext);
-    resolvedProps = shadowNode.getComponentDescriptor().cloneResolvedProps(
-        propsParserContext,
-        shadowNode.getProps(),
-        RawProps{rawProps},
-        resolveContext);
-#ifdef RN_SERIALIZABLE_STATE
-    auto& family = shadowNode.getFamily();
-    if (family.nativeProps_DEPRECATED != nullptr) {
-      for (const auto& [key, val] : resolvedProps->rawProps.items()) {
-        if (family.nativeProps_DEPRECATED->count(key) > 0) {
-          (*family.nativeProps_DEPRECATED)[key] = val;
-        }
-      }
-    }
-#endif
-  }
-
-  return shadowNode.clone({
-      .props = resolvedProps,
-      .children = areChildrenChanged
-          ? std::make_shared<
-                const std::vector<std::shared_ptr<const ShadowNode>>>(
-                std::move(newChildren))
-          : ShadowNodeFragment::childrenPlaceholder(),
-  });
-}
-
-static std::shared_ptr<ShadowNode> progressPreCalc(
-    const ShadowNode& shadowNode,
-    const LayoutContext& layoutContext) {
-  auto areChildrenChanged = false;
-  auto newChildren = std::vector<std::shared_ptr<const ShadowNode>>{};
-
-  if (!shadowNode.getChildren().empty()) {
-    auto index = size_t{0};
-    for (const auto& childNode : shadowNode.getChildren()) {
-      auto newChildNode = progressPreCalc(*childNode, layoutContext);
-      if (newChildNode) {
-        if (!areChildrenChanged) {
-          newChildren = shadowNode.getChildren();
-        }
-        newChildren[index] = newChildNode;
-        areChildrenChanged = true;
-      }
-      index++;
-    }
-  }
-
-  auto needsCalcResolution = shadowNode.getProps()->hasResolvableStyleValues();
-
-  if (!areChildrenChanged && !needsCalcResolution) {
-    return nullptr;
-  }
-
-  Props::Shared resolvedProps = ShadowNodeFragment::propsPlaceholder();
-
-  if (needsCalcResolution) {
-    auto contextContainer = shadowNode.getContextContainer();
-    if (!contextContainer) {
-      contextContainer = std::make_shared<ContextContainer>();
-    }
-    PropsParserContext propsParserContext{
-        shadowNode.getSurfaceId(), *contextContainer};
-
-#ifdef RN_SERIALIZABLE_STATE
-    RawProps rawProps = (RawProps)shadowNode.getProps()->rawProps;
-#else
-    RawProps rawProps{};
-#endif
-
-    const auto* layoutable =
-        dynamic_cast<const LayoutableShadowNode*>(&shadowNode);
-    auto metrics =
-        layoutable ? layoutable->getLayoutMetrics() : EmptyLayoutMetrics;
-    auto resolveContext = DynamicResolveContext(metrics, layoutContext);
-    resolvedProps = shadowNode.getComponentDescriptor().cloneResolvedProps(
-        propsParserContext,
-        shadowNode.getProps(),
-        RawProps{rawProps},
-        resolveContext);
-  }
-
-  return shadowNode.clone({
-      .props = resolvedProps,
-      .children = areChildrenChanged
-          ? std::make_shared<
-                const std::vector<std::shared_ptr<const ShadowNode>>>(
-                std::move(newChildren))
-          : ShadowNodeFragment::childrenPlaceholder(),
-  });
-}
+//static std::shared_ptr<ShadowNode> progressCalc(
+//    const ShadowNode& shadowNode,
+//    const LayoutContext& layoutContext) {
+//  auto areChildrenChanged = false;
+//  auto newChildren = std::vector<std::shared_ptr<const ShadowNode>>{};
+//
+//  if (!shadowNode.getChildren().empty()) {
+//    auto index = size_t{0};
+//    for (const auto& childNode : shadowNode.getChildren()) {
+//      auto newChildNode = progressCalc(*childNode, layoutContext);
+//      if (newChildNode) {
+//        if (!areChildrenChanged) {
+//          newChildren = shadowNode.getChildren();
+//        }
+//        newChildren[index] = newChildNode;
+//        areChildrenChanged = true;
+//      }
+//      index++;
+//    }
+//  }
+//
+//  auto needsCalcResolution = shadowNode.getProps()->hasResolvableStyleValues();
+//
+//  if (!areChildrenChanged && !needsCalcResolution) {
+//    return nullptr;
+//  }
+//
+//  Props::Shared resolvedProps = ShadowNodeFragment::propsPlaceholder();
+//
+//  if (needsCalcResolution) {
+//    auto contextContainer = shadowNode.getContextContainer();
+//    if (!contextContainer) {
+//      contextContainer = std::make_shared<ContextContainer>();
+//    }
+//    PropsParserContext propsParserContext{
+//        shadowNode.getSurfaceId(), *contextContainer};
+//
+//#ifdef RN_SERIALIZABLE_STATE
+//    RawProps rawProps = (RawProps)shadowNode.getProps()->rawProps;
+//#else
+//    RawProps rawProps{};
+//#endif
+//
+//    const auto* layoutable =
+//        dynamic_cast<const LayoutableShadowNode*>(&shadowNode);
+//    auto metrics =
+//        layoutable ? layoutable->getLayoutMetrics() : EmptyLayoutMetrics;
+//    auto resolveContext = DynamicResolveContext(metrics, layoutContext);
+//    resolvedProps = shadowNode.getComponentDescriptor().cloneResolvedProps(
+//        propsParserContext,
+//        shadowNode.getProps(),
+//        RawProps{rawProps},
+//        resolveContext);
+//#ifdef RN_SERIALIZABLE_STATE
+//    auto& family = shadowNode.getFamily();
+//    if (family.nativeProps_DEPRECATED != nullptr) {
+//      for (const auto& [key, val] : resolvedProps->rawProps.items()) {
+//        if (family.nativeProps_DEPRECATED->count(key) > 0) {
+//          (*family.nativeProps_DEPRECATED)[key] = val;
+//        }
+//      }
+//    }
+//#endif
+//  }
+//
+//  return shadowNode.clone({
+//      .props = resolvedProps,
+//      .children = areChildrenChanged
+//          ? std::make_shared<
+//                const std::vector<std::shared_ptr<const ShadowNode>>>(
+//                std::move(newChildren))
+//          : ShadowNodeFragment::childrenPlaceholder(),
+//  });
+//}
+//
+//static std::shared_ptr<ShadowNode> progressPreCalc(
+//    const ShadowNode& shadowNode,
+//    const LayoutContext& layoutContext) {
+//  auto areChildrenChanged = false;
+//  auto newChildren = std::vector<std::shared_ptr<const ShadowNode>>{};
+//
+//  if (!shadowNode.getChildren().empty()) {
+//    auto index = size_t{0};
+//    for (const auto& childNode : shadowNode.getChildren()) {
+//      auto newChildNode = progressPreCalc(*childNode, layoutContext);
+//      if (newChildNode) {
+//        if (!areChildrenChanged) {
+//          newChildren = shadowNode.getChildren();
+//        }
+//        newChildren[index] = newChildNode;
+//        areChildrenChanged = true;
+//      }
+//      index++;
+//    }
+//  }
+//
+//  auto needsCalcResolution = shadowNode.getProps()->hasResolvableStyleValues();
+//
+//  if (!areChildrenChanged && !needsCalcResolution) {
+//    return nullptr;
+//  }
+//
+//  Props::Shared resolvedProps = ShadowNodeFragment::propsPlaceholder();
+//
+//  if (needsCalcResolution) {
+//    auto contextContainer = shadowNode.getContextContainer();
+//    if (!contextContainer) {
+//      contextContainer = std::make_shared<ContextContainer>();
+//    }
+//    PropsParserContext propsParserContext{
+//        shadowNode.getSurfaceId(), *contextContainer};
+//
+//#ifdef RN_SERIALIZABLE_STATE
+//    RawProps rawProps = (RawProps)shadowNode.getProps()->rawProps;
+//#else
+//    RawProps rawProps{};
+//#endif
+//
+//    const auto* layoutable =
+//        dynamic_cast<const LayoutableShadowNode*>(&shadowNode);
+//    auto metrics =
+//        layoutable ? layoutable->getLayoutMetrics() : EmptyLayoutMetrics;
+//    auto resolveContext = DynamicResolveContext(metrics, layoutContext);
+//    resolvedProps = shadowNode.getComponentDescriptor().cloneResolvedProps(
+//        propsParserContext,
+//        shadowNode.getProps(),
+//        RawProps{rawProps},
+//        resolveContext);
+//  }
+//
+//  return shadowNode.clone({
+//      .props = resolvedProps,
+//      .children = areChildrenChanged
+//          ? std::make_shared<
+//                const std::vector<std::shared_ptr<const ShadowNode>>>(
+//                std::move(newChildren))
+//          : ShadowNodeFragment::childrenPlaceholder(),
+//  });
+//}
 
 ShadowTree::ShadowTree(
     SurfaceId surfaceId,
@@ -544,14 +544,14 @@ CommitStatus ShadowTree::tryCommit(
     return CommitStatus::Cancelled;
   }
 
-  {
-    auto layoutContext = newRootShadowNode->getConcreteProps().layoutContext;
-    auto resolvedTree = progressPreCalc(*newRootShadowNode, layoutContext);
-    if (resolvedTree) {
-      newRootShadowNode =
-          std::static_pointer_cast<RootShadowNode>(resolvedTree);
-    }
-  }
+//  {
+//    auto layoutContext = newRootShadowNode->getConcreteProps().layoutContext;
+//    auto resolvedTree = progressPreCalc(*newRootShadowNode, layoutContext);
+//    if (resolvedTree) {
+//      newRootShadowNode =
+//          std::static_pointer_cast<RootShadowNode>(resolvedTree);
+//    }
+//  }
 
   // Layout nodes.
   std::vector<const LayoutableShadowNode*> affectedLayoutableNodes{};
@@ -586,14 +586,14 @@ CommitStatus ShadowTree::tryCommit(
 
   // Resolve calc() expressions. This may clone nodes (invalidating
   // affectedLayoutableNodes), but pendingLayoutEvents is safe to use.
-  {
-    auto layoutContext = newRootShadowNode->getConcreteProps().layoutContext;
-    auto resolvedTree = progressCalc(*newRootShadowNode, layoutContext);
-    if (resolvedTree) {
-      newRootShadowNode =
-          std::static_pointer_cast<RootShadowNode>(resolvedTree);
-    }
-  }
+//  {
+//    auto layoutContext = newRootShadowNode->getConcreteProps().layoutContext;
+//    auto resolvedTree = progressCalc(*newRootShadowNode, layoutContext);
+//    if (resolvedTree) {
+//      newRootShadowNode =
+//          std::static_pointer_cast<RootShadowNode>(resolvedTree);
+//    }
+//  }
 
   {
     // Updating `currentRevision_` in unique manner if it hasn't changed.

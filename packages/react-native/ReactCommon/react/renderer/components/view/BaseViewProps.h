@@ -23,7 +23,6 @@
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Filter.h>
 #include <react/renderer/graphics/Isolation.h>
-#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/Transform.h>
 
 #include <optional>
@@ -54,7 +53,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 #pragma mark - Props
 
   // Color
-  NumberValue opacity{NumberValue::number(1.0f)};
+  Float opacity{1.0f};
   SharedColor backgroundColor{};
 
   // Borders
@@ -65,15 +64,15 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   // Outline
   SharedColor outlineColor{};
-  LengthValue outlineOffset{LengthValue::length(0.0f)};
+  Float outlineOffset{0.0f};
   OutlineStyle outlineStyle{OutlineStyle::Solid};
-  LengthValue outlineWidth{LengthValue::length(0.0f)};
+  Float outlineWidth{};
 
   // Shadow
   SharedColor shadowColor{};
   Size shadowOffset{0, -3};
-  NumberValue shadowOpacity{NumberValue::number(0.0f)};
-  LengthValue shadowRadius{LengthValue::length(3.0f)};
+  Float shadowOpacity{0.0f};
+  Float shadowRadius{3.0f};
 
   Cursor cursor{};
 
@@ -136,6 +135,7 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE

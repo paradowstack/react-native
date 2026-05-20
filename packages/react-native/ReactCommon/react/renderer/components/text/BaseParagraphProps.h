@@ -60,6 +60,7 @@ class BaseParagraphProps : public ViewProps, public BaseTextProps {
 
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE

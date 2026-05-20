@@ -44,17 +44,36 @@ Float DynamicResolver::resolveById(DynamicPropertyId id, float referenceLength)
 // Public resolve methods
 // ---------------------------------------------------------------------------
 
+void DynamicResolver::resolve(
+    const DynamicPropertyId& id,
+    Float& result,
+    float ref) const {
+  auto it = propertiesMap.find(id);
+  if (it != propertiesMap.end()) {
+    result = resolveCalcEntry(it->second, ref);
+  }
+}
+
+Float DynamicResolver::resolveNumber(DynamicPropertyId id, float ref)
+    const {
+  auto it = propertiesMap.find(id);
+  if (it == propertiesMap.end()) {
+    return 0.0f;
+  }
+  return resolveCalcEntry(it->second, ref);
+}
+
 Float DynamicResolver::resolveNumber(const UntypedNumericValue& value) const {
   if (value.isDynamic()) {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
         !std::holds_alternative<NumberCalcEntry>(it->second)) {
-			return 0.0f;
+      return 0.0f;
     }
     return resolveCalcEntry(it->second, 0.0f);
   }
   if (value.kind() != NumericValueKind::Number) {
-		return 0.0f;
+    return 0.0f;
   }
   return value.resolve(0.0f);
 }
@@ -64,12 +83,12 @@ Float DynamicResolver::resolveLength(const UntypedNumericValue& value) const {
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
         !std::holds_alternative<LengthCalcEntry>(it->second)) {
-			return 0.0f;
+      return 0.0f;
     }
     return resolveCalcEntry(it->second, 0.0f);
   }
   if (value.kind() != NumericValueKind::Length) {
-		return 0.0f;
+    return 0.0f;
   }
   return value.resolve(0.0f);
 }
@@ -81,13 +100,13 @@ Float DynamicResolver::resolveLengthOrPercentage(
     auto it = propertiesMap.find(value.asDynamicId());
     if (it == propertiesMap.end() ||
         !std::holds_alternative<LengthOrPercentageCalcEntry>(it->second)) {
-			return 0.0f;
+      return 0.0f;
     }
     return resolveCalcEntry(it->second, percentRef);
   }
   auto k = value.kind();
   if (k != NumericValueKind::Length && k != NumericValueKind::Percentage) {
-		return 0.0f;
+    return 0.0f;
   }
   return value.resolve(percentRef);
 }

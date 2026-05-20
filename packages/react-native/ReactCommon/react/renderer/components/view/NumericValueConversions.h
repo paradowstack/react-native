@@ -9,6 +9,7 @@
 
 #include <react/renderer/components/view/DynamicPropertiesMap.h>
 #include <react/renderer/core/PropsParserContext.h>
+#include <react/renderer/core/RawProps.h>
 #include <react/renderer/core/RawValue.h>
 #include <react/renderer/css/CSSCalc.h>
 #include <react/renderer/css/CSSLength.h>
@@ -31,7 +32,8 @@ namespace facebook::react {
 template <NumericValueConcreteType T = NumericValueAny>
 inline std::optional<NumericValue<T>> parseNumericValue(
     const PropsParserContext& context,
-    const RawValue& value) {
+    const RawValue& value,
+    const DynamicPropertyPath& path = {}) {
   // Float literal
   if (value.hasType<Float>()) {
     auto numeric = static_cast<Float>(value);
@@ -94,23 +96,20 @@ inline std::optional<NumericValue<T>> parseNumericValue(
     }
   }
 
-  auto mapIt =
-      context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-          DynamicPropertiesMapKey);
-  if (!mapIt) {
+  if (!context.calcMap) {
     return std::nullopt;
   }
 
-  auto& map = *mapIt;
-  auto index = map->allocateId();
+  auto& map = *context.calcMap;
+  auto index = map.allocateId();
 
   if constexpr (std::same_as<T, NumericValueNumber>) {
-    map->insert_or_assign(index, NumberCalcEntry{cssCalc});
+    map.insert_or_assign(index, NumberCalcEntry{cssCalc});
   } else if constexpr (std::same_as<T, NumericValueLength>) {
-    map->insert_or_assign(index, LengthCalcEntry{cssCalc});
+    map.insert_or_assign(index, LengthCalcEntry{cssCalc});
   } else {
     // LengthPercentage, Any → LengthOrPercentage entry
-    map->insert_or_assign(index, LengthOrPercentageCalcEntry{cssCalc});
+    map.insert_or_assign(index, LengthOrPercentageCalcEntry{cssCalc});
   }
 
   return NumericValue<T>::dynamic(index);
@@ -126,8 +125,9 @@ inline std::optional<NumericValue<T>> parseNumericValue(
 template <NumericValueConcreteType T>
 inline std::optional<UntypedNumericValue> parseNumericValueAs(
     const PropsParserContext& context,
-    const RawValue& value) {
-  if (auto v = parseNumericValue<T>(context, value)) {
+    const RawValue& value,
+    const DynamicPropertyPath& path = {}) {
+  if (auto v = parseNumericValue<T>(context, value, path)) {
     return v->unwrap();
   }
   return std::nullopt;
@@ -142,6 +142,17 @@ inline void fromRawValue(
     const RawValue& value,
     NumericValue<T>& result) {
   if (auto parsed = parseNumericValue<T>(context, value)) {
+    result = *parsed;
+  }
+}
+
+template <NumericValueConcreteType T>
+inline void fromRawValueWithCalc(
+    DynamicPropertyPath& path,
+    const PropsParserContext& context,
+    const RawValue& value,
+    NumericValue<T>& result) {
+  if (auto parsed = parseNumericValue<T>(context, value, path)) {
     result = *parsed;
   }
 }
@@ -192,15 +203,12 @@ inline std::optional<UntypedNumericValue> parseScaleNumericValue(
     return std::nullopt; // reject calc(20px), calc(50vw), etc.
   }
 
-  auto mapIt =
-      context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-          DynamicPropertiesMapKey);
-  if (!mapIt) {
+  if (!context.calcMap) {
     return std::nullopt;
   }
-  auto& map = *mapIt;
-  auto index = map->allocateId();
-  map->insert_or_assign(index, NumberCalcEntry{cssCalc});
+  auto& map = *context.calcMap;
+  auto index = map.allocateId();
+  map.insert_or_assign(index, NumberCalcEntry{cssCalc});
   return UntypedNumericValue::dynamic(index);
 }
 
@@ -229,10 +237,7 @@ inline NumericValue<T> numericValueFromCSSCalc(
   }
 
   // Complex calc — store in DynamicPropertiesMap for deferred resolution.
-  auto mapIt =
-      context.contextContainer.find<std::shared_ptr<DynamicPropertiesMap>>(
-          DynamicPropertiesMapKey);
-  if (!mapIt) {
+  if (!context.calcMap) {
     // No map available; degrade gracefully to the px component.
     if constexpr (SupportsLength<T>) {
       return NumericValue<T>::length(calc.px);
@@ -242,15 +247,15 @@ inline NumericValue<T> numericValueFromCSSCalc(
     return {};
   }
 
-  auto& map = *mapIt;
-  auto id = map->allocateId();
+  auto& map = *context.calcMap;
+  auto id = map.allocateId();
   if constexpr (std::same_as<T, NumericValueNumber>) {
-    map->insert_or_assign(id, NumberCalcEntry{calc});
+    map.insert_or_assign(id, NumberCalcEntry{calc});
   } else if constexpr (std::same_as<T, NumericValueLength>) {
-    map->insert_or_assign(id, LengthCalcEntry{calc});
+    map.insert_or_assign(id, LengthCalcEntry{calc});
   } else {
     // LengthPercentage, Any → LengthOrPercentage entry
-    map->insert_or_assign(id, LengthOrPercentageCalcEntry{calc});
+    map.insert_or_assign(id, LengthOrPercentageCalcEntry{calc});
   }
   return NumericValue<T>::dynamic(id);
 }

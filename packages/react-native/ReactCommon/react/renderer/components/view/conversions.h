@@ -33,6 +33,7 @@
 #include <react/renderer/graphics/LinearGradient.h>
 #include <react/renderer/graphics/PlatformColorParser.h>
 #include <react/renderer/graphics/Transform.h>
+#include <react/renderer/graphics/ValueUnit.h>
 #include <yoga/YGEnums.h>
 #include <yoga/node/Node.h>
 #include <cmath>
@@ -504,13 +505,10 @@ inline void fromRawValue(
           return;
         }
         if (cssCalc.isComplex()) {
-          auto mapIt = context.contextContainer
-                           .find<std::shared_ptr<DynamicPropertiesMap>>(
-                               DynamicPropertiesMapKey);
-          if (mapIt) {
-            auto& map = *mapIt;
-            auto index = map->allocateId();
-            map->insert_or_assign(index, LengthOrPercentageCalcEntry{cssCalc});
+          if (context.calcMap) {
+            auto index = context.calcMap->allocateId();
+            context.calcMap->insert_or_assign(
+                index, LengthOrPercentageCalcEntry{cssCalc});
             result = yoga::StyleSizeLength::dynamic(
                 &yogaNodeCalcValueResolver, index);
             return;
@@ -555,13 +553,10 @@ inline void fromRawValue(
           return;
         }
         if (cssCalc.isComplex()) {
-          auto mapIt = context.contextContainer
-                           .find<std::shared_ptr<DynamicPropertiesMap>>(
-                               DynamicPropertiesMapKey);
-          if (mapIt) {
-            auto& map = *mapIt;
-            auto index = map->allocateId();
-            map->insert_or_assign(index, LengthOrPercentageCalcEntry{cssCalc});
+          if (context.calcMap) {
+            auto index = context.calcMap->allocateId();
+            context.calcMap->insert_or_assign(
+                index, LengthOrPercentageCalcEntry{cssCalc});
             result =
                 yoga::StyleLength::dynamic(&yogaNodeCalcValueResolver, index);
             return;
@@ -624,6 +619,84 @@ inline std::optional<Float> toRadians(const RawValue& value) {
   }
 
   return {};
+}
+
+inline ValueUnit toValueUnit(const RawValue& value) {
+  if (value.hasType<Float>()) {
+    return ValueUnit((Float)value, UnitType::Point);
+  }
+  if (!value.hasType<std::string>()) {
+    return {};
+  }
+
+  auto pct = parseCSSProperty<CSSPercentage>((std::string)value);
+  if (std::holds_alternative<CSSPercentage>(pct)) {
+    return ValueUnit(std::get<CSSPercentage>(pct).value, UnitType::Percent);
+  }
+
+  // auto calc = parseCSSProperty<CSSCalc>((std::string)value);
+  // if (std::holds_alternative<CSSCalc>(calc)) {
+  //   auto cssCalc = std::get<CSSCalc>(calc);
+  //   if (cssCalc.isPointsOnly()) {
+  //     return ValueUnit(cssCalc.px, UnitType::Point);
+  //   }
+  //   if (cssCalc.isPercentOnly()) {
+  //     return ValueUnit(cssCalc.percent, UnitType::Percent);
+  //   }
+  //   if (cssCalc.isUnitless()) {
+  //     return ValueUnit(cssCalc.unitless, UnitType::Undefined);
+  //   }
+  // }
+
+  return {};
+}
+
+inline ValueUnit toValueUnit(
+    DynamicPropertyPath& path,
+    const PropsParserContext& context,
+    const RawValue& value) {
+  auto v = toValueUnit(value);
+  if (v.unit != UnitType::Undefined) {
+    return v;
+  }
+
+  auto parsed =
+      parseCSSProperty<CSSPercentage, CSSLength, CSSCalc>((std::string)value);
+  if (std::holds_alternative<CSSPercentage>(parsed)) {
+    return ValueUnit(std::get<CSSPercentage>(parsed).value, UnitType::Percent);
+  }
+
+  if (std::holds_alternative<CSSLength>(parsed)) {
+    return ValueUnit(std::get<CSSLength>(parsed).value, UnitType::Point);
+  }
+
+  if (std::holds_alternative<CSSCalc>(parsed)) {
+    auto cssCalc = std::get<CSSCalc>(parsed);
+    // if (cssCalc.isComplex()) {
+    if (context.calcMap) {
+      context.calcMap->insert_or_assign(
+          fnv1a(path.to_string()), LengthOrPercentageCalcEntry{cssCalc});
+      return ValueUnit{0.0f, UnitType::Undefined};
+    }
+    // }
+  }
+
+  return {};
+}
+
+inline void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    ValueUnit& result) {
+  result = toValueUnit(value);
+}
+
+inline void fromRawValueWithCalc(
+    DynamicPropertyPath& path,
+    const PropsParserContext& context,
+    const RawValue& value,
+    ValueUnit& result) {
+  result = toValueUnit(path, context, value);
 }
 
 // `Float` is handled by the explicit specialization in

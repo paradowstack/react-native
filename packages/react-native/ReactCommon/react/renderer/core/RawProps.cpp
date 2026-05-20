@@ -14,6 +14,88 @@
 
 namespace facebook::react {
 
+DynamicPropertyPath::ScopedLevel::ScopedLevel(
+    DynamicPropertyPath& path,
+    std::string_view node)
+    : path_(path) {
+  path_.push(node);
+}
+
+DynamicPropertyPath::ScopedLevel::~ScopedLevel() {
+  path_.pop();
+}
+
+DynamicPropertyPath::ScopedLevel::operator DynamicPropertyPath&() noexcept {
+  return path_;
+}
+DynamicPropertyPath::ScopedLevel::operator const DynamicPropertyPath&()
+    const noexcept {
+  return path_;
+}
+
+// Modifiers
+void DynamicPropertyPath::push(std::string_view node) {
+  nodes_.emplace_back(node);
+}
+
+void DynamicPropertyPath::pop() noexcept {
+  if (!nodes_.empty()) {
+    nodes_.pop_back();
+  }
+}
+
+[[nodiscard]] DynamicPropertyPath::ScopedLevel DynamicPropertyPath::node(
+    std::string_view name) {
+  return ScopedLevel{*this, name};
+}
+
+// Observers
+[[nodiscard]] bool DynamicPropertyPath::empty() const noexcept {
+  return nodes_.empty();
+}
+
+[[nodiscard]] std::size_t DynamicPropertyPath::depth() const noexcept {
+  return nodes_.size();
+}
+
+// Returns a C++20 std::span for lightweight, read-only viewing of the path
+[[nodiscard]] std::span<const DynamicPropertyPath::Node>
+DynamicPropertyPath::view() const noexcept {
+  return nodes_;
+}
+
+// String representation utility
+[[nodiscard]] std::string DynamicPropertyPath::to_string(
+    std::string_view separator,
+    std::string_view node) const {
+  if (nodes_.empty())
+    return "";
+
+  std::string result;
+
+  // Pre-calculate and reserve exact memory to avoid reallocations
+  std::size_t total_length = (nodes_.size() - 1) * separator.size();
+  for (const auto& node : nodes_) {
+    total_length += node.size();
+  }
+  if (!node.empty()) {
+    total_length += separator.size() + node.size();
+  }
+  result.reserve(total_length);
+
+  result += nodes_.front();
+  for (std::size_t i = 1; i < nodes_.size(); ++i) {
+    result += separator;
+    result += nodes_[i];
+  }
+  if (!node.empty()) {
+    result += separator;
+    result += node;
+  }
+
+  return result;
+}
+
 /*
  * Creates an object with given `runtime` and `value`.
  */

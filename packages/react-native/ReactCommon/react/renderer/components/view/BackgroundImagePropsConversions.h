@@ -17,34 +17,58 @@ namespace facebook::react {
 void parseProcessedBackgroundImage(
     const PropsParserContext& context,
     const RawValue& value,
-    std::vector<BackgroundImage>& result);
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path);
 
 void parseUnprocessedBackgroundImageList(
     const PropsParserContext& context,
     const std::vector<RawValue>& value,
-    std::vector<BackgroundImage>& result);
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path);
 
 void parseUnprocessedBackgroundImageString(
     const PropsParserContext& context,
     const std::string& value,
-    std::vector<BackgroundImage>& result);
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path);
 
 inline void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    std::vector<BackgroundImage>& result) {
+  DynamicPropertyPath path;
+  if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
+    if (value.hasType<std::string>()) {
+      parseUnprocessedBackgroundImageString(
+          context, (std::string)value, result, path);
+    } else if (value.hasType<std::vector<RawValue>>()) {
+      parseUnprocessedBackgroundImageList(
+          context, (std::vector<RawValue>)value, result, path);
+    } else {
+      result = {};
+    }
+  } else {
+    parseProcessedBackgroundImage(context, value, result, path);
+  }
+}
+
+inline void fromRawValueWithCalc(
+    DynamicPropertyPath& path,
     const PropsParserContext& context,
     const RawValue& value,
     std::vector<BackgroundImage>& result) {
   if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
     if (value.hasType<std::string>()) {
       parseUnprocessedBackgroundImageString(
-          context, (std::string)value, result);
+          context, (std::string)value, result, path);
     } else if (value.hasType<std::vector<RawValue>>()) {
       parseUnprocessedBackgroundImageList(
-          context, (std::vector<RawValue>)value, result);
+          context, (std::vector<RawValue>)value, result, path);
     } else {
       result = {};
     }
   } else {
-    parseProcessedBackgroundImage(context, value, result);
+    parseProcessedBackgroundImage(context, value, result, path);
   }
 }
 

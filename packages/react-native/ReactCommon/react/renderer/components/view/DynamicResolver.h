@@ -21,6 +21,9 @@ struct DynamicResolver {
   const DynamicPropertiesMap& propertiesMap;
   const DynamicResolveContext& context;
 
+  void resolve(const DynamicPropertyId& id, Float& result, float ref = 0.0f)
+      const;
+  Float resolveNumber(DynamicPropertyId id, float ref = 0.0f) const;
   Float resolveNumber(const UntypedNumericValue& value) const;
   Float resolveLength(const UntypedNumericValue& value) const;
   Float resolveLengthOrPercentage(

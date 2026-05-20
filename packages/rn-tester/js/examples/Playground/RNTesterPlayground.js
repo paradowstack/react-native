@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Animated, Image, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Animated, Image, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 
 function Playground() {
   const animValue = React.useRef(new Animated.Value(0)).current;
@@ -36,7 +36,7 @@ function Playground() {
     });
     const animationSmall2= animValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ['calc(16px * 2)', 'calc(166px * 2)'],  
+    outputRange: ['calc(16px * 2)', 'calc(62px * 2)'],  
     });
     const animationSmall3 = animValue.interpolate({
     inputRange: [0, 1],
@@ -50,7 +50,14 @@ function Playground() {
     inputRange: [0, 1],
     outputRange: ['calc(1)', 'calc(25)'],  
     });
-
+    const animationPlainNumber = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [2, 10],  
+    });
+    const animatedColor = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(82, 55, 122, 0.22)', 'rgba(82, 55, 122, 1)'],  
+    });
     const animatedBoxShadow = animValue.interpolate({
       inputRange: [0, 1],
       outputRange: [
@@ -59,68 +66,76 @@ function Playground() {
       ],
     });
 
+  const [outlineWidth, setOutlineWidth] = React.useState('calc(2vw + 10px)');
+  const [boxShadow, setBoxShadow] = React.useState('calc(10vw) calc(10vh) calc(15px) 0px grey');
+
   return (
     <View style={styles.container}>
        <Animated.View
         style={{
           width: 300,
           height: 300,
-
+          
           experimental_backgroundImage:
             'linear-gradient(' +
               '45deg, ' +
-              'rgb(30, 29, 29)  calc(20% + 10px),' +
+              'rgb(30, 29, 29)  calc(10% + 10px),' +
               'rgb(82, 55, 122) 100%)',
           boxShadow: animatedBoxShadow,
-          outlineWidth: 'calc(22px)',
-          outlineColor: 'rgba(82, 55, 122, 0.62)',
-          opacity: 'calc(0.95)',
-          borderWidth: 'calc(1vw + 10px)',
-          borderLeftWidth: 'calc(1vw)',
-          borderEndWidth: 'calc(1vw)',
-          borderTopLeftRadius: animationSmall2,
+          outlineWidth: animationSmall1,
+          outlineColor: 'rgba(82, 55, 122, 0.7)',
+          // opacity: 0.66,
+          // borderWidth: animationSmall2,
+          borderTopEndRadius: animationSmall2,
           borderBottomRightRadius: animationSmall2,
-          borderTopRightRadius: 'calc(90%/2)',
+          borderTopRightRadius: 'calc(90px)',
 
           transform: [{ scale: 'calc(75%)' }, 
-                      { translateY: animationTiny }, 
-                      { translateX: animationTiny },
+                      // { translateY: animationTiny }, 
+                      // { translateX: animationTiny },
                     ],
-          // filter: [{blur: animationSmall3}, {saturate: animationSmallNumber}],
+          // filter: [{blur: animationSmall3}],
         }}
       />
-       <Animated.Text style={{ 
+       {/* <Animated.Text style={{ 
           opacity: 'calc(0.6)', 
-          fontSize: 'calc(20vw)', 
-          marginTop: 'calc(40px)',
+          fontSize: 'calc(20vw)',
+          marginTop: 'calc(20px)',
           letterSpacing: animationTiny,
           color: 'black',
           textShadowColor: "rgb(82, 55, 122)", 
-          textShadowRadius: 'calc(2vw)', 
+          textShadowRadius: 'calc(20vw)', 
           textShadowOffset: {width: 20, height: 0}
-      }}>callstack</Animated.Text>
+      }}>callstack</Animated.Text> */}
+
+       {/* <Pressable onPress={() => {
+        setOutlineWidth(outlineWidth === 'calc(2vw + 10px)' ? 'calc(10vw + 20px)' : 'calc(2vw + 10px)');
+        setBoxShadow(boxShadow === 'calc(10vw) calc(10vh) calc(15px) 0px grey' ? 'calc(25vw) calc(15vh) calc(25px) 0px grey' : 'calc(10vw) calc(10vh) calc(15px) 0px grey');
+      }}> */}
 
       <Animated.Image
           style={{ 
-            borderRadius: 'calc(50%)', 
+            borderRadius: 'calc(30%)', 
             marginTop: 'calc(20px)'
         }}
         source={{
-          height: 'calc(20vw)',
-          width: 'calc(20vw)',
+          height: 100,
+          width: 100,
           uri: 'https://www.facebook.com/ar_effect/external_textures/648609739826677.png',
         }}
-        blurRadius={animationTiny}
+        blurRadius={'calc(5px)'}
       />  
+      
+      {/* </Pressable> */}
 
       <TextInput
       value='Input'
       style={{
         color: 'rgba(82, 55, 122, 0.7)',
-        fontSize: 'calc(30vw)', 
+        fontSize: 'calc(20vw)', 
         textShadowRadius: 'calc(50px)', 
         textShadowColor: "black", 
-      }}></TextInput>
+      }}></TextInput> 
 
     </View>
   );
@@ -132,7 +147,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    // direction: 'rtl',
   },
 });
 

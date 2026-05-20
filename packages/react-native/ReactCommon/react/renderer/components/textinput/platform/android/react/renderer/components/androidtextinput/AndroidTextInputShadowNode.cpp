@@ -163,8 +163,7 @@ AttributedString AndroidTextInputShadowNode::getAttributedString(
     const LayoutContext& layoutContext) const {
   // Use BaseTextShadowNode to get attributed string from children
   auto childTextAttributes = TextAttributes::defaultTextAttributes();
-  childTextAttributes.fontSizeMultiplier =
-      NumberValue::number(layoutContext.fontSizeMultiplier);
+  childTextAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
   childTextAttributes.apply(getConcreteProps().textAttributes);
   // Don't propagate the background color of the TextInput onto the attributed
   // string. Android tries to render shadow of the background alongside the
@@ -182,8 +181,7 @@ AttributedString AndroidTextInputShadowNode::getAttributedString(
   if (!getConcreteProps().text.empty()) {
     auto textAttributes = TextAttributes::defaultTextAttributes();
     textAttributes.apply(getConcreteProps().textAttributes);
-    textAttributes.fontSizeMultiplier =
-        NumberValue::number(layoutContext.fontSizeMultiplier);
+    textAttributes.fontSizeMultiplier = layoutContext.fontSizeMultiplier;
     auto fragment = AttributedString::Fragment{};
     fragment.string = getConcreteProps().text;
     fragment.textAttributes = textAttributes;

@@ -17,7 +17,6 @@
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/graphics/Color.h>
-#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/imagemanager/primitives.h>
 #include <unordered_map>
 
@@ -92,7 +91,7 @@ class AndroidTextInputProps final : public BaseTextInputProps {
   bool showSoftInputOnFocus{false};
   bool autoCorrect{false};
   bool allowFontScaling{false};
-  NumberValue maxFontSizeMultiplier{NumberValue::number(0.0f)};
+  Float maxFontSizeMultiplier{0.0f};
   std::string keyboardType{};
   std::string returnKeyType{};
   bool secureTextEntry{false};
@@ -101,15 +100,15 @@ class AndroidTextInputProps final : public BaseTextInputProps {
   bool caretHidden{false};
   bool contextMenuHidden{false};
   SharedColor textShadowColor{};
-  LengthValue textShadowRadius{LengthValue::length(0.0f)};
+  Float textShadowRadius{0.0f};
   std::string textDecorationLine{};
   std::string fontStyle{};
   AndroidTextInputTextShadowOffsetStruct textShadowOffset{};
-  LengthValue lineHeight{LengthValue::length(0.0f)};
+  Float lineHeight{0.0f};
   std::string textTransform{};
   SharedColor color{0};
-  LengthValue letterSpacing{LengthValue::length(0.0f)};
-  LengthValue fontSize{LengthValue::length(0.0f)};
+  Float letterSpacing{0.0f};
+  Float fontSize{0.0f};
   std::string textAlign{};
   bool includeFontPadding{false};
   std::string fontWeight{};
@@ -142,6 +141,7 @@ class AndroidTextInputProps final : public BaseTextInputProps {
 
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
 
   folly::dynamic getResolvedProps(

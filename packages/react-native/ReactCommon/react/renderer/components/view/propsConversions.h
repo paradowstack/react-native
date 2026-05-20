@@ -412,6 +412,46 @@ static inline CascadedRectangleCorners<T> convertRawProp(
   return result;
 }
 
+template <>
+inline CascadedRectangleCorners<ValueUnit> convertRawProp(
+    const PropsParserContext &context,
+    const RawProps &rawProps,
+    const char *prefix,
+    const char *suffix,
+    const CascadedRectangleCorners<ValueUnit> &sourceValue,
+    const CascadedRectangleCorners<ValueUnit> &defaultValue)
+{
+  CascadedRectangleCorners<ValueUnit> result;
+
+  result.topLeft =
+      convertRawPropWithCalc(context, rawProps, "TopLeft", sourceValue.topLeft, defaultValue.topLeft, prefix, suffix);
+  result.topRight =
+      convertRawPropWithCalc(context, rawProps, "TopRight", sourceValue.topRight, defaultValue.topRight, prefix, suffix);
+  result.bottomLeft =
+      convertRawPropWithCalc(context, rawProps, "BottomLeft", sourceValue.bottomLeft, defaultValue.bottomLeft, prefix, suffix);
+  result.bottomRight = convertRawPropWithCalc(
+      context, rawProps, "BottomRight", sourceValue.bottomRight, defaultValue.bottomRight, prefix, suffix);
+
+  result.topStart =
+      convertRawPropWithCalc(context, rawProps, "TopStart", sourceValue.topStart, defaultValue.topStart, prefix, suffix);
+  result.topEnd = convertRawPropWithCalc(context, rawProps, "TopEnd", sourceValue.topEnd, defaultValue.topEnd, prefix, suffix);
+  result.bottomStart = convertRawPropWithCalc(
+      context, rawProps, "BottomStart", sourceValue.bottomStart, defaultValue.bottomStart, prefix, suffix);
+  result.bottomEnd =
+      convertRawPropWithCalc(context, rawProps, "BottomEnd", sourceValue.bottomEnd, defaultValue.bottomEnd, prefix, suffix);
+  result.endEnd = convertRawPropWithCalc(context, rawProps, "EndEnd", sourceValue.endEnd, defaultValue.endEnd, prefix, suffix);
+  result.endStart =
+      convertRawPropWithCalc(context, rawProps, "EndStart", sourceValue.endStart, defaultValue.endStart, prefix, suffix);
+  result.startEnd =
+      convertRawPropWithCalc(context, rawProps, "StartEnd", sourceValue.startEnd, defaultValue.startEnd, prefix, suffix);
+  result.startStart =
+      convertRawPropWithCalc(context, rawProps, "StartStart", sourceValue.startStart, defaultValue.startStart, prefix, suffix);
+
+  result.all = convertRawProp(context, rawProps, "", sourceValue.all, defaultValue.all, prefix, suffix);
+
+  return result;
+}
+
 template <typename T>
 static inline CascadedRectangleEdges<T> convertRawProp(
     const PropsParserContext &context,

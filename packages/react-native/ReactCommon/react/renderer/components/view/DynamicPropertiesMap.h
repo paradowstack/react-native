@@ -12,6 +12,7 @@
 #include <react/renderer/css/CSSCalc.h>
 
 #include <variant>
+#include <glog/logging.h>
 
 namespace facebook::react {
 
@@ -39,8 +40,51 @@ using TypedCalcEntry =
 struct DynamicPropertiesMap
     : std::unordered_map<DynamicPropertyId, TypedCalcEntry> {
   using Base = std::unordered_map<DynamicPropertyId, TypedCalcEntry>;
-  using Base::Base;
-
+			using Base::Base;
+//			
+//			// 1. Konstruktor uniwersalny (perfect forwarding)
+//				template<typename... Args>
+//				DynamicPropertiesMap(Args&&... args) : Base(std::forward<Args>(args)...) {
+//					LOG(ERROR) << "[DynamicPropertiesMap] CREATED at: " << this;
+//				}
+//
+//				// 2. Konstruktor kopiujący
+//				DynamicPropertiesMap(const DynamicPropertiesMap& other)
+//					: Base(other), nextId(other.nextId) {
+//					LOG(ERROR) << "[DynamicPropertiesMap] COPIED to: " << this << " from: " << &other;
+//				}
+//
+//				// 3. Konstruktor przenoszący
+//				DynamicPropertiesMap(DynamicPropertiesMap&& other) noexcept
+//					: Base(std::move(other)), nextId(other.nextId) {
+//					LOG(ERROR) << "[DynamicPropertiesMap] MOVED to: " << this << " from: " << &other;
+//				}
+//
+//				// 4. Operator przypisania kopiującego (NOWE)
+//				DynamicPropertiesMap& operator=(const DynamicPropertiesMap& other) {
+//					LOG(ERROR) << "[DynamicPropertiesMap] COPY ASSIGNED to: " << this << " from: " << &other;
+//					if (this != &other) {
+//						Base::operator=(other);
+//						nextId = other.nextId;
+//					}
+//					return *this;
+//				}
+//
+//				// 5. Operator przypisania przenoszącego (NOWE)
+//				DynamicPropertiesMap& operator=(DynamicPropertiesMap&& other) noexcept {
+//					LOG(ERROR) << "[DynamicPropertiesMap] MOVE ASSIGNED to: " << this << " from: " << &other;
+//					if (this != &other) {
+//						Base::operator=(std::move(other));
+//						nextId = other.nextId;
+//					}
+//					return *this;
+//				}
+//
+//				// 6. Destruktor
+//				~DynamicPropertiesMap() {
+//					LOG(ERROR) << "[DynamicPropertiesMap] DESTROYED at: " << this;
+//				}
+			
   uint32_t nextId{1};
 
   uint32_t allocateId() {

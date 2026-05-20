@@ -9,6 +9,10 @@
 
 #include <limits>
 #include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include <folly/dynamic.h>
 #include <jsi/JSIDynamic.h>
@@ -19,6 +23,54 @@
 #include <vector>
 
 namespace facebook::react {
+
+class DynamicPropertyPath {
+ public:
+  using Node = std::string;
+
+  // RAII Guard for managing path depth safely
+  class ScopedLevel {
+   public:
+    ScopedLevel(DynamicPropertyPath& path, std::string_view node);
+    ~ScopedLevel();
+
+    // Delete copy and move semantics to prevent accidental
+    // double-pops or scope-escaping bugs.
+    ScopedLevel(const ScopedLevel&) = delete;
+    ScopedLevel& operator=(const ScopedLevel&) = delete;
+    ScopedLevel(ScopedLevel&&) = delete;
+    ScopedLevel& operator=(ScopedLevel&&) = delete;
+
+    operator DynamicPropertyPath&() noexcept;
+    operator const DynamicPropertyPath&() const noexcept;
+
+   private:
+    DynamicPropertyPath& path_;
+  };
+
+  // Modifiers
+  void push(std::string_view node);
+
+  void pop() noexcept;
+
+  [[nodiscard]] ScopedLevel node(std::string_view name);
+
+  // Observers
+  [[nodiscard]] bool empty() const noexcept;
+
+  [[nodiscard]] std::size_t depth() const noexcept;
+
+  // Returns a C++20 std::span for lightweight, read-only viewing of the path
+  [[nodiscard]] std::span<const Node> view() const noexcept;
+
+  // String representation utility
+  [[nodiscard]] std::string to_string(
+      std::string_view separator = ".",
+      std::string_view node = "") const;
+
+ private:
+  std::vector<Node> nodes_;
+};
 
 class RawPropsParser;
 
@@ -48,13 +100,13 @@ class RawProps final {
   /*
    * Creates an object with given `runtime` and `value`.
    */
-  RawProps(jsi::Runtime &runtime, const jsi::Value &value) noexcept;
+  RawProps(jsi::Runtime& runtime, const jsi::Value& value) noexcept;
 
-  explicit RawProps(const RawProps &other) noexcept;
-  RawProps(RawProps &&other) noexcept = default;
+  explicit RawProps(const RawProps& other) noexcept;
+  RawProps(RawProps&& other) noexcept = default;
 
-  RawProps &operator=(const RawProps &other) noexcept = delete;
-  RawProps &operator=(RawProps &&other) noexcept = delete;
+  RawProps& operator=(const RawProps& other) noexcept = delete;
+  RawProps& operator=(RawProps&& other) noexcept = delete;
 
   /*
    * Creates an object with given `folly::dynamic` object.
@@ -64,7 +116,7 @@ class RawProps final {
    */
   explicit RawProps(folly::dynamic dynamic) noexcept;
 
-  void parse(const RawPropsParser &parser) noexcept;
+  void parse(const RawPropsParser& parser) noexcept;
 
   /*
    * Deprecated. Do not use.
@@ -78,7 +130,9 @@ class RawProps final {
    * The support for explicit conversion to `folly::dynamic` is deprecated and
    * will be removed as soon Android implementation does not need it.
    */
-  folly::dynamic toDynamic(const std::function<bool(const std::string &)> &filterObjectKeys = nullptr) const;
+  folly::dynamic toDynamic(
+      const std::function<bool(const std::string&)>& filterObjectKeys =
+          nullptr) const;
 
   /*
    * Returns `true` if the object is empty.
@@ -90,12 +144,13 @@ class RawProps final {
    * Returns a const unowning pointer to `RawValue` of a prop with a given name.
    * Returns `nullptr` if a prop with the given name does not exist.
    */
-  const RawValue *at(const char *name, const char *prefix, const char *suffix) const noexcept;
+  const RawValue* at(const char* name, const char* prefix, const char* suffix)
+      const noexcept;
 
  private:
   friend class RawPropsParser;
 
-  mutable const RawPropsParser *parser_{nullptr};
+  mutable const RawPropsParser* parser_{nullptr};
 
   /*
    * Source artefacts:
@@ -105,7 +160,7 @@ class RawProps final {
   Mode mode_;
 
   // Case 1: Source data is represented as `jsi::Object`.
-  jsi::Runtime *runtime_{};
+  jsi::Runtime* runtime_{};
   jsi::Value value_;
 
   // Case 2: Source data is represented as `folly::dynamic`.
@@ -133,7 +188,7 @@ class RawProps final {
  * Java.
  */
 template <typename T>
-concept RawPropsFilterable = requires(RawProps &rawProps) {
+concept RawPropsFilterable = requires(RawProps& rawProps) {
   { T::filterRawProps(rawProps) } -> std::same_as<void>;
 };
 

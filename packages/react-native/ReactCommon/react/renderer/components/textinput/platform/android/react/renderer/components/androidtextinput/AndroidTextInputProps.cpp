@@ -86,10 +86,10 @@ AndroidTextInputProps::AndroidTextInputProps(
           "allowFontScaling",
           sourceProps.allowFontScaling,
           {false})),
-      maxFontSizeMultiplier(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.maxFontSizeMultiplier : convertRawProp(context, rawProps,
+      maxFontSizeMultiplier(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.maxFontSizeMultiplier : convertRawPropWithCalc(context, rawProps,
           "maxFontSizeMultiplier",
           sourceProps.maxFontSizeMultiplier,
-          NumberValue::number(0.0f))),
+          0.0f)),
       keyboardType(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.keyboardType : convertRawProp(context, rawProps,
           "keyboardType",
           sourceProps.keyboardType,
@@ -119,10 +119,10 @@ AndroidTextInputProps::AndroidTextInputProps(
           "textShadowColor",
           sourceProps.textShadowColor,
           {})),
-      textShadowRadius(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.textShadowRadius : convertRawProp(context, rawProps,
+      textShadowRadius(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.textShadowRadius : convertRawPropWithCalc(context, rawProps,
           "textShadowRadius",
           sourceProps.textShadowRadius,
-          LengthValue::length(0.0f))),
+          0.0f)),
       textDecorationLine(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.textDecorationLine : convertRawProp(context, rawProps,
           "textDecorationLine",
           sourceProps.textDecorationLine,
@@ -133,26 +133,26 @@ AndroidTextInputProps::AndroidTextInputProps(
           "textShadowOffset",
           sourceProps.textShadowOffset,
           {})),
-      lineHeight(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.lineHeight : convertRawProp(context, rawProps,
+      lineHeight(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.lineHeight : convertRawPropWithCalc(context, rawProps,
           "lineHeight",
           sourceProps.lineHeight,
-          LengthValue::length(0.0f))),
+          0.0f)),
       textTransform(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.textTransform : convertRawProp(context, rawProps,
           "textTransform",
           sourceProps.textTransform,
           {})),
       color(0 /*convertRawProp(context, rawProps, "color", sourceProps.color, {0})*/),
-      letterSpacing(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.letterSpacing : convertRawProp(context, rawProps,
+      letterSpacing(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.letterSpacing : convertRawPropWithCalc(context, rawProps,
           "letterSpacing",
           sourceProps.letterSpacing,
-          LengthValue::length(0.0f))),
+          0.0f)),
       fontSize(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.fontSize :
-          convertRawProp(
+          convertRawPropWithCalc(
             context,
             rawProps,
             "fontSize",
             sourceProps.fontSize,
-            LengthValue::length(0.0f))),
+            0.0f)),
       textAlign(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.textAlign :
           convertRawProp(context, rawProps, "textAlign", sourceProps.textAlign, {})),
       includeFontPadding(ReactNativeFeatureFlags::enableCppPropsIteratorSetter()? sourceProps.includeFontPadding : convertRawProp(context, rawProps,
@@ -307,7 +307,7 @@ folly::dynamic AndroidTextInputProps::getDynamic() const {
   props["autoCorrect"] = autoCorrect;
   props["autoFocus"] = autoFocus;
   props["allowFontScaling"] = allowFontScaling;
-  props["maxFontSizeMultiplier"] = maxFontSizeMultiplier.asFloat();
+  props["maxFontSizeMultiplier"] = maxFontSizeMultiplier;
   props["keyboardType"] = keyboardType;
   props["returnKeyType"] = returnKeyType;
   props["maxLength"] = maxLength;
@@ -324,15 +324,15 @@ folly::dynamic AndroidTextInputProps::getDynamic() const {
   props["caretHidden"] = caretHidden;
   props["contextMenuHidden"] = contextMenuHidden;
   props["textShadowColor"] = toAndroidRepr(textShadowColor);
-  props["textShadowRadius"] = textShadowRadius.asFloat();
+  props["textShadowRadius"] = textShadowRadius;
   props["textDecorationLine"] = textDecorationLine;
   props["fontStyle"] = fontStyle;
   props["textShadowOffset"] = toDynamic(textShadowOffset);
-  props["lineHeight"] = lineHeight.asFloat();
+  props["lineHeight"] = lineHeight;
   props["textTransform"] = textTransform;
   props["color"] = toAndroidRepr(color);
-  props["letterSpacing"] = letterSpacing.asFloat();
-  props["fontSize"] = fontSize.asFloat();
+  props["letterSpacing"] = letterSpacing;
+  props["fontSize"] = fontSize;
   props["textAlign"] = textAlign;
   props["includeFontPadding"] = includeFontPadding;
   props["fontWeight"] = fontWeight;
@@ -405,13 +405,13 @@ folly::dynamic AndroidTextInputProps::getDiffProps(
   if (!floatEquality(
           paragraphAttributes.minimumFontSize,
           oldProps->paragraphAttributes.minimumFontSize)) {
-    result["minimumFontSize"] = paragraphAttributes.minimumFontSize.toDynamic();
+    result["minimumFontSize"] = paragraphAttributes.minimumFontSize;
   }
 
   if (!floatEquality(
           paragraphAttributes.maximumFontSize,
           oldProps->paragraphAttributes.maximumFontSize)) {
-    result["maximumFontSize"] = paragraphAttributes.maximumFontSize.toDynamic();
+    result["maximumFontSize"] = paragraphAttributes.maximumFontSize;
   }
 
   if (paragraphAttributes.includeFontPadding !=
@@ -556,7 +556,7 @@ folly::dynamic AndroidTextInputProps::getDiffProps(
   }
 
   if (maxFontSizeMultiplier != oldProps->maxFontSizeMultiplier) {
-    result["maxFontSizeMultiplier"] = maxFontSizeMultiplier.toDynamic();
+    result["maxFontSizeMultiplier"] = maxFontSizeMultiplier;
   }
 
   if (keyboardType != oldProps->keyboardType) {
@@ -592,7 +592,7 @@ folly::dynamic AndroidTextInputProps::getDiffProps(
   }
 
   if (textShadowRadius != oldProps->textShadowRadius) {
-    result["textShadowRadius"] = textShadowRadius.toDynamic();
+    result["textShadowRadius"] = textShadowRadius;
     ;
   }
 
@@ -609,7 +609,7 @@ folly::dynamic AndroidTextInputProps::getDiffProps(
   }
 
   if (lineHeight != oldProps->lineHeight) {
-    result["lineHeight"] = lineHeight.toDynamic();
+    result["lineHeight"] = lineHeight;
     ;
   }
 
@@ -618,12 +618,12 @@ folly::dynamic AndroidTextInputProps::getDiffProps(
   }
 
   if (letterSpacing != oldProps->letterSpacing) {
-    result["letterSpacing"] = letterSpacing.toDynamic();
+    result["letterSpacing"] = letterSpacing;
     ;
   }
 
   if (fontSize != oldProps->fontSize) {
-    result["fontSize"] = fontSize.toDynamic();
+    result["fontSize"] = fontSize;
     ;
   }
 
@@ -653,45 +653,28 @@ void AndroidTextInputProps::resolveProperties(const DynamicResolver& resolver) {
 
   BaseTextInputProps::resolveProperties(resolver);
 
-  if (maxFontSizeMultiplier.isDynamic()) {
-    maxFontSizeMultiplier =
-        NumberValue::number(resolver.resolveNumber(maxFontSizeMultiplier));
-  }
-  if (textShadowRadius.isDynamic()) {
-    textShadowRadius =
-        LengthValue::length(resolver.resolveLength(textShadowRadius));
-  }
-  if (lineHeight.isDynamic()) {
-    lineHeight = LengthValue::length(resolver.resolveLength(lineHeight));
-  }
-  if (letterSpacing.isDynamic()) {
-    letterSpacing = LengthValue::length(resolver.resolveLength(letterSpacing));
-  }
-  if (fontSize.isDynamic()) {
-    fontSize = LengthValue::length(resolver.resolveLength(fontSize));
-  }
+  resolver.resolve(fnv1a("maxFontSizeMultiplier"), maxFontSizeMultiplier);
+  resolver.resolve(fnv1a("textShadowRadius"), textShadowRadius);
+  resolver.resolve(fnv1a("lineHeight"), lineHeight);
+  resolver.resolve(fnv1a("letterSpacing"), letterSpacing);
+  resolver.resolve(fnv1a("fontSize"), fontSize);
 }
 void AndroidTextInputProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  ViewProps::collectLiveResolvableIds(ids);
-  BaseTextProps::collectLiveResolvableIds(ids);
-  paragraphAttributes.collectLiveResolvableIds(ids);
+  ViewProps::collectLiveResolvableIds(map, ids);
+  BaseTextProps::collectLiveResolvableIds(map, ids);
+  paragraphAttributes.collectLiveResolvableIds(map, ids);
 
-  if (maxFontSizeMultiplier.isDynamic()) {
-    ids.insert(maxFontSizeMultiplier.asDynamicId());
-  }
-  if (textShadowRadius.isDynamic()) {
-    ids.insert(textShadowRadius.asDynamicId());
-  }
-  if (lineHeight.isDynamic()) {
-    ids.insert(lineHeight.asDynamicId());
-  }
-  if (letterSpacing.isDynamic()) {
-    ids.insert(letterSpacing.asDynamicId());
-  }
-  if (fontSize.isDynamic()) {
-    ids.insert(fontSize.asDynamicId());
-  }
+  auto addById = [&](auto id) {
+    if (map.contains(id))
+      ids.insert(id);
+  };
+  addById(fnv1a("maxFontSizeMultiplier"));
+  addById(fnv1a("textShadowRadius"));
+  addById(fnv1a("lineHeight"));
+  addById(fnv1a("letterSpacing"));
+  addById(fnv1a("fontSize"));
 }
 
 folly::dynamic AndroidTextInputProps::getResolvedProps(
@@ -700,21 +683,22 @@ folly::dynamic AndroidTextInputProps::getResolvedProps(
   props.update(BaseTextProps::getResolvedProps(resolver));
   props.update(paragraphAttributes.getResolvedProps(resolver));
 
-  if (maxFontSizeMultiplier.isDynamic()) {
+  if (resolver.propertiesMap.contains(fnv1a("maxFontSizeMultiplier"))) {
     props["maxFontSizeMultiplier"] =
-        resolver.toDynamicNumber(maxFontSizeMultiplier);
+        resolver.resolveNumber(fnv1a("maxFontSizeMultiplier"));
   }
-  if (textShadowRadius.isDynamic()) {
-    props["textShadowRadius"] = resolver.toDynamicLength(textShadowRadius);
+  if (resolver.propertiesMap.contains(fnv1a("textShadowRadius"))) {
+    props["textShadowRadius"] =
+        resolver.resolveNumber(fnv1a("textShadowRadius"));
   }
-  if (lineHeight.isDynamic()) {
-    props["lineHeight"] = resolver.toDynamicLength(lineHeight);
+  if (resolver.propertiesMap.contains(fnv1a("lineHeight"))) {
+    props["lineHeight"] = resolver.resolveNumber(fnv1a("lineHeight"));
   }
-  if (letterSpacing.isDynamic()) {
-    props["letterSpacing"] = resolver.toDynamicLength(letterSpacing);
+  if (resolver.propertiesMap.contains(fnv1a("letterSpacing"))) {
+    props["letterSpacing"] = resolver.resolveNumber(fnv1a("letterSpacing"));
   }
-  if (fontSize.isDynamic()) {
-    props["fontSize"] = resolver.toDynamicLength(fontSize);
+  if (resolver.propertiesMap.contains(fnv1a("fontSize"))) {
+    props["fontSize"] = resolver.resolveNumber(fnv1a("fontSize"));
   }
 
   LOG(ERROR) << props;

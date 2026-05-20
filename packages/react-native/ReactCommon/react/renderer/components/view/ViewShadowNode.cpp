@@ -52,7 +52,7 @@ void ViewShadowNode::initialize() noexcept {
       viewProps.pointerEvents == PointerEventsMode::BoxOnly ||
       viewProps.pointerEvents == PointerEventsMode::None ||
       !viewProps.nativeId.empty() || viewProps.accessible ||
-      !floatEquality(viewProps.opacity, NumberValue::number(1.0f)) ||
+      !floatEquality(viewProps.opacity, static_cast<Float>(1.0f)) ||
       viewProps.transform != Transform{} ||
       (viewProps.zIndex.has_value() &&
        viewProps.yogaStyle.positionType() != yoga::PositionType::Static) ||
@@ -69,12 +69,12 @@ void ViewShadowNode::initialize() noexcept {
       HostPlatformViewTraitsInitializer::formsStackingContext(viewProps) ||
       !viewProps.accessibilityOrder.empty();
 
-	bool formsView = formsStackingContext ||
-			isColorMeaningful(viewProps.backgroundColor) || hasBorder() ||
-			!viewProps.testId.empty() || !viewProps.boxShadow.empty() ||
-			!viewProps.backgroundImage.empty() ||
-			HostPlatformViewTraitsInitializer::formsView(viewProps) ||
-			viewProps.outlineWidth.asFloat() > 0;
+  bool formsView = formsStackingContext ||
+      isColorMeaningful(viewProps.backgroundColor) || hasBorder() ||
+      !viewProps.testId.empty() || !viewProps.boxShadow.empty() ||
+      !viewProps.backgroundImage.empty() ||
+      HostPlatformViewTraitsInitializer::formsView(viewProps) ||
+      viewProps.outlineWidth > 0;
 
   if (formsView) {
     traits_.set(ShadowNodeTraits::Trait::FormsView);

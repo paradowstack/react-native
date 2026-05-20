@@ -132,20 +132,19 @@ folly::dynamic HostPlatformParagraphProps::getDiffProps(
   if (!floatEquality(
           paragraphAttributes.minimumFontScale,
           oldProps->paragraphAttributes.minimumFontScale)) {
-    result["minimumFontScale"] =
-        paragraphAttributes.minimumFontScale.toDynamic();
+    result["minimumFontScale"] = paragraphAttributes.minimumFontScale;
   }
 
   if (!floatEquality(
           paragraphAttributes.minimumFontSize,
           oldProps->paragraphAttributes.minimumFontSize)) {
-    result["minimumFontSize"] = paragraphAttributes.minimumFontSize.toDynamic();
+    result["minimumFontSize"] = paragraphAttributes.minimumFontSize;
   }
 
   if (!floatEquality(
           paragraphAttributes.maximumFontSize,
           oldProps->paragraphAttributes.maximumFontSize)) {
-    result["maximumFontSize"] = paragraphAttributes.maximumFontSize.toDynamic();
+    result["maximumFontSize"] = paragraphAttributes.maximumFontSize;
   }
 
   if (paragraphAttributes.includeFontPadding !=

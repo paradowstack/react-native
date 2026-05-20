@@ -19,8 +19,8 @@ namespace facebook::react {
 
 namespace {
 
-bool hasValue(const UntypedNumericValue& value) {
-  return !value.isDynamic() && !std::isnan(value.asFloat());
+bool hasValue(Float value) {
+  return !std::isnan(value);
 }
 
 } // namespace
@@ -60,7 +60,7 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   dynamicTypeRamp = textAttributes.dynamicTypeRamp.has_value()
       ? textAttributes.dynamicTypeRamp
       : dynamicTypeRamp;
-  letterSpacing = hasValue(textAttributes.letterSpacing)
+  letterSpacing = !std::isnan(textAttributes.letterSpacing)
       ? textAttributes.letterSpacing
       : letterSpacing;
   textTransform = textAttributes.textTransform.has_value()
@@ -191,8 +191,8 @@ TextAttributes TextAttributes::defaultTextAttributes() {
     // Non-obvious (can be different among platforms) default text attributes.
     defaultAttrs.foregroundColor = blackColor();
     defaultAttrs.backgroundColor = clearColor();
-    defaultAttrs.fontSize = LengthValue::length(14.0f);
-    defaultAttrs.fontSizeMultiplier = NumberValue::number(1.0f);
+    defaultAttrs.fontSize = 14.0f;
+    defaultAttrs.fontSizeMultiplier = 1.0f;
     return defaultAttrs;
   }();
   return textAttributes;
@@ -297,61 +297,53 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
 #endif
 
 void TextAttributes::resolveProperties(const DynamicResolver& resolver) {
-  fontSize = LengthValue::length(resolver.resolveLength(fontSize));
-  fontSizeMultiplier =
-      NumberValue::number(resolver.resolveNumber(fontSizeMultiplier));
-  maxFontSizeMultiplier =
-      NumberValue::number(resolver.resolveNumber(maxFontSizeMultiplier));
-  letterSpacing = LengthValue::length(resolver.resolveLength(letterSpacing));
-  lineHeight = LengthValue::length(resolver.resolveLength(lineHeight));
-  textShadowRadius =
-      LengthValue::length(resolver.resolveLength(textShadowRadius));
+  resolver.resolve(fnv1a("fontSize"), fontSize);
+  resolver.resolve(fnv1a("fontSizeMultiplier"), fontSizeMultiplier);
+  resolver.resolve(fnv1a("maxFontSizeMultiplier"), maxFontSizeMultiplier);
+  resolver.resolve(fnv1a("letterSpacing"), letterSpacing);
+  resolver.resolve(fnv1a("lineHeight"), lineHeight);
+  resolver.resolve(fnv1a("textShadowRadius"), textShadowRadius);
 }
 
 void TextAttributes::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  if (fontSize.isDynamic()) {
-    ids.insert(fontSize.asDynamicId());
-  }
-  if (fontSizeMultiplier.isDynamic()) {
-    ids.insert(fontSizeMultiplier.asDynamicId());
-  }
-  if (maxFontSizeMultiplier.isDynamic()) {
-    ids.insert(maxFontSizeMultiplier.asDynamicId());
-  }
-  if (letterSpacing.isDynamic()) {
-    ids.insert(letterSpacing.asDynamicId());
-  }
-  if (lineHeight.isDynamic()) {
-    ids.insert(lineHeight.asDynamicId());
-  }
-  if (textShadowRadius.isDynamic()) {
-    ids.insert(textShadowRadius.asDynamicId());
-  }
+  auto addById = [&](auto id) {
+    if (map.contains(id))
+      ids.insert(id);
+  };
+  addById(fnv1a("fontSize"));
+  addById(fnv1a("fontSizeMultiplier"));
+  addById(fnv1a("maxFontSizeMultiplier"));
+  addById(fnv1a("letterSpacing"));
+  addById(fnv1a("lineHeight"));
+  addById(fnv1a("textShadowRadius"));
 }
 
 #ifdef RN_SERIALIZABLE_STATE
 folly::dynamic TextAttributes::getResolvedProps(
     const DynamicResolver& resolver) const {
   folly::dynamic props = folly::dynamic::object();
-  if (fontSize.isDynamic()) {
-    props["fontSize"] = resolver.toDynamicLength(fontSize);
+  if (resolver.propertiesMap.contains(fnv1a("fontSize"))) {
+    props["fontSize"] = resolver.resolveNumber(fnv1a("fontSize"));
   }
-  if (fontSizeMultiplier.isDynamic()) {
-    props["fontSizeMultiplier"] = resolver.toDynamicNumber(fontSizeMultiplier);
+  if (resolver.propertiesMap.contains(fnv1a("fontSizeMultiplier"))) {
+    props["fontSizeMultiplier"] =
+        resolver.resolveNumber(fnv1a("fontSizeMultiplier"));
   }
-  if (maxFontSizeMultiplier.isDynamic()) {
+  if (resolver.propertiesMap.contains(fnv1a("maxFontSizeMultiplier"))) {
     props["maxFontSizeMultiplier"] =
-        resolver.toDynamicNumber(maxFontSizeMultiplier);
+        resolver.resolveNumber(fnv1a("maxFontSizeMultiplier"));
   }
-  if (letterSpacing.isDynamic()) {
-    props["letterSpacing"] = resolver.toDynamicLength(letterSpacing);
+  if (resolver.propertiesMap.contains(fnv1a("letterSpacing"))) {
+    props["letterSpacing"] = resolver.resolveNumber(fnv1a("letterSpacing"));
   }
-  if (lineHeight.isDynamic()) {
-    props["lineHeight"] = resolver.toDynamicLength(lineHeight);
+  if (resolver.propertiesMap.contains(fnv1a("lineHeight"))) {
+    props["lineHeight"] = resolver.resolveNumber(fnv1a("lineHeight"));
   }
-  if (textShadowRadius.isDynamic()) {
-    props["textShadowRadius"] = resolver.toDynamicLength(textShadowRadius);
+  if (resolver.propertiesMap.contains(fnv1a("textShadowRadius"))) {
+    props["textShadowRadius"] =
+        resolver.resolveNumber(fnv1a("textShadowRadius"));
   }
   return props;
 }

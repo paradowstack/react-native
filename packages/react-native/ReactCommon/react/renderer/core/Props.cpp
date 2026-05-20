@@ -34,10 +34,13 @@ void Props::initialize(
       : convertRawProp(context, rawProps, "nativeID", sourceProps.nativeId, {});
   calcExpressions = sourceProps.calcExpressions;
 
-  context.contextContainer.insert_or_assign(
-      DynamicPropertiesMapKey,
-      std::shared_ptr<DynamicPropertiesMap>(
-          &calcExpressions, [](DynamicPropertiesMap*) {}));
+  // Point the context's calcMap directly at this props' map so that
+  // fromRawValueWithCalc / parseNumericValue helpers on the same call-stack
+  // write into the correct map.  Using the shared ContextContainer for this
+  // caused a data race: the ComponentDescriptor's ContextContainer is shared
+  // across all nodes of the same type, so concurrent Props construction on
+  // different threads would overwrite each other's entry.
+  context.calcMap = &calcExpressions;
 
 #ifdef RN_SERIALIZABLE_STATE
   if (!ReactNativeFeatureFlags::enableExclusivePropsUpdateAndroid()) {
@@ -65,6 +68,7 @@ bool Props::hasResolvableStyleValues() const {
 void Props::resolveProperties(const DynamicResolver& resolver) {}
 
 void Props::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<uint32_t>& /*ids*/) const {
   // Base class has no calc-capable fields.
 }
@@ -74,11 +78,11 @@ void Props::sweepCalcExpressions() {
     return;
   }
   std::unordered_set<uint32_t> liveIds;
-  collectLiveResolvableIds(liveIds);
-  std::erase_if(calcExpressions, [&](const auto& entry) {
-    return !liveIds.contains(entry.first);
-  });
-  needsToResolveStyleValues = !calcExpressions.empty();
+  //  collectLiveResolvableIds(calcExpressions, liveIds);
+  //  std::erase_if(calcExpressions, [&](const auto& entry) {
+  //    return !liveIds.contains(entry.first);
+  //  });
+  needsToResolveStyleValues = true;
 }
 
 #ifdef RN_SERIALIZABLE_STATE

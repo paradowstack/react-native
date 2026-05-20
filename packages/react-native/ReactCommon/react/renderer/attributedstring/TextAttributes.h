@@ -22,7 +22,6 @@
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
-#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/Size.h>
 #include <react/utils/hash_combine.h>
 
@@ -31,7 +30,7 @@ namespace facebook::react {
 struct TextEffectInfo {
   std::string name;
   folly::dynamic props;
-  bool operator==(const TextEffectInfo &) const = default;
+  bool operator==(const TextEffectInfo&) const = default;
 };
 
 class TextAttributes;
@@ -57,24 +56,19 @@ class TextAttributes : public DebugStringConvertible,
 
   // Font
   std::string fontFamily{""};
-  LengthValue fontSize{
-      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
-  NumberValue fontSizeMultiplier{
-      NumberValue::number(std::numeric_limits<Float>::quiet_NaN())};
+  Float fontSize{std::numeric_limits<Float>::quiet_NaN()};
+  Float fontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<FontWeight> fontWeight{};
   std::optional<FontStyle> fontStyle{};
   std::optional<FontVariant> fontVariant{};
   std::optional<bool> allowFontScaling{};
-  NumberValue maxFontSizeMultiplier{
-      NumberValue::number(std::numeric_limits<Float>::quiet_NaN())};
+  Float maxFontSizeMultiplier{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<DynamicTypeRamp> dynamicTypeRamp{};
-  LengthValue letterSpacing{
-      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
+  Float letterSpacing{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextTransform> textTransform{};
 
   // Paragraph Styles
-  LengthValue lineHeight{
-      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
+  Float lineHeight{std::numeric_limits<Float>::quiet_NaN()};
   std::optional<TextAlignment> alignment{};
   std::optional<WritingDirection> baseWritingDirection{};
   std::optional<LineBreakStrategy> lineBreakStrategy{};
@@ -88,8 +82,7 @@ class TextAttributes : public DebugStringConvertible,
   // Shadow
   // TODO: Use `Point` type instead of `Size` for `textShadowOffset` attribute.
   std::optional<Size> textShadowOffset{};
-  LengthValue textShadowRadius{
-      LengthValue::length(std::numeric_limits<Float>::quiet_NaN())};
+  Float textShadowRadius{std::numeric_limits<Float>::quiet_NaN()};
   SharedColor textShadowColor{};
 
   // Special
@@ -113,7 +106,7 @@ class TextAttributes : public DebugStringConvertible,
 
 #pragma mark - Operators
 
-  bool operator==(const TextAttributes &rhs) const;
+  bool operator==(const TextAttributes& rhs) const;
 
 #pragma mark - DebugStringConvertible
 
@@ -123,6 +116,7 @@ class TextAttributes : public DebugStringConvertible,
 
   void resolveProperties(const DynamicResolver& resolver) override;
   void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -137,18 +131,17 @@ namespace std {
 
 template <>
 struct hash<facebook::react::TextEffectInfo> {
-  size_t operator()(const facebook::react::TextEffectInfo &info) const
-  {
+  size_t operator()(const facebook::react::TextEffectInfo& info) const {
     return facebook::react::hash_combine(info.name, info.props);
   }
 };
 
 template <>
 struct hash<facebook::react::TextAttributes> {
-  size_t operator()(const facebook::react::TextAttributes &textAttributes) const
-  {
+  size_t operator()(
+      const facebook::react::TextAttributes& textAttributes) const {
     size_t textEffectsHash = 0;
-    for (const auto &effect : textAttributes.textEffects) {
+    for (const auto& effect : textAttributes.textEffects) {
       facebook::react::hash_combine(textEffectsHash, effect);
     }
     return facebook::react::hash_combine(

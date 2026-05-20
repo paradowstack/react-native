@@ -20,6 +20,7 @@ class DynamicPropertiesHolder {
 
   virtual void resolveProperties(const DynamicResolver& resolver) = 0;
   virtual void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
       std::unordered_set<DynamicPropertyId>& ids) const = 0;
 
 #ifdef RN_SERIALIZABLE_STATE

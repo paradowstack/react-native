@@ -81,7 +81,8 @@ sliceChildShadowNodeViewPairsFromViewNodePair(
     const ShadowViewNodePair& shadowViewNodePair,
     ViewNodePairScope& scope,
     bool allowFlattened,
-    const CullingContext& cullingContext) {
+    const CullingContext& cullingContext,
+    const DynamicResolveContext& dynamicResolveContext = {}) {
   return sliceChildShadowNodeViewPairs(
       shadowViewNodePair,
       scope,
@@ -170,7 +171,8 @@ static void calculateShadowViewMutationsFlattener(
     DiffMap<Tag, ShadowViewNodePair*>* parentSubVisitedOtherNewNodes,
     DiffMap<Tag, ShadowViewNodePair*>* parentSubVisitedOtherOldNodes,
     const CullingContext& cullingContextForUnvisitedOtherNodes,
-    const CullingContext& cullingContext);
+    const CullingContext& cullingContext,
+		const DynamicResolveContext& dynamicResolveContext = {});
 
 /**
  * Updates the subtrees of any matched ShadowViewNodePair. This handles
@@ -429,7 +431,8 @@ static void calculateShadowViewMutationsFlattener(
     DiffMap<Tag, ShadowViewNodePair*>* parentSubVisitedOtherNewNodes,
     DiffMap<Tag, ShadowViewNodePair*>* parentSubVisitedOtherOldNodes,
     const CullingContext& cullingContextForUnvisitedOtherNodes,
-    const CullingContext& cullingContext) {
+    const CullingContext& cullingContext,
+    const DynamicResolveContext& dynamicResolveContext) {
   // Step 1: iterate through entire tree
   std::vector<ShadowViewNodePair*> treeChildren =
       sliceChildShadowNodeViewPairsFromViewNodePair(
@@ -1401,6 +1404,10 @@ ShadowViewMutation::List calculateShadowViewMutations(
             oldRootShadowView, newRootShadowView, {}));
   }
 
+	LayoutContext lc;
+	lc.viewportSize = newRootShadowView.layoutMetrics.frame.size;
+	
+	DynamicResolveContext context{newRootShadowView.layoutMetrics, lc};
   auto sliceOne = sliceChildShadowNodeViewPairs(
       ShadowViewNodePair{.shadowNode = &oldRootShadowNode},
       viewNodePairScope,
@@ -1412,7 +1419,8 @@ ShadowViewMutation::List calculateShadowViewMutations(
       viewNodePairScope,
       false /* allowFlattened */,
       {} /* layoutOffset */,
-      {} /* cullingContext */);
+      {} /* cullingContext */,
+			context);
 
   if (ReactNativeFeatureFlags::
           enableDifferentiatorMutationVectorPreallocation()) {

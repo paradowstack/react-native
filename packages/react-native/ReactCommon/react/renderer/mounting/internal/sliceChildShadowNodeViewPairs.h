@@ -48,6 +48,7 @@ std::vector<ShadowViewNodePair *> sliceChildShadowNodeViewPairs(
     ViewNodePairScope &viewNodePairScope,
     bool allowFlattened,
     Point layoutOffset,
-    const CullingContext &cullingContext);
+    const CullingContext &cullingContext,
+		const DynamicResolveContext& dynamicResolveContext = {});
 
 } // namespace facebook::react

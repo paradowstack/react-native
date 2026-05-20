@@ -184,7 +184,7 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableNativeCSSParsing() override {
-    return true;
+    return false;
   }
 
   bool enableNetworkEventReporting() override {

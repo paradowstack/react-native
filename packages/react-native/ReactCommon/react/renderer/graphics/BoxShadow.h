@@ -9,27 +9,26 @@
 
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
-#include <react/renderer/graphics/NumericValue.h>
 
 namespace facebook::react {
 
 struct BoxShadow {
   bool operator==(const BoxShadow& other) const = default;
 
-  LengthValue offsetX{};
-  LengthValue offsetY{};
-  LengthValue blurRadius{};
-  LengthValue spreadDistance{};
+  Float offsetX{};
+  Float offsetY{};
+  Float blurRadius{};
+  Float spreadDistance{};
   SharedColor color{};
   bool inset{};
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const {
     folly::dynamic result = folly::dynamic::object();
-    result["offsetX"] = offsetX.asFloat();
-    result["offsetY"] = offsetY.asFloat();
-    result["blurRadius"] = blurRadius.asFloat();
-    result["spreadDistance"] = spreadDistance.asFloat();
+    result["offsetX"] = offsetX;
+    result["offsetY"] = offsetY;
+    result["blurRadius"] = blurRadius;
+    result["spreadDistance"] = spreadDistance;
     result["color"] = *color;
     result["inset"] = inset;
     return result;

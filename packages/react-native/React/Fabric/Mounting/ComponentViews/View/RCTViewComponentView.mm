@@ -6,6 +6,7 @@
  */
 
 #import "RCTViewComponentView.h"
+#import "RCTLog.h"
 #import <React/RCTSurfaceHostingProxyRootView.h>
 
 #import <CoreGraphics/CoreGraphics.h>
@@ -285,7 +286,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // `opacity`
   if (oldViewProps.opacity != newViewProps.opacity &&
       ![_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
-    self.layer.opacity = (float)newViewProps.opacity.asFloat();
+    self.layer.opacity = newViewProps.opacity;
     needsInvalidateLayer = YES;
   }
 
@@ -318,13 +319,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 
   // `shadowOpacity`
   if (oldViewProps.shadowOpacity != newViewProps.shadowOpacity) {
-		self.layer.shadowOpacity = (float)newViewProps.shadowOpacity.asFloat();
+		self.layer.shadowOpacity = newViewProps.shadowOpacity;
     needsInvalidateLayer = YES;
   }
 
   // `shadowRadius`
   if (oldViewProps.shadowRadius != newViewProps.shadowRadius) {
-    self.layer.shadowRadius = (CGFloat)newViewProps.shadowRadius.asFloat();
+    self.layer.shadowRadius = newViewProps.shadowRadius;
     needsInvalidateLayer = YES;
   }
 
@@ -385,14 +386,12 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     needsInvalidateLayer = YES;
   }
 
-  auto newOutlineWidth = newViewProps.outlineWidth.asFloat();
-  auto oldOutlineWidth = oldViewProps.outlineWidth.asFloat();
-  auto newOutlineOffset = newViewProps.outlineOffset.asFloat();
-  auto oldOutlineOffset = oldViewProps.outlineOffset.asFloat();
+  auto newOutlineOffset = newViewProps.outlineOffset;
+  auto oldOutlineOffset = oldViewProps.outlineOffset;
   // `outline`
   if (oldViewProps.outlineStyle != newViewProps.outlineStyle ||
       oldViewProps.outlineColor != newViewProps.outlineColor ||
-      oldOutlineOffset != newOutlineOffset || newOutlineWidth != oldOutlineWidth) {
+      oldOutlineOffset != newOutlineOffset || newViewProps.outlineWidth != oldViewProps.outlineWidth) {
     needsInvalidateLayer = YES;
   }
 
@@ -625,11 +624,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if (_layoutContext == layoutContext) {
     return;
   }
-  _layoutContext = layoutContext;
-  const auto &viewProps = static_cast<const ViewProps &>(*_props);
-  if (viewProps.outlineWidth.isDynamic()) {
-    _needsInvalidateLayer = YES;
-  }
+	_layoutContext = layoutContext;
 }
 
 - (void)updateEventEmitter:(const EventEmitter::Shared &)eventEmitter
@@ -715,7 +710,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     self.layer.transform = RCTCATransform3DFromTransformMatrix(props.transform);
   }
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
-    self.layer.opacity = (float)props.opacity.asFloat();
+    self.layer.opacity = props.opacity;
   }
 
   // Clean up box shadow layers to prevent cross-component contamination
@@ -918,9 +913,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
   BOOL nonZeroBorderWidth = !(borderMetrics.borderWidths.isUniform() && borderMetrics.borderWidths.left == 0);
   BOOL clipToPaddingBox = ReactNativeFeatureFlags::enableIOSViewClipToPaddingBox();
-	Float resolvedOutlineWidth = _props->outlineWidth.asFloat();
   return _props->getClipsContentToBounds() &&
-      ((!_props->boxShadow.empty() || (clipToPaddingBox && nonZeroBorderWidth)) || resolvedOutlineWidth != 0);
+      ((!_props->boxShadow.empty() || (clipToPaddingBox && nonZeroBorderWidth)) || _props->outlineWidth != 0);
 }
 
 // The view that is used as the receiver for all styling (borders, background,
@@ -1018,7 +1012,20 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   }
 
   const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
-
+  // log content of borderMetrics
+	if (borderMetrics.borderRadii.bottomLeft.horizontal > 0.0f) {
+		RCTLogInfo(
+							 @"Invalidate layer with border radii (%.2f, %.2f, %.2f, %.2f)",
+							 borderMetrics.borderRadii.topLeft.horizontal,
+							 borderMetrics.borderRadii.topRight.horizontal,
+							 borderMetrics.borderRadii.bottomLeft.horizontal,
+							 borderMetrics.borderRadii.bottomRight.horizontal);
+		
+		if (borderMetrics.borderRadii.bottomLeft.horizontal == 210.0f) {
+			RCTLogInfo(@"Co");
+			auto bm = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
+		}
+	}
   // Stage 1. Shadow Path
   BOOL const layerHasShadow = layer.shadowOpacity > 0 && CGColorGetAlpha(layer.shadowColor) > 0;
   if (layerHasShadow) {
@@ -1138,9 +1145,8 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   [_outlineLayer removeFromSuperlayer];
   _outlineLayer = nil;
   {
-		Float resolvedOutlineWidth = _props->outlineWidth.asFloat();
-		Float resolvedOutlineOffset = _props->outlineOffset.asFloat();
-    if (resolvedOutlineWidth != 0) {
+		Float resolvedOutlineOffset = _props->outlineOffset;
+    if (_props->outlineWidth != 0) {
       if (!_outlineLayer) {
         CALayer *outlineLayer = [CALayer new];
         outlineLayer.magnificationFilter = kCAFilterNearest;
@@ -1151,12 +1157,12 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
       }
       _outlineLayer.frame = CGRectInset(
           layer.bounds,
-          -resolvedOutlineOffset - resolvedOutlineWidth,
-          -resolvedOutlineOffset - resolvedOutlineWidth);
+          -resolvedOutlineOffset - _props->outlineWidth,
+          -resolvedOutlineOffset - _props->outlineWidth);
 
       if (borderMetrics.borderRadii.isUniform() && borderMetrics.borderRadii.topLeft.horizontal == 0) {
         UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
-        _outlineLayer.borderWidth = resolvedOutlineWidth;
+        _outlineLayer.borderWidth = _props->outlineWidth;
         _outlineLayer.borderColor = outlineColor.CGColor;
       } else {
         UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
@@ -1164,13 +1170,13 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
         RCTAddContourEffectToLayer(
             _outlineLayer,
             RCTCreateOutlineCornerRadiiFromBorderRadii(
-                borderMetrics.borderRadii, resolvedOutlineWidth, resolvedOutlineOffset),
+                borderMetrics.borderRadii, _props->outlineWidth, resolvedOutlineOffset),
             RCTBorderColors{outlineColor, outlineColor, outlineColor, outlineColor},
             UIEdgeInsets{
-                resolvedOutlineWidth,
-                resolvedOutlineWidth,
-                resolvedOutlineWidth,
-                resolvedOutlineWidth},
+                _props->outlineWidth,
+                _props->outlineWidth,
+                _props->outlineWidth,
+                _props->outlineWidth},
             RCTBorderStyleFromOutlineStyle(_props->outlineStyle));
       }
     }
@@ -1182,7 +1188,7 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   if (_swiftUIWrapper != nullptr) {
     [_swiftUIWrapper resetStyles];
   }
-  self.layer.opacity = (float)_props->opacity.asFloat();
+  self.layer.opacity = _props->opacity;
   if (!_props->filter.empty()) {
     float multiplicativeBrightness = 1;
     bool hasBrightnessFilter = false;

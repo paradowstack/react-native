@@ -244,8 +244,8 @@ static NSLineBreakMode RCTNSLineBreakModeFromEllipsizeMode(EllipsizeMode ellipsi
   [textStorage addLayoutManager:layoutManager];
 
   if (paragraphAttributes.adjustsFontSizeToFit) {
-		CGFloat minimumFontSize = !paragraphAttributes.minimumFontSize.isNan() ? paragraphAttributes.minimumFontSize.asFloat() : 4.0;
-    CGFloat maximumFontSize = !paragraphAttributes.maximumFontSize.isNan() ? paragraphAttributes.maximumFontSize.asFloat() : 96.0;
+		CGFloat minimumFontSize = !std::isnan(paragraphAttributes.minimumFontSize) ? paragraphAttributes.minimumFontSize : 4.0;
+    CGFloat maximumFontSize = !std::isnan(paragraphAttributes.maximumFontSize) ? paragraphAttributes.maximumFontSize : 96.0;
     [textStorage scaleFontSizeToFitSize:size minimumFontSize:minimumFontSize maximumFontSize:maximumFontSize];
   }
 

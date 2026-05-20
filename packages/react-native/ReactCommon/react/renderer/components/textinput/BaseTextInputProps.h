@@ -22,12 +22,15 @@ class BaseTextInputProps : public ViewProps, public BaseTextProps {
  public:
   BaseTextInputProps() = default;
   BaseTextInputProps(
-      const PropsParserContext &context,
-      const BaseTextInputProps &sourceProps,
-      const RawProps &rawProps);
+      const PropsParserContext& context,
+      const BaseTextInputProps& sourceProps,
+      const RawProps& rawProps);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
   SubmitBehavior getNonDefaultSubmitBehavior() const;
 
@@ -81,11 +84,14 @@ class BaseTextInputProps : public ViewProps, public BaseTextProps {
 
   std::optional<std::vector<std::string>> acceptDragAndDropTypes{};
 
-  void resolveProperties(const DynamicResolver &resolver) override;
-  void collectLiveResolvableIds(std::unordered_set<DynamicPropertyId> &ids) const override;
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
+      std::unordered_set<DynamicPropertyId>& ids) const override;
 
 #ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic getResolvedProps(const DynamicResolver &resolver) const override;
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
 #endif
 };
 

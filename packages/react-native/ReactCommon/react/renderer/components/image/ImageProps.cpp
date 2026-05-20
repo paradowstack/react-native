@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <folly/json.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/image/ImageProps.h>
 #include <react/renderer/components/image/conversions.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/debugStringConvertibleUtils.h>
-#include <folly/json.h>
+#include <react/utils/fnv1a.h>
 
 namespace facebook::react {
 
@@ -77,12 +78,12 @@ ImageProps::ImageProps(
       blurRadius(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.blurRadius
-              : convertRawProp(
+              : convertRawPropWithCalc(
                     context,
                     rawProps,
                     "blurRadius",
                     sourceProps.blurRadius,
-                    LengthValue::length(0.0f))),
+                    0.0f)),
       capInsets(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.capInsets
@@ -122,12 +123,12 @@ ImageProps::ImageProps(
       resizeMultiplier(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.resizeMultiplier
-              : convertRawProp(
+              : convertRawPropWithCalc(
                     context,
                     rawProps,
                     "resizeMultiplier",
                     sourceProps.resizeMultiplier,
-                    NumberValue::number(1.0f))),
+                    1.0f)),
       shouldNotifyLoadEvents(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.shouldNotifyLoadEvents
@@ -149,12 +150,12 @@ ImageProps::ImageProps(
       fadeDuration(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.fadeDuration
-              : convertRawProp(
+              : convertRawPropWithCalc(
                     context,
                     rawProps,
                     "fadeDuration",
                     sourceProps.fadeDuration,
-                    NumberValue::number(300.0f))),
+                    300.0f)),
       progressiveRenderingEnabled(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.progressiveRenderingEnabled
@@ -263,7 +264,7 @@ folly::dynamic ImageProps::getDiffProps(
   }
 
   if (blurRadius != oldProps->blurRadius) {
-    result["blurRadius"] = blurRadius.asFloat();
+    result["blurRadius"] = blurRadius;
   }
 
   if (capInsets != oldProps->capInsets) {
@@ -283,7 +284,7 @@ folly::dynamic ImageProps::getDiffProps(
   }
 
   if (resizeMultiplier != oldProps->resizeMultiplier) {
-    result["resizeMultiplier"] = resizeMultiplier.asFloat();
+    result["resizeMultiplier"] = resizeMultiplier;
   }
 
   if (shouldNotifyLoadEvents != oldProps->shouldNotifyLoadEvents) {
@@ -295,7 +296,7 @@ folly::dynamic ImageProps::getDiffProps(
   }
 
   if (fadeDuration != oldProps->fadeDuration) {
-    result["fadeDuration"] = fadeDuration.asFloat();
+    result["fadeDuration"] = fadeDuration;
   }
 
   if (progressiveRenderingEnabled != oldProps->progressiveRenderingEnabled) {
@@ -343,25 +344,24 @@ void ImageProps::resolveProperties(const DynamicResolver& resolver) {
   }
   ViewProps::resolveProperties(resolver);
 
-  blurRadius = LengthValue::length(resolver.resolveLength(blurRadius));
-  resizeMultiplier =
-      NumberValue::number(resolver.resolveNumber(resizeMultiplier));
-  fadeDuration = NumberValue::number(resolver.resolveNumber(fadeDuration));
+  resolver.resolve(fnv1a("blurRadius"), blurRadius);
+  resolver.resolve(fnv1a("resizeMultiplier"), resizeMultiplier);
+  resolver.resolve(fnv1a("fadeDuration"), fadeDuration);
 }
 
 void ImageProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
     std::unordered_set<DynamicPropertyId>& ids) const {
-  ViewProps::collectLiveResolvableIds(ids);
+  ViewProps::collectLiveResolvableIds(map, ids);
 
-  if (blurRadius.isDynamic()) {
-    ids.insert(blurRadius.asDynamicId());
-  }
-  if (resizeMultiplier.isDynamic()) {
-    ids.insert(resizeMultiplier.asDynamicId());
-  }
-  if (fadeDuration.isDynamic()) {
-    ids.insert(fadeDuration.asDynamicId());
-  }
+  auto addById = [&](const auto& id) {
+    if (map.contains(id)) {
+      ids.insert(id);
+    }
+  };
+  addById(fnv1a("blurRadius"));
+  addById(fnv1a("resizeMultiplier"));
+  addById(fnv1a("fadeDuration"));
 }
 
 #ifdef RN_SERIALIZABLE_STATE
@@ -370,14 +370,15 @@ folly::dynamic ImageProps::getResolvedProps(
   [[maybe_unused]] auto p0 = folly::toJson(rawProps);
   folly::dynamic props = ViewProps::getResolvedProps(resolver);
   [[maybe_unused]] auto p1 = folly::toJson(props);
-  if (blurRadius.isDynamic()) {
-    props["blurRadius"] = resolver.toDynamicLength(blurRadius);
+  if (calcExpressions.contains(fnv1a("blurRadius"))) {
+    props["blurRadius"] = resolver.resolveNumber(fnv1a("blurRadius"));
   }
-  if (resizeMultiplier.isDynamic()) {
-    props["resizeMultiplier"] = resolver.toDynamicNumber(resizeMultiplier);
+  if (calcExpressions.contains(fnv1a("resizeMultiplier"))) {
+    props["resizeMultiplier"] =
+        resolver.resolveNumber(fnv1a("resizeMultiplier"));
   }
-  if (fadeDuration.isDynamic()) {
-    props["fadeDuration"] = resolver.toDynamicNumber(fadeDuration);
+  if (calcExpressions.contains(fnv1a("fadeDuration"))) {
+    props["fadeDuration"] = resolver.resolveNumber(fnv1a("fadeDuration"));
   }
   [[maybe_unused]] auto p2 = folly::toJson(props);
   return props;

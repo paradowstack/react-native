@@ -13,6 +13,7 @@
 #include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/RectangleCorners.h>
 #include <react/renderer/graphics/RectangleEdges.h>
+#include <react/renderer/graphics/ValueUnit.h>
 #include <algorithm>
 
 #include <array>
@@ -240,7 +241,7 @@ using CascadedBorderWidths = CascadedRectangleEdges<Float>;
 using CascadedBorderCurves = CascadedRectangleCorners<BorderCurve>;
 using CascadedBorderStyles = CascadedRectangleEdges<BorderStyle>;
 using CascadedBorderColors = CascadedRectangleEdges<SharedColor>;
-using CascadedBorderRadii = CascadedRectangleCorners<LengthPercentageValue>;
+using CascadedBorderRadii = CascadedRectangleCorners<ValueUnit>;
 
 struct BorderMetrics {
   BorderColors borderColors{};
