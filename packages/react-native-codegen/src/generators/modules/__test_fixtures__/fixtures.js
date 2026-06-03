@@ -2678,7 +2678,6 @@ const ARRAY_BUFFER_NATIVE_MODULE: SchemaType = {
         ],
       },
       moduleName: 'SampleTurboModule',
-      excludedPlatforms: ['android'],
     },
   },
 };

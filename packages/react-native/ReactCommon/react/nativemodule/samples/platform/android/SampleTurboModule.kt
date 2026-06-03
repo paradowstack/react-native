@@ -268,25 +268,48 @@ public class SampleTurboModule(private val context: ReactApplicationContext) :
   @DoNotStrip
   @Suppress("unused")
   override fun getArrayBuffer(buffer: ByteBuffer) : ByteBuffer {
-    error("ArrayBuffer is not yet supported in Java TurboModules")
+    val size = buffer.capacity()
+    for (i in 0 until size) {
+      buffer.put(i, (10 * i).toByte())
+    }
+    return buffer
   }
 
   @DoNotStrip
   @Suppress("unused")
   override fun createNativeBuffer(size: Double) : ByteBuffer {
-    error("ArrayBuffer is not yet supported in Java TurboModules")
+    val capacity = size.toInt()
+    val buffer = ByteBuffer.allocateDirect(capacity)
+    for (i in 0 until capacity) {
+      buffer.put(i, (i + 1).toByte())
+    }
+    return buffer
   }
 
   @DoNotStrip
   @Suppress("unused")
   override fun processAsyncBuffer(payload: ByteBuffer, promise: Promise) {
-    promise.reject("UNSUPPORTED", "ArrayBuffer is not yet supported in Java TurboModules")
+    Thread {
+      var sum = 0.0
+      val size = payload.capacity()
+      for (i in 0 until size) {
+        sum += payload.get(i).toInt()
+      }
+      promise.resolve(sum)
+    }.start()
   }
 
   @DoNotStrip
   @Suppress("unused")
   override fun getAsyncBuffer(size: Double, promise: Promise) {
-    promise.reject("UNSUPPORTED", "ArrayBuffer is not yet supported in Java TurboModules")
+    Thread {
+      val capacity = size.toInt()
+      val buffer = ByteBuffer.allocateDirect(capacity)
+      for (i in 0 until capacity) {
+        buffer.put(i, (i + 1).toByte())
+      }
+      promise.resolve(buffer)
+    }.start()
   }
 
   override fun getName(): String {
