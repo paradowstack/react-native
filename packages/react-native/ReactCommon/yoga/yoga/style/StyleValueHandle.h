@@ -57,6 +57,10 @@ class StyleValueHandle {
     return type() == Type::Point;
   }
 
+  constexpr bool isDynamic() const {
+    return type() == Type::Dynamic;
+  }
+
  private:
   friend class StyleValuePool;
 

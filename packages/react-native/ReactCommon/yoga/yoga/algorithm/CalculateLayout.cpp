@@ -734,9 +734,9 @@ static float computeMinContentMainSize(
     const Direction leafDirection = node->resolveDirection(ownerDirection);
     const float paddingAndBorder =
         node->style().computeFlexStartPaddingAndBorder(
-            requestedAxis, leafDirection, ownerWidth) +
+            requestedAxis, leafDirection, ownerWidth, node) +
         node->style().computeFlexEndPaddingAndBorder(
-            requestedAxis, leafDirection, ownerWidth);
+            requestedAxis, leafDirection, ownerWidth, node);
     return (wantRow ? size.width : size.height) + paddingAndBorder;
   }
 
@@ -762,25 +762,26 @@ static float computeMinContentMainSize(
 
     float childMain = computeMinContentMainSize(
         child, nodeMainAxis, direction, ownerWidth, ownerHeight);
-    childMain += child->style().computeMarginForAxis(nodeMainAxis, ownerWidth);
+    childMain +=
+        child->style().computeMarginForAxis(nodeMainAxis, ownerWidth, child);
 
     float childCross = computeMinContentMainSize(
         child, nodeCrossAxis, direction, ownerWidth, ownerHeight);
     childCross +=
-        child->style().computeMarginForAxis(nodeCrossAxis, ownerWidth);
+        child->style().computeMarginForAxis(nodeCrossAxis, ownerWidth, child);
 
     mainTotal += childMain;
     crossMax = std::max(crossMax, childCross);
   }
 
   mainTotal += node->style().computeFlexStartPaddingAndBorder(
-                   nodeMainAxis, direction, ownerWidth) +
+                   nodeMainAxis, direction, ownerWidth, node) +
       node->style().computeFlexEndPaddingAndBorder(
-          nodeMainAxis, direction, ownerWidth);
+          nodeMainAxis, direction, ownerWidth, node);
   crossMax += node->style().computeFlexStartPaddingAndBorder(
-                  nodeCrossAxis, direction, ownerWidth) +
+                  nodeCrossAxis, direction, ownerWidth, node) +
       node->style().computeFlexEndPaddingAndBorder(
-          nodeCrossAxis, direction, ownerWidth);
+          nodeCrossAxis, direction, ownerWidth, node);
 
   const bool nodeMainIsRow = isRow(nodeMainAxis);
   const float widthMin = nodeMainIsRow ? mainTotal : crossMax;
@@ -868,7 +869,7 @@ static FloatOptional computeAutoMinMainSize(
 
   // §4.5: cap by the max main size.
   const FloatOptional maxMain = child->style().resolvedMaxDimension(
-      direction, mainDim, ownerMainAxisSize, ownerWidth);
+      direction, mainDim, ownerMainAxisSize, ownerWidth, child);
   if (maxMain.isDefined() && floor > maxMain) {
     floor = maxMain;
   }
@@ -2111,8 +2112,8 @@ static void calculateLayoutImpl(
             leadingCrossDim += yoga::maxOrDefined(0.0f, remainingCrossDim / 2);
           } else if (child->style().flexEndMarginIsAuto(crossAxis, direction)) {
             // No-Op
-          } else if (child->style().flexStartMarginIsAuto(
-                         crossAxis, direction)) {
+          } else if (
+              child->style().flexStartMarginIsAuto(crossAxis, direction)) {
             leadingCrossDim += yoga::maxOrDefined(0.0f, remainingCrossDim);
           } else if (alignItem == Align::FlexStart) {
             // No-Op
@@ -2755,10 +2756,11 @@ void calculateLayout(
          node->style().computeMarginForAxis(
              FlexDirection::Row, ownerWidth, node));
     widthSizingMode = SizingMode::StretchFit;
-  } else if (style
-                 .resolvedMaxDimension(
-                     direction, Dimension::Width, ownerWidth, ownerWidth, node)
-                 .isDefined()) {
+  } else if (
+      style
+          .resolvedMaxDimension(
+              direction, Dimension::Width, ownerWidth, ownerWidth, node)
+          .isDefined()) {
     width = style
                 .resolvedMaxDimension(
                     direction, Dimension::Width, ownerWidth, ownerWidth, node)
@@ -2783,14 +2785,11 @@ void calculateLayout(
          node->style().computeMarginForAxis(
              FlexDirection::Column, ownerWidth, node));
     heightSizingMode = SizingMode::StretchFit;
-  } else if (style
-                 .resolvedMaxDimension(
-                     direction,
-                     Dimension::Height,
-                     ownerHeight,
-                     ownerWidth,
-                     node)
-                 .isDefined()) {
+  } else if (
+      style
+          .resolvedMaxDimension(
+              direction, Dimension::Height, ownerHeight, ownerWidth, node)
+          .isDefined()) {
     height =
         style
             .resolvedMaxDimension(

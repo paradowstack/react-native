@@ -141,6 +141,19 @@ class StyleValuePool {
         : unpackInlineInteger(handle.value());
   }
 
+  YGValueDynamic getDynamicCallback(StyleValueHandle handle) const {
+    assert(handle.isDynamic());
+    assert(handle.isValueIndexed());
+    return reinterpret_cast<YGValueDynamic>(
+        static_cast<uintptr_t>(buffer_.get64(handle.value())));
+  }
+
+  YGValueDynamicID getDynamicCallbackID(StyleValueHandle handle) const {
+    assert(handle.isDynamic());
+    assert(handle.isValueIndexed());
+    return buffer_.get32(handle.value() + 2);
+  }
+
  private:
   void storeValue(
       StyleValueHandle& handle,
@@ -175,17 +188,29 @@ class StyleValuePool {
     }
   }
 
-  YGValueDynamic getDynamicCallback(StyleValueHandle handle) const {
-    assert(handle.isDynamic());
-    assert(handle.isValueIndexed());
-    return reinterpret_cast<YGValueDynamic>(
-        static_cast<uintptr_t>(buffer_.get64(handle.value())));
-  }
+  void storeDynamic(
+      StyleValueHandle& handle,
+      YGValueDynamic callback,
+      YGValueDynamicID id) {
+    handle.setType(StyleValueHandle::Type::Dynamic);
+    auto packed = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(callback));
 
-  YGValueDynamicID getDynamicCallbackID(StyleValueHandle handle) const {
-    assert(handle.isDynamic());
-    assert(handle.isValueIndexed());
-    return buffer_.get32(handle.value() + 2);
+    if (handle.isValueIndexed()) {
+      auto oldIndex = handle.value();
+      auto newIndex = buffer_.replace(oldIndex, packed);
+      if (newIndex == oldIndex) {
+        [[maybe_unused]] auto replacedIndex = buffer_.replace(
+            static_cast<uint16_t>(newIndex + 2), static_cast<uint32_t>(id));
+      } else {
+        buffer_.push(static_cast<uint32_t>(id));
+      }
+      handle.setValue(newIndex);
+    } else {
+      auto newIndex = buffer_.push(packed);
+      buffer_.push(static_cast<uint32_t>(id));
+      handle.setValue(newIndex);
+      handle.setValueIsIndexed();
+    }
   }
 
   static constexpr bool isIntegerPackable(float f) {

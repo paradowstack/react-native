@@ -293,12 +293,13 @@ class YG_EXPORT Style {
       Direction direction,
       Dimension axis,
       float referenceLength,
-      float ownerWidth) const {
+      float ownerWidth,
+      YGNodeConstRef node) const {
     const auto handle = minDimensions_[yoga::to_underlying(axis)];
     if (handle.isUndefined()) {
       return FloatOptional{};
     }
-    FloatOptional value = resolve(handle, referenceLength);
+    FloatOptional value = resolve(handle, referenceLength, node);
     if (boxSizing() == BoxSizing::BorderBox || !value.isDefined()) {
       return value;
     }
@@ -322,12 +323,13 @@ class YG_EXPORT Style {
       Direction direction,
       Dimension axis,
       float referenceLength,
-      float ownerWidth) const {
+      float ownerWidth,
+      YGNodeConstRef node) const {
     const auto handle = maxDimensions_[yoga::to_underlying(axis)];
     if (handle.isUndefined()) {
       return FloatOptional{};
     }
-    FloatOptional value = resolve(handle, referenceLength);
+    FloatOptional value = resolve(handle, referenceLength, node);
     if (boxSizing() == BoxSizing::BorderBox || !value.isDefined()) {
       return value;
     }
@@ -416,72 +418,87 @@ class YG_EXPORT Style {
   float computeFlexStartPosition(
       FlexDirection axis,
       Direction direction,
-      float axisSize) const {
-    return resolve(computePosition(flexStartEdge(axis), direction), axisSize)
+      float axisSize,
+      YGNodeConstRef node) const {
+    return resolve(
+               computePosition(flexStartEdge(axis), direction), axisSize, node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeInlineStartPosition(
       FlexDirection axis,
       Direction direction,
-      float axisSize) const {
+      float axisSize,
+      YGNodeConstRef node) const {
     return resolve(
                computePosition(inlineStartEdge(axis, direction), direction),
-               axisSize)
+               axisSize,
+               node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeFlexEndPosition(
       FlexDirection axis,
       Direction direction,
-      float axisSize) const {
-    return resolve(computePosition(flexEndEdge(axis), direction), axisSize)
+      float axisSize,
+      YGNodeConstRef node) const {
+    return resolve(
+               computePosition(flexEndEdge(axis), direction), axisSize, node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeInlineEndPosition(
       FlexDirection axis,
       Direction direction,
-      float axisSize) const {
+      float axisSize,
+      YGNodeConstRef node) const {
     return resolve(
                computePosition(inlineEndEdge(axis, direction), direction),
-               axisSize)
+               axisSize,
+               node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeFlexStartMargin(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
-    return resolve(computeMargin(flexStartEdge(axis), direction), widthSize)
+      float widthSize,
+      YGNodeConstRef node) const {
+    return resolve(
+               computeMargin(flexStartEdge(axis), direction), widthSize, node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeInlineStartMargin(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     return resolve(
                computeMargin(inlineStartEdge(axis, direction), direction),
-               widthSize)
+               widthSize,
+               node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeFlexEndMargin(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
-    return resolve(computeMargin(flexEndEdge(axis), direction), widthSize)
+      float widthSize,
+      YGNodeConstRef node) const {
+    return resolve(computeMargin(flexEndEdge(axis), direction), widthSize, node)
         .unwrapOrDefault(0.0f);
   }
 
   float computeInlineEndMargin(
       FlexDirection axis,
       Direction direction,
-      float widthSize) const {
+      float widthSize,
+      YGNodeConstRef node) const {
     return resolve(
                computeMargin(inlineEndEdge(axis, direction), direction),
-               widthSize)
+               widthSize,
+               node)
         .unwrapOrDefault(0.0f);
   }
 
@@ -490,7 +507,8 @@ class YG_EXPORT Style {
       Direction direction,
       YGNodeConstRef node) const {
     return maxOrDefined(
-        resolve(computeBorder(flexStartEdge(axis), direction), 0.0f).unwrap(),
+        resolve(computeBorder(flexStartEdge(axis), direction), 0.0f, node)
+            .unwrap(),
         0.0f);
   }
 
@@ -500,7 +518,9 @@ class YG_EXPORT Style {
       YGNodeConstRef node) const {
     return maxOrDefined(
         resolve(
-            computeBorder(inlineStartEdge(axis, direction), direction), 0.0f)
+            computeBorder(inlineStartEdge(axis, direction), direction),
+            0.0f,
+            node)
             .unwrap(),
         0.0f);
   }
@@ -510,7 +530,8 @@ class YG_EXPORT Style {
       Direction direction,
       YGNodeConstRef node) const {
     return maxOrDefined(
-        resolve(computeBorder(flexEndEdge(axis), direction), 0.0f).unwrap(),
+        resolve(computeBorder(flexEndEdge(axis), direction), 0.0f, node)
+            .unwrap(),
         0.0f);
   }
 
@@ -519,7 +540,10 @@ class YG_EXPORT Style {
       Direction direction,
       YGNodeConstRef node) const {
     return maxOrDefined(
-        resolve(computeBorder(inlineEndEdge(axis, direction), direction), 0.0f)
+        resolve(
+            computeBorder(inlineEndEdge(axis, direction), direction),
+            0.0f,
+            node)
             .unwrap(),
         0.0f);
   }
@@ -530,7 +554,7 @@ class YG_EXPORT Style {
       float widthSize,
       YGNodeConstRef node) const {
     return maxOrDefined(
-        resolve(computePadding(flexStartEdge(axis), direction), widthSize)
+        resolve(computePadding(flexStartEdge(axis), direction), widthSize, node)
             .unwrap(),
         0.0f);
   }
@@ -543,7 +567,8 @@ class YG_EXPORT Style {
     return maxOrDefined(
         resolve(
             computePadding(inlineStartEdge(axis, direction), direction),
-            widthSize)
+            widthSize,
+            node)
             .unwrap(),
         0.0f);
   }
@@ -554,7 +579,7 @@ class YG_EXPORT Style {
       float widthSize,
       YGNodeConstRef node) const {
     return maxOrDefined(
-        resolve(computePadding(flexEndEdge(axis), direction), widthSize)
+        resolve(computePadding(flexEndEdge(axis), direction), widthSize, node)
             .unwrap(),
         0.0f);
   }
@@ -567,7 +592,8 @@ class YG_EXPORT Style {
     return maxOrDefined(
         resolve(
             computePadding(inlineEndEdge(axis, direction), direction),
-            widthSize)
+            widthSize,
+            node)
             .unwrap(),
         0.0f);
   }
@@ -632,6 +658,8 @@ class YG_EXPORT Style {
       FlexDirection axis,
       float widthSize,
       YGNodeConstRef node) const {
+    // The total margin for a given axis does not depend on the direction
+    // so hardcoding LTR here to avoid piping direction to this function
     return computeInlineStartMargin(axis, Direction::LTR, widthSize, node) +
         computeInlineEndMargin(axis, Direction::LTR, widthSize, node);
   }
@@ -641,7 +669,7 @@ class YG_EXPORT Style {
       float ownerSize,
       YGNodeConstRef node) const {
     auto gap = isRow(axis) ? computeColumnGap() : computeRowGap();
-    return maxOrDefined(resolve(gap, ownerSize).unwrap(), 0.0f);
+    return maxOrDefined(resolve(gap, ownerSize, node).unwrap(), 0.0f);
   }
 
   float computeGapForDimension(
@@ -650,7 +678,7 @@ class YG_EXPORT Style {
       YGNodeConstRef node) const {
     auto gap =
         dimension == Dimension::Width ? computeColumnGap() : computeRowGap();
-    return maxOrDefined(resolve(gap, ownerSize).unwrap(), 0.0f);
+    return maxOrDefined(resolve(gap, ownerSize, node).unwrap(), 0.0f);
   }
 
   bool flexStartMarginIsAuto(FlexDirection axis, Direction direction) const {
@@ -913,7 +941,10 @@ class YG_EXPORT Style {
    * StyleLength/StyleSizeLength object on the stack during hot-path overhead
    * calculations.
    */
-  FloatOptional resolve(StyleValueHandle handle, float referenceLength) const {
+  FloatOptional resolve(
+      StyleValueHandle handle,
+      float referenceLength,
+      YGNodeConstRef node) const {
     if (handle.isPoint()) {
       return FloatOptional{pool_.getStoredValue(handle)};
     }
@@ -921,6 +952,17 @@ class YG_EXPORT Style {
       return FloatOptional{
           pool_.getStoredValue(handle) * referenceLength * 0.01f};
     }
+    if (handle.isDynamic()) {
+      auto callback = pool_.getDynamicCallback(handle);
+      if (callback) {
+        return FloatOptional{callback(
+                                 node,
+                                 pool_.getDynamicCallbackID(handle),
+                                 YGValueDynamicContext{referenceLength})
+                                 .value};
+      }
+    }
+
     return FloatOptional{};
   }
 
