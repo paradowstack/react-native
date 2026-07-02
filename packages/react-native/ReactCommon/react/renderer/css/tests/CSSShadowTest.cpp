@@ -17,33 +17,18 @@ TEST(CSSShadow, basic) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
   EXPECT_EQ(shadow.color, CSSColor::black());
   EXPECT_FALSE(shadow.inset);
 }
 
 TEST(CSSShadow, rem_unit) {
+  // rem units cannot be resolved at parse time and are rejected
   auto value = parseCSSProperty<CSSShadow>("10px 5rem");
-  EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
-  auto& shadow = std::get<CSSShadow>(value);
-
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Rem);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.color, CSSColor::black());
-  EXPECT_FALSE(shadow.inset);
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(value));
 }
 
 TEST(CSSShadow, unitless_zero_length) {
@@ -51,14 +36,10 @@ TEST(CSSShadow, unitless_zero_length) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 0.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 0.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
   EXPECT_EQ(shadow.color, CSSColor::black());
   EXPECT_FALSE(shadow.inset);
 }
@@ -68,14 +49,10 @@ TEST(CSSShadow, multiple_whitespace) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
   EXPECT_EQ(shadow.color, CSSColor::black());
   EXPECT_FALSE(shadow.inset);
 }
@@ -85,14 +62,10 @@ TEST(CSSShadow, trailing_color) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
 
   CSSColor red{.r = 255u, .g = 0u, .b = 0u, .a = 255u};
   EXPECT_EQ(shadow.color, red);
@@ -104,14 +77,10 @@ TEST(CSSShadow, leading_color) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
 
   CSSColor red{.r = 255u, .g = 0u, .b = 0u, .a = 255u};
   EXPECT_EQ(shadow.color, red);
@@ -123,14 +92,10 @@ TEST(CSSShadow, color_function) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
 
   CSSColor red{.r = 255u, .g = 0u, .b = 0u, .a = 128u};
   EXPECT_EQ(shadow.color, red);
@@ -142,14 +107,10 @@ TEST(CSSShadow, blur_radius) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 2.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 2.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
   EXPECT_EQ(shadow.color, CSSColor::black());
   EXPECT_FALSE(shadow.inset);
 }
@@ -159,14 +120,10 @@ TEST(CSSShadow, spread_distance) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 5.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 2.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 3.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 2.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 3.0f);
   EXPECT_EQ(shadow.color, CSSColor::black());
   EXPECT_FALSE(shadow.inset);
 }
@@ -176,14 +133,10 @@ TEST(CSSShadow, inset) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 5.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 2.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 5.0f);
+  EXPECT_EQ(shadow.offsetY.px, 2.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
   EXPECT_EQ(shadow.color, CSSColor::black());
   EXPECT_TRUE(shadow.inset);
 }
@@ -193,14 +146,10 @@ TEST(CSShadow, color_length_inset) {
   EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
   auto& shadow = std::get<CSSShadow>(value);
 
-  EXPECT_EQ(shadow.offsetX.value, 10.0f);
-  EXPECT_EQ(shadow.offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.offsetY.value, 10.0f);
-  EXPECT_EQ(shadow.offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.blurRadius.value, 0.0f);
-  EXPECT_EQ(shadow.blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadow.spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadow.spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 10.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 0.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
 
   CSSColor red{.r = 255u, .g = 0u, .b = 0u, .a = 255u};
   EXPECT_EQ(shadow.color, red);
@@ -215,38 +164,26 @@ TEST(CSSShadow, multiple_shadows) {
 
   EXPECT_EQ(shadows.size(), 3);
 
-  EXPECT_EQ(shadows[0].offsetX.value, 10.0f);
-  EXPECT_EQ(shadows[0].offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[0].offsetY.value, 5.0f);
-  EXPECT_EQ(shadows[0].offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[0].blurRadius.value, 0.0f);
-  EXPECT_EQ(shadows[0].blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[0].spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadows[0].spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadows[0].offsetX.px, 10.0f);
+  EXPECT_EQ(shadows[0].offsetY.px, 5.0f);
+  EXPECT_EQ(shadows[0].blurRadius.px, 0.0f);
+  EXPECT_EQ(shadows[0].spreadDistance.px, 0.0f);
 
   CSSColor red{.r = 255u, .g = 0u, .b = 0u, .a = 255u};
   EXPECT_EQ(shadows[0].color, red);
   EXPECT_FALSE(shadows[0].inset);
 
-  EXPECT_EQ(shadows[1].offsetX.value, 5.0f);
-  EXPECT_EQ(shadows[1].offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[1].offsetY.value, 12.0f);
-  EXPECT_EQ(shadows[1].offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[1].blurRadius.value, 0.0f);
-  EXPECT_EQ(shadows[1].blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[1].spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadows[1].spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadows[1].offsetX.px, 5.0f);
+  EXPECT_EQ(shadows[1].offsetY.px, 12.0f);
+  EXPECT_EQ(shadows[1].blurRadius.px, 0.0f);
+  EXPECT_EQ(shadows[1].spreadDistance.px, 0.0f);
   EXPECT_EQ(shadows[1].color, CSSColor::black());
   EXPECT_TRUE(shadows[1].inset);
 
-  EXPECT_EQ(shadows[2].offsetX.value, 10.0f);
-  EXPECT_EQ(shadows[2].offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[2].offsetY.value, 45.0f);
-  EXPECT_EQ(shadows[2].offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[2].blurRadius.value, 13.0f);
-  EXPECT_EQ(shadows[2].blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[2].spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadows[2].spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadows[2].offsetX.px, 10.0f);
+  EXPECT_EQ(shadows[2].offsetY.px, 45.0f);
+  EXPECT_EQ(shadows[2].blurRadius.px, 13.0f);
+  EXPECT_EQ(shadows[2].spreadDistance.px, 0.0f);
   EXPECT_EQ(shadows[2].color, red);
   EXPECT_TRUE(shadows[2].inset);
 }
@@ -259,38 +196,26 @@ TEST(CSSShadow, multiple_shadows_with_new_line) {
 
   EXPECT_EQ(shadows.size(), 3);
 
-  EXPECT_EQ(shadows[0].offsetX.value, 10.0f);
-  EXPECT_EQ(shadows[0].offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[0].offsetY.value, 5.0f);
-  EXPECT_EQ(shadows[0].offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[0].blurRadius.value, 0.0f);
-  EXPECT_EQ(shadows[0].blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[0].spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadows[0].spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadows[0].offsetX.px, 10.0f);
+  EXPECT_EQ(shadows[0].offsetY.px, 5.0f);
+  EXPECT_EQ(shadows[0].blurRadius.px, 0.0f);
+  EXPECT_EQ(shadows[0].spreadDistance.px, 0.0f);
 
   CSSColor red{.r = 255u, .g = 0u, .b = 0u, .a = 255u};
   EXPECT_EQ(shadows[0].color, red);
   EXPECT_FALSE(shadows[0].inset);
 
-  EXPECT_EQ(shadows[1].offsetX.value, 5.0f);
-  EXPECT_EQ(shadows[1].offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[1].offsetY.value, 12.0f);
-  EXPECT_EQ(shadows[1].offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[1].blurRadius.value, 0.0f);
-  EXPECT_EQ(shadows[1].blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[1].spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadows[1].spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadows[1].offsetX.px, 5.0f);
+  EXPECT_EQ(shadows[1].offsetY.px, 12.0f);
+  EXPECT_EQ(shadows[1].blurRadius.px, 0.0f);
+  EXPECT_EQ(shadows[1].spreadDistance.px, 0.0f);
   EXPECT_EQ(shadows[1].color, CSSColor::black());
   EXPECT_TRUE(shadows[1].inset);
 
-  EXPECT_EQ(shadows[2].offsetX.value, 10.0f);
-  EXPECT_EQ(shadows[2].offsetX.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[2].offsetY.value, 45.0f);
-  EXPECT_EQ(shadows[2].offsetY.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[2].blurRadius.value, 13.0f);
-  EXPECT_EQ(shadows[2].blurRadius.unit, CSSLengthUnit::Px);
-  EXPECT_EQ(shadows[2].spreadDistance.value, 0.0f);
-  EXPECT_EQ(shadows[2].spreadDistance.unit, CSSLengthUnit::Px);
+  EXPECT_EQ(shadows[2].offsetX.px, 10.0f);
+  EXPECT_EQ(shadows[2].offsetY.px, 45.0f);
+  EXPECT_EQ(shadows[2].blurRadius.px, 13.0f);
+  EXPECT_EQ(shadows[2].spreadDistance.px, 0.0f);
   EXPECT_EQ(shadows[2].color, red);
   EXPECT_TRUE(shadows[2].inset);
 }
@@ -334,6 +259,41 @@ TEST(CSSShadow, negative_blur) {
 TEST(CSSShadow, missing_unit) {
   auto value = parseCSSProperty<CSSShadow>("10px 5");
   EXPECT_TRUE(std::holds_alternative<std::monostate>(value));
+}
+
+TEST(CSSShadow, calc_viewport_units) {
+  auto value = parseCSSProperty<CSSShadow>("calc(10vw) calc(10vh) calc(5px)");
+  EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
+  auto& shadow = std::get<CSSShadow>(value);
+
+  EXPECT_EQ(shadow.offsetX.vw, 10.0f);
+  EXPECT_EQ(shadow.offsetX.px, 0.0f);
+  EXPECT_EQ(shadow.offsetY.vh, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 0.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 5.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 0.0f);
+  EXPECT_FALSE(shadow.inset);
+}
+
+TEST(CSSShadow, calc_mixed_px_and_vw) {
+  auto value = parseCSSProperty<CSSShadow>("calc(15vw + 10px) 5px");
+  EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
+  auto& shadow = std::get<CSSShadow>(value);
+
+  EXPECT_EQ(shadow.offsetX.vw, 15.0f);
+  EXPECT_EQ(shadow.offsetX.px, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+}
+
+TEST(CSSShadow, calc_mixed_px_and_plain_lengths) {
+  auto value = parseCSSProperty<CSSShadow>("calc(10vw) 5px 2px 3px grey");
+  EXPECT_TRUE(std::holds_alternative<CSSShadow>(value));
+  auto& shadow = std::get<CSSShadow>(value);
+
+  EXPECT_EQ(shadow.offsetX.vw, 10.0f);
+  EXPECT_EQ(shadow.offsetY.px, 5.0f);
+  EXPECT_EQ(shadow.blurRadius.px, 2.0f);
+  EXPECT_EQ(shadow.spreadDistance.px, 3.0f);
 }
 
 } // namespace facebook::react

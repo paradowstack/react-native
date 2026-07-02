@@ -5,13 +5,34 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <folly/json.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/image/ImageProps.h>
 #include <react/renderer/components/image/conversions.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/debugStringConvertibleUtils.h>
+#include <react/utils/fnv1a.h>
 
 namespace facebook::react {
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+static std::string imageResizeModeToString(ImageResizeMode resizeMode) {
+  switch (resizeMode) {
+    case ImageResizeMode::Cover:
+      return "cover";
+    case ImageResizeMode::Contain:
+      return "contain";
+    case ImageResizeMode::Stretch:
+      return "stretch";
+    case ImageResizeMode::Center:
+      return "center";
+    case ImageResizeMode::Repeat:
+      return "repeat";
+    case ImageResizeMode::None:
+      return "none";
+  }
+}
+#endif
 
 ImageProps::ImageProps(
     const PropsParserContext& context,
@@ -57,12 +78,12 @@ ImageProps::ImageProps(
       blurRadius(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.blurRadius
-              : convertRawProp(
+              : convertRawPropWithCalc(
                     context,
                     rawProps,
                     "blurRadius",
                     sourceProps.blurRadius,
-                    {})),
+                    0.0f)),
       capInsets(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.capInsets
@@ -102,12 +123,12 @@ ImageProps::ImageProps(
       resizeMultiplier(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.resizeMultiplier
-              : convertRawProp(
+              : convertRawPropWithCalc(
                     context,
                     rawProps,
                     "resizeMultiplier",
                     sourceProps.resizeMultiplier,
-                    1)),
+                    1.0f)),
       shouldNotifyLoadEvents(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.shouldNotifyLoadEvents
@@ -129,12 +150,12 @@ ImageProps::ImageProps(
       fadeDuration(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.fadeDuration
-              : convertRawProp(
+              : convertRawPropWithCalc(
                     context,
                     rawProps,
                     "fadeDuration",
                     sourceProps.fadeDuration,
-                    {})),
+                    300.0f)),
       progressiveRenderingEnabled(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.progressiveRenderingEnabled
@@ -190,14 +211,18 @@ ComponentName ImageProps::getDiffPropsImplementationTarget() const {
   return "Image";
 }
 
-folly::dynamic ImageProps::getDiffProps(const Props* prevProps) const {
+folly::dynamic ImageProps::getDiffProps(
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = ImageProps();
 
   const ImageProps* oldProps = prevProps == nullptr
       ? &defaultProps
       : static_cast<const ImageProps*>(prevProps);
 
-  folly::dynamic result = ViewProps::getDiffProps(oldProps);
+  folly::dynamic result =
+      ViewProps::getDiffProps(oldProps, layoutMetrics, layoutContext);
 
   if (sources != oldProps->sources) {
     auto sourcesArray = folly::dynamic::array();
@@ -292,7 +317,7 @@ SharedDebugStringConvertibleList ImageProps::getDebugProps() const {
     sourcesList = sources[0].getDebugProps("source");
   } else if (sources.size() > 1) {
     for (const auto& source : sources) {
-      std::string sourceName = "source-" + react::toString(source.scale) + "x";
+      std::string sourceName = "source-" + std::to_string(source.scale) + "x";
       auto debugProps = source.getDebugProps(sourceName);
       sourcesList.insert(
           sourcesList.end(), debugProps.begin(), debugProps.end());
@@ -306,30 +331,59 @@ SharedDebugStringConvertibleList ImageProps::getDebugProps() const {
               "blurRadius", blurRadius, imageProps.blurRadius),
           debugStringConvertibleItem(
               "resizeMode",
-              toString(resizeMode),
-              toString(imageProps.resizeMode)),
+              imageResizeModeToString(resizeMode),
+              imageResizeModeToString(imageProps.resizeMode)),
           debugStringConvertibleItem(
-              "tintColor", toString(tintColor), toString(imageProps.tintColor)),
+              "tintColor", tintColor, imageProps.tintColor),
       };
 }
 
-inline std::string toString(ImageResizeMode resizeMode) {
-  switch (resizeMode) {
-    case ImageResizeMode::Cover:
-      return "cover";
-    case ImageResizeMode::Contain:
-      return "contain";
-    case ImageResizeMode::Stretch:
-      return "stretch";
-    case ImageResizeMode::Center:
-      return "center";
-    case ImageResizeMode::Repeat:
-      return "repeat";
-    case ImageResizeMode::None:
-      return "none";
+void ImageProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
   }
+  ViewProps::resolveProperties(resolver);
+
+  resolver.resolve(fnv1a("blurRadius"), blurRadius);
+  resolver.resolve(fnv1a("resizeMultiplier"), resizeMultiplier);
+  resolver.resolve(fnv1a("fadeDuration"), fadeDuration);
 }
 
+void ImageProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  ViewProps::collectLiveResolvableIds(map, ids);
+
+  auto addById = [&](const auto& id) {
+    if (map.contains(id)) {
+      ids.insert(id);
+    }
+  };
+  addById(fnv1a("blurRadius"));
+  addById(fnv1a("resizeMultiplier"));
+  addById(fnv1a("fadeDuration"));
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic ImageProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  [[maybe_unused]] auto p0 = folly::toJson(rawProps);
+  folly::dynamic props = ViewProps::getResolvedProps(resolver);
+  [[maybe_unused]] auto p1 = folly::toJson(props);
+  if (calcExpressions.contains(fnv1a("blurRadius"))) {
+    props["blurRadius"] = resolver.resolveNumber(fnv1a("blurRadius"));
+  }
+  if (calcExpressions.contains(fnv1a("resizeMultiplier"))) {
+    props["resizeMultiplier"] =
+        resolver.resolveNumber(fnv1a("resizeMultiplier"));
+  }
+  if (calcExpressions.contains(fnv1a("fadeDuration"))) {
+    props["fadeDuration"] = resolver.resolveNumber(fnv1a("fadeDuration"));
+  }
+  [[maybe_unused]] auto p2 = folly::toJson(props);
+  return props;
+}
+#endif
 #endif
 
 } // namespace facebook::react

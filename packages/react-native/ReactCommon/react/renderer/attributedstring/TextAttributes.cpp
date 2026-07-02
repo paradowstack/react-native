@@ -17,6 +17,14 @@
 
 namespace facebook::react {
 
+namespace {
+
+bool hasValue(Float value) {
+  return !std::isnan(value);
+}
+
+} // namespace
+
 void TextAttributes::apply(TextAttributes textAttributes) {
   // Color
   foregroundColor = textAttributes.foregroundColor
@@ -32,8 +40,8 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   fontFamily = !textAttributes.fontFamily.empty() ? textAttributes.fontFamily
                                                   : fontFamily;
   fontSize =
-      !std::isnan(textAttributes.fontSize) ? textAttributes.fontSize : fontSize;
-  fontSizeMultiplier = !std::isnan(textAttributes.fontSizeMultiplier)
+      hasValue(textAttributes.fontSize) ? textAttributes.fontSize : fontSize;
+  fontSizeMultiplier = hasValue(textAttributes.fontSizeMultiplier)
       ? textAttributes.fontSizeMultiplier
       : fontSizeMultiplier;
   fontWeight = textAttributes.fontWeight.has_value() ? textAttributes.fontWeight
@@ -46,7 +54,7 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   allowFontScaling = textAttributes.allowFontScaling.has_value()
       ? textAttributes.allowFontScaling
       : allowFontScaling;
-  maxFontSizeMultiplier = !std::isnan(textAttributes.maxFontSizeMultiplier)
+  maxFontSizeMultiplier = hasValue(textAttributes.maxFontSizeMultiplier)
       ? textAttributes.maxFontSizeMultiplier
       : maxFontSizeMultiplier;
   dynamicTypeRamp = textAttributes.dynamicTypeRamp.has_value()
@@ -60,9 +68,8 @@ void TextAttributes::apply(TextAttributes textAttributes) {
       : textTransform;
 
   // Paragraph Styles
-  lineHeight = !std::isnan(textAttributes.lineHeight)
-      ? textAttributes.lineHeight
-      : lineHeight;
+  lineHeight = hasValue(textAttributes.lineHeight) ? textAttributes.lineHeight
+                                                   : lineHeight;
   alignment = textAttributes.alignment.has_value() ? textAttributes.alignment
                                                    : alignment;
   baseWritingDirection = textAttributes.baseWritingDirection.has_value()
@@ -90,7 +97,7 @@ void TextAttributes::apply(TextAttributes textAttributes) {
   textShadowOffset = textAttributes.textShadowOffset.has_value()
       ? textAttributes.textShadowOffset
       : textShadowOffset;
-  textShadowRadius = !std::isnan(textAttributes.textShadowRadius)
+  textShadowRadius = hasValue(textAttributes.textShadowRadius)
       ? textAttributes.textShadowRadius
       : textShadowRadius;
   textShadowColor = textAttributes.textShadowColor
@@ -184,8 +191,8 @@ TextAttributes TextAttributes::defaultTextAttributes() {
     // Non-obvious (can be different among platforms) default text attributes.
     defaultAttrs.foregroundColor = blackColor();
     defaultAttrs.backgroundColor = clearColor();
-    defaultAttrs.fontSize = 14.0;
-    defaultAttrs.fontSizeMultiplier = 1.0;
+    defaultAttrs.fontSize = 14.0f;
+    defaultAttrs.fontSizeMultiplier = 1.0f;
     return defaultAttrs;
   }();
   return textAttributes;
@@ -286,6 +293,59 @@ SharedDebugStringConvertibleList TextAttributes::getDebugProps() const {
           textAttributes.accessibilityRole),
       debugStringConvertibleItem("role", role, textAttributes.role),
   };
+}
+#endif
+
+void TextAttributes::resolveProperties(const DynamicResolver& resolver) {
+  resolver.resolve(fnv1a("fontSize"), fontSize);
+  resolver.resolve(fnv1a("fontSizeMultiplier"), fontSizeMultiplier);
+  resolver.resolve(fnv1a("maxFontSizeMultiplier"), maxFontSizeMultiplier);
+  resolver.resolve(fnv1a("letterSpacing"), letterSpacing);
+  resolver.resolve(fnv1a("lineHeight"), lineHeight);
+  resolver.resolve(fnv1a("textShadowRadius"), textShadowRadius);
+}
+
+void TextAttributes::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  auto addById = [&](auto id) {
+    if (map.contains(id))
+      ids.insert(id);
+  };
+  addById(fnv1a("fontSize"));
+  addById(fnv1a("fontSizeMultiplier"));
+  addById(fnv1a("maxFontSizeMultiplier"));
+  addById(fnv1a("letterSpacing"));
+  addById(fnv1a("lineHeight"));
+  addById(fnv1a("textShadowRadius"));
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic TextAttributes::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  folly::dynamic props = folly::dynamic::object();
+  if (resolver.propertiesMap.contains(fnv1a("fontSize"))) {
+    props["fontSize"] = resolver.resolveNumber(fnv1a("fontSize"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("fontSizeMultiplier"))) {
+    props["fontSizeMultiplier"] =
+        resolver.resolveNumber(fnv1a("fontSizeMultiplier"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("maxFontSizeMultiplier"))) {
+    props["maxFontSizeMultiplier"] =
+        resolver.resolveNumber(fnv1a("maxFontSizeMultiplier"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("letterSpacing"))) {
+    props["letterSpacing"] = resolver.resolveNumber(fnv1a("letterSpacing"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("lineHeight"))) {
+    props["lineHeight"] = resolver.resolveNumber(fnv1a("lineHeight"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("textShadowRadius"))) {
+    props["textShadowRadius"] =
+        resolver.resolveNumber(fnv1a("textShadowRadius"));
+  }
+  return props;
 }
 #endif
 

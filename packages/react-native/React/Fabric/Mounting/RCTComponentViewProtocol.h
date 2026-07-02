@@ -9,6 +9,7 @@
 
 #import <react/renderer/componentregistry/ComponentDescriptorProvider.h>
 #import <react/renderer/core/EventEmitter.h>
+#import <react/renderer/core/LayoutContext.h>
 #import <react/renderer/core/LayoutMetrics.h>
 #import <react/renderer/core/Props.h>
 #import <react/renderer/core/State.h>
@@ -83,6 +84,13 @@ typedef NS_OPTIONS(NSInteger, RNComponentViewUpdateMask) {
  * events when needed.
  */
 - (void)updateEventEmitter:(const facebook::react::EventEmitter::Shared &)eventEmitter;
+
+/*
+ * Called for updating layout context (viewport, font scale, RTL flags, etc.)
+ * for this surface. Invoked before `updateProps` / `updateLayoutMetrics` when
+ * processing a mounting transaction.
+ */
+- (void)updateLayoutContext:(const facebook::react::LayoutContext &)layoutContext;
 
 /*
  * Called for updating component's layout metrics.

@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/PropsMacros.h>
 #include <react/renderer/core/PropsParserContext.h>
 #include <react/renderer/core/RawProps.h>
@@ -24,16 +26,19 @@ namespace facebook::react {
 /*
  * Represents the most generic props object.
  */
-class Props : public virtual Sealable, public virtual DebugStringConvertible {
+class Props : public virtual Sealable,
+              public virtual DebugStringConvertible,
+              public virtual DynamicPropertiesHolder {
  public:
   using Shared = std::shared_ptr<const Props>;
 
   Props() = default;
   Props(
-      const PropsParserContext &context,
-      const Props &sourceProps,
-      const RawProps &rawProps,
-      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const PropsParserContext& context,
+      const Props& sourceProps,
+      const RawProps& rawProps,
+      const std::function<bool(const std::string&)>& filterObjectKeys =
+          nullptr);
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   virtual ~Props() override = default;
@@ -41,8 +46,8 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
   virtual ~Props() = default;
 #endif
 
-  Props(const Props &other) = delete;
-  Props &operator=(const Props &other) = delete;
+  Props(const Props& other) = delete;
+  Props& operator=(const Props& other) = delete;
 
   /**
    * Set a prop value via iteration (see enableIterator above).
@@ -54,24 +59,45 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
    * multiple times for different values in the hierarchy. For example, if
    * ViewProps uses "propX", Props may also use "propX".
    */
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
+
+  bool hasResolvableStyleValues() const;
+
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
+      std::unordered_set<DynamicPropertyId>& ids) const override;
+  void sweepCalcExpressions();
 
   std::string nativeId;
+
+  DynamicPropertiesMap calcExpressions;
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic rawProps = folly::dynamic::object();
 
   void initializeDynamicProps(
-      const Props &sourceProps,
-      const RawProps &rawProps,
-      [[maybe_unused]] const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const Props& sourceProps,
+      const RawProps& rawProps,
+      [[maybe_unused]] const std::function<bool(const std::string&)>&
+          filterObjectKeys = nullptr);
 
   virtual ComponentName getDiffPropsImplementationTarget() const;
 
-  virtual folly::dynamic getDiffProps(const Props *prevProps) const
-  {
+  virtual folly::dynamic getDiffProps(
+      const Props* prevProps,
+      const LayoutMetrics* layoutMetrics = nullptr,
+      const LayoutContext* layoutContext = nullptr) const {
     return folly::dynamic::object();
+  }
+
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override {
+    return rawProps;
   }
 #endif
 
@@ -82,6 +108,8 @@ class Props : public virtual Sealable, public virtual DebugStringConvertible {
   SharedDebugStringConvertibleList getDebugProps() const override;
 
 #endif
+protected:
+  bool needsToResolveStyleValues{false};
 };
 
 } // namespace facebook::react

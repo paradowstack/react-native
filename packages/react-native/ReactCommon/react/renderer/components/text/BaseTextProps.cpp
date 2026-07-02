@@ -38,13 +38,13 @@ static TextAttributes convertRawProp(
       "fontFamily",
       sourceTextAttributes.fontFamily,
       defaultTextAttributes.fontFamily);
-  textAttributes.fontSize = convertRawProp(
+  textAttributes.fontSize = convertRawPropWithCalc(
       context,
       rawProps,
       "fontSize",
       sourceTextAttributes.fontSize,
       defaultTextAttributes.fontSize);
-  textAttributes.fontSizeMultiplier = convertRawProp(
+  textAttributes.fontSizeMultiplier = convertRawPropWithCalc(
       context,
       rawProps,
       "fontSizeMultiplier",
@@ -74,7 +74,7 @@ static TextAttributes convertRawProp(
       "allowFontScaling",
       sourceTextAttributes.allowFontScaling,
       defaultTextAttributes.allowFontScaling);
-  textAttributes.maxFontSizeMultiplier = convertRawProp(
+  textAttributes.maxFontSizeMultiplier = convertRawPropWithCalc(
       context,
       rawProps,
       "maxFontSizeMultiplier",
@@ -86,7 +86,7 @@ static TextAttributes convertRawProp(
       "dynamicTypeRamp",
       sourceTextAttributes.dynamicTypeRamp,
       defaultTextAttributes.dynamicTypeRamp);
-  textAttributes.letterSpacing = convertRawProp(
+  textAttributes.letterSpacing = convertRawPropWithCalc(
       context,
       rawProps,
       "letterSpacing",
@@ -100,7 +100,7 @@ static TextAttributes convertRawProp(
       defaultTextAttributes.textTransform);
 
   // Paragraph
-  textAttributes.lineHeight = convertRawProp(
+  textAttributes.lineHeight = convertRawPropWithCalc(
       context,
       rawProps,
       "lineHeight",
@@ -158,7 +158,7 @@ static TextAttributes convertRawProp(
       "textShadowOffset",
       sourceTextAttributes.textShadowOffset,
       defaultTextAttributes.textShadowOffset);
-  textAttributes.textShadowRadius = convertRawProp(
+  textAttributes.textShadowRadius = convertRawPropWithCalc(
       context,
       rawProps,
       "textShadowRadius",
@@ -347,6 +347,15 @@ SharedDebugStringConvertibleList BaseTextProps::getDebugProps() const {
 }
 #endif
 
+void BaseTextProps::resolveProperties(const DynamicResolver& resolver) {
+  textAttributes.resolveProperties(resolver);
+}
+void BaseTextProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  textAttributes.collectLiveResolvableIds(map, ids);
+}
+
 #ifdef RN_SERIALIZABLE_STATE
 
 static folly::dynamic toDynamic(const Size& size) {
@@ -354,6 +363,11 @@ static folly::dynamic toDynamic(const Size& size) {
   sizeResult["width"] = size.width;
   sizeResult["height"] = size.height;
   return sizeResult;
+}
+
+folly::dynamic BaseTextProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  return textAttributes.getResolvedProps(resolver);
 }
 
 void BaseTextProps::appendTextAttributesProps(

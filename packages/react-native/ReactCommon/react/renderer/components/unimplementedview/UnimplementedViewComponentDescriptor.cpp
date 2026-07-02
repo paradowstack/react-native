@@ -39,4 +39,12 @@ Props::Shared UnimplementedViewComponentDescriptor::cloneProps(
   return unimplementedViewProps;
 };
 
+Props::Shared UnimplementedViewComponentDescriptor::cloneResolvedProps(
+    const PropsParserContext &context, 
+    const Props::Shared &props, 
+    RawProps rawProps,
+    [[maybe_unused]] DynamicResolveContext resolveContext) const {
+  return cloneProps(context, props, std::move(rawProps));
+}
+
 } // namespace facebook::react

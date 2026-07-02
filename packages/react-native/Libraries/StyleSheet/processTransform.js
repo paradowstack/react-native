@@ -25,7 +25,7 @@ function processTransform(
   transform: Array<Object> | string,
 ): Array<Object> | Array<number> {
   if (typeof transform === 'string') {
-    const regex = new RegExp(/(\w+)\(([^)]+)\)/g);
+    const regex = new RegExp(/(\w+)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g);
     const transformArray: Array<Object> = [];
     let matches;
 
@@ -132,7 +132,9 @@ const _getKeyAndValueFromCSSTransform: (
       }
 
       return {key, value};
-
+    case 'scale':
+      const arg = typeof args === 'number' ? Number(args) : args;
+      return {key, value: arg};
     default:
       return {key, value: !isNaN(args) ? Number(args) : args};
   }
@@ -240,7 +242,8 @@ function _validateTransform(
     case 'translateY':
       invariant(
         typeof value === 'number' ||
-          (typeof value === 'string' && value.endsWith('%')),
+          (typeof value === 'string' &&
+            (value.endsWith('%') || value.startsWith('calc('))),
         'Transform with key of "%s" must be number or a percentage. Passed value: %s.',
         key,
         stringifySafe(transformation),
@@ -250,8 +253,9 @@ function _validateTransform(
     case 'scaleX':
     case 'scaleY':
       invariant(
-        typeof value === 'number',
-        'Transform with key of "%s" must be a number: %s',
+        typeof value === 'number' ||
+          (typeof value === 'string' && value.startsWith('calc(')),
+        'Transform with key of "%s" must be a number or a calc expression: %s',
         key,
         stringifySafe(transformation),
       );

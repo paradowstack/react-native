@@ -101,29 +101,41 @@ TEST(ConversionsTest, unprocessed_filter_string) {
 
   EXPECT_EQ(filters[0].type, FilterType::DropShadow);
   EXPECT_TRUE(std::holds_alternative<DropShadowParams>(filters[0].parameters));
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetX, 10);
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetY, -2);
   EXPECT_EQ(
-      std::get<DropShadowParams>(filters[0].parameters).standardDeviation, 0.5);
+      std::get<DropShadowParams>(filters[0].parameters).offsetX.asFloat(), 10);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters).offsetY.asFloat(), -2);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters)
+          .standardDeviation.asFloat(),
+      0.5);
   EXPECT_EQ(
       std::get<DropShadowParams>(filters[0].parameters).color,
       colorFromRGBA(255, 255, 255, 255));
 
   EXPECT_EQ(filters[1].type, FilterType::Blur);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[1].parameters));
-  EXPECT_EQ(std::get<Float>(filters[1].parameters), 5.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[1].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[1].parameters).asFloat(), 5.0f);
 
   EXPECT_EQ(filters[2].type, FilterType::HueRotate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[2].parameters));
-  EXPECT_EQ(std::get<Float>(filters[2].parameters), 90.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[2].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[2].parameters).asFloat(), 90.0f);
 
   EXPECT_EQ(filters[3].type, FilterType::Saturate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[3].parameters));
-  EXPECT_EQ(std::get<Float>(filters[3].parameters), 2.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[3].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[3].parameters).asFloat(), 2.0f);
 
   EXPECT_EQ(filters[4].type, FilterType::Brightness);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[4].parameters));
-  EXPECT_EQ(std::get<Float>(filters[4].parameters), 0.5f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[4].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[4].parameters).asFloat(), 0.5f);
 }
 
 TEST(ConversionsTest, unprocessed_filter_objects) {
@@ -146,38 +158,54 @@ TEST(ConversionsTest, unprocessed_filter_objects) {
 
   EXPECT_EQ(filters[0].type, FilterType::DropShadow);
   EXPECT_TRUE(std::holds_alternative<DropShadowParams>(filters[0].parameters));
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetX, 10);
-  EXPECT_EQ(std::get<DropShadowParams>(filters[0].parameters).offsetY, -2);
   EXPECT_EQ(
-      std::get<DropShadowParams>(filters[0].parameters).standardDeviation, 0.5);
+      std::get<DropShadowParams>(filters[0].parameters).offsetX.asFloat(), 10);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters).offsetY.asFloat(), -2);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[0].parameters)
+          .standardDeviation.asFloat(),
+      0.5);
   EXPECT_EQ(
       std::get<DropShadowParams>(filters[0].parameters).color, SharedColor{});
 
   EXPECT_EQ(filters[1].type, FilterType::DropShadow);
   EXPECT_TRUE(std::holds_alternative<DropShadowParams>(filters[1].parameters));
-  EXPECT_EQ(std::get<DropShadowParams>(filters[1].parameters).offsetX, 2);
-  EXPECT_EQ(std::get<DropShadowParams>(filters[1].parameters).offsetY, 0);
   EXPECT_EQ(
-      std::get<DropShadowParams>(filters[1].parameters).standardDeviation, 0.5);
+      std::get<DropShadowParams>(filters[1].parameters).offsetX.asFloat(), 2);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[1].parameters).offsetY.asFloat(), 0);
+  EXPECT_EQ(
+      std::get<DropShadowParams>(filters[1].parameters)
+          .standardDeviation.asFloat(),
+      0.5);
   EXPECT_EQ(
       std::get<DropShadowParams>(filters[1].parameters).color,
       colorFromRGBA(255, 255, 255, 255));
 
   EXPECT_EQ(filters[2].type, FilterType::Blur);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[2].parameters));
-  EXPECT_EQ(std::get<Float>(filters[2].parameters), 5.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[2].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[2].parameters).asFloat(), 5.0f);
 
   EXPECT_EQ(filters[3].type, FilterType::HueRotate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[3].parameters));
-  EXPECT_EQ(std::get<Float>(filters[3].parameters), 90.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[3].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[3].parameters).asFloat(), 90.0f);
 
   EXPECT_EQ(filters[4].type, FilterType::Saturate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[4].parameters));
-  EXPECT_EQ(std::get<Float>(filters[4].parameters), 2.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[4].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[4].parameters).asFloat(), 2.0f);
 
   EXPECT_EQ(filters[5].type, FilterType::Brightness);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[5].parameters));
-  EXPECT_EQ(std::get<Float>(filters[5].parameters), 0.5f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[5].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[5].parameters).asFloat(), 0.5f);
 }
 
 TEST(ConversionsTest, unprocessed_filter_objects_negative_shadow_blur) {
@@ -226,8 +254,10 @@ TEST(ConversionsTest, unprocessed_filter_objects_negative_hue_rotate) {
   EXPECT_EQ(filters.size(), 1);
 
   EXPECT_EQ(filters[0].type, FilterType::HueRotate);
-  EXPECT_TRUE(std::holds_alternative<Float>(filters[0].parameters));
-  EXPECT_EQ(std::get<Float>(filters[0].parameters), -5.0f);
+  EXPECT_TRUE(
+      std::holds_alternative<UntypedNumericValue>(filters[0].parameters));
+  EXPECT_EQ(
+      std::get<UntypedNumericValue>(filters[0].parameters).asFloat(), -5.0f);
 }
 
 TEST(ConversionsTest, unprocessed_filter_objects_multiple_objects) {
@@ -262,20 +292,21 @@ TEST(ConversionsTest, unprocessed_transform_css_string) {
   // rotate(45deg) -> Rotate, z = 45 * PI / 180
   EXPECT_EQ(result.operations[0].type, TransformOperationType::Rotate);
   EXPECT_NEAR(
-      result.operations[0].z.value,
+      result.operations[0].z.asFloat(),
       static_cast<float>(45.0 * M_PI / 180.0),
       0.001f);
 
   // scale(2) -> Scale, x=2, y=2
   EXPECT_EQ(result.operations[1].type, TransformOperationType::Scale);
-  EXPECT_EQ(result.operations[1].x.value, 2.0f);
-  EXPECT_EQ(result.operations[1].y.value, 2.0f);
+  EXPECT_TRUE(result.operations[1].x.isNumber());
+  EXPECT_EQ(result.operations[1].x.asFloat(), 2.0f);
+  EXPECT_EQ(result.operations[1].y.asFloat(), 2.0f);
 
   // translateX(10px) -> Translate, x=10
   EXPECT_EQ(result.operations[2].type, TransformOperationType::Translate);
-  EXPECT_EQ(result.operations[2].x.value, 10.0f);
-  EXPECT_EQ(result.operations[2].x.unit, UnitType::Point);
-  EXPECT_EQ(result.operations[2].y.value, 0.0f);
+  EXPECT_TRUE(result.operations[2].x.isLength());
+  EXPECT_EQ(result.operations[2].x.asFloat(), 10.0f);
+  EXPECT_EQ(result.operations[2].y.asFloat(), 0.0f);
 }
 
 TEST(ConversionsTest, unprocessed_transform_css_translate_percent) {
@@ -284,10 +315,10 @@ TEST(ConversionsTest, unprocessed_transform_css_translate_percent) {
 
   EXPECT_EQ(result.operations.size(), 1);
   EXPECT_EQ(result.operations[0].type, TransformOperationType::Translate);
-  EXPECT_EQ(result.operations[0].x.value, 10.0f);
-  EXPECT_EQ(result.operations[0].x.unit, UnitType::Point);
-  EXPECT_EQ(result.operations[0].y.value, 50.0f);
-  EXPECT_EQ(result.operations[0].y.unit, UnitType::Percent);
+  EXPECT_TRUE(result.operations[0].x.isLength());
+  EXPECT_EQ(result.operations[0].x.asFloat(), 10.0f);
+  EXPECT_TRUE(result.operations[0].y.isPercentage());
+  EXPECT_EQ(result.operations[0].y.asFloat(), 50.0f);
 }
 
 TEST(ConversionsTest, unprocessed_transform_css_perspective) {
@@ -296,7 +327,8 @@ TEST(ConversionsTest, unprocessed_transform_css_perspective) {
 
   EXPECT_EQ(result.operations.size(), 1);
   EXPECT_EQ(result.operations[0].type, TransformOperationType::Perspective);
-  EXPECT_EQ(result.operations[0].x.value, 500.0f);
+  EXPECT_TRUE(result.operations[0].x.isLength());
+  EXPECT_EQ(result.operations[0].x.asFloat(), 500.0f);
 }
 
 TEST(ConversionsTest, unprocessed_transform_css_invalid_string) {
@@ -328,7 +360,7 @@ TEST(ConversionsTest, unprocessed_transform_rawvalue_array) {
   EXPECT_EQ(result.operations.size(), 2);
   EXPECT_EQ(result.operations[0].type, TransformOperationType::Rotate);
   EXPECT_EQ(result.operations[1].type, TransformOperationType::Scale);
-  EXPECT_EQ(result.operations[1].x.value, 2.0f);
+  EXPECT_EQ(result.operations[1].x.asFloat(), 2.0f);
 }
 
 TEST(ConversionsTest, unprocessed_transform_rawvalue_matrix) {
@@ -354,18 +386,18 @@ TEST(ConversionsTest, unprocessed_transform_rawvalue_translate_percent) {
 
   EXPECT_EQ(result.operations.size(), 1);
   EXPECT_EQ(result.operations[0].type, TransformOperationType::Translate);
-  EXPECT_EQ(result.operations[0].x.value, 50.0f);
-  EXPECT_EQ(result.operations[0].x.unit, UnitType::Percent);
+  EXPECT_TRUE(result.operations[0].x.isPercentage());
+  EXPECT_EQ(result.operations[0].x.asFloat(), 50.0f);
 }
 
 TEST(ConversionsTest, unprocessed_transform_origin_css_top_left) {
   TransformOrigin result;
   parseUnprocessedTransformOriginString("top left", result);
 
-  EXPECT_EQ(result.xy[0].value, 0.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Percent);
-  EXPECT_EQ(result.xy[1].value, 0.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isPercentage());
+  EXPECT_EQ(result.xy[0].asFloat(), 0.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 0.0f);
   EXPECT_EQ(result.z, 0.0f);
 }
 
@@ -373,10 +405,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_css_center) {
   TransformOrigin result;
   parseUnprocessedTransformOriginString("center", result);
 
-  EXPECT_EQ(result.xy[0].value, 50.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Percent);
-  EXPECT_EQ(result.xy[1].value, 50.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isPercentage());
+  EXPECT_EQ(result.xy[0].asFloat(), 50.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 50.0f);
   EXPECT_EQ(result.z, 0.0f);
 }
 
@@ -384,10 +416,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_css_right_bottom) {
   TransformOrigin result;
   parseUnprocessedTransformOriginString("right bottom", result);
 
-  EXPECT_EQ(result.xy[0].value, 100.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Percent);
-  EXPECT_EQ(result.xy[1].value, 100.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isPercentage());
+  EXPECT_EQ(result.xy[0].asFloat(), 100.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 100.0f);
   EXPECT_EQ(result.z, 0.0f);
 }
 
@@ -395,10 +427,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_css_length_percent) {
   TransformOrigin result;
   parseUnprocessedTransformOriginString("10px 50%", result);
 
-  EXPECT_EQ(result.xy[0].value, 10.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Point);
-  EXPECT_EQ(result.xy[1].value, 50.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isLength());
+  EXPECT_EQ(result.xy[0].asFloat(), 10.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 50.0f);
   EXPECT_EQ(result.z, 0.0f);
 }
 
@@ -409,10 +441,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_processed_array) {
   parseProcessedTransformOrigin(
       PropsParserContext{-1, ContextContainer{}}, value, result);
 
-  EXPECT_EQ(result.xy[0].value, 50.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Percent);
-  EXPECT_EQ(result.xy[1].value, 50.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isPercentage());
+  EXPECT_EQ(result.xy[0].asFloat(), 50.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 50.0f);
   EXPECT_EQ(result.z, 0.0f);
 }
 
@@ -422,10 +454,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_rawvalue_string) {
   parseUnprocessedTransformOrigin(
       PropsParserContext{-1, ContextContainer{}}, value, result);
 
-  EXPECT_EQ(result.xy[0].value, 0.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Percent);
-  EXPECT_EQ(result.xy[1].value, 0.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isPercentage());
+  EXPECT_EQ(result.xy[0].asFloat(), 0.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 0.0f);
   EXPECT_EQ(result.z, 0.0f);
 }
 
@@ -435,10 +467,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_rawvalue_array) {
   parseUnprocessedTransformOrigin(
       PropsParserContext{-1, ContextContainer{}}, value, result);
 
-  EXPECT_EQ(result.xy[0].value, 10.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Point);
-  EXPECT_EQ(result.xy[1].value, 50.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isLength());
+  EXPECT_EQ(result.xy[0].asFloat(), 10.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 50.0f);
   EXPECT_EQ(result.z, 5.0f);
 }
 
@@ -448,10 +480,10 @@ TEST(ConversionsTest, unprocessed_transform_origin_rawvalue_string_with_z) {
   parseUnprocessedTransformOrigin(
       PropsParserContext{-1, ContextContainer{}}, value, result);
 
-  EXPECT_EQ(result.xy[0].value, 50.0f);
-  EXPECT_EQ(result.xy[0].unit, UnitType::Percent);
-  EXPECT_EQ(result.xy[1].value, 50.0f);
-  EXPECT_EQ(result.xy[1].unit, UnitType::Percent);
+  EXPECT_TRUE(result.xy[0].isPercentage());
+  EXPECT_EQ(result.xy[0].asFloat(), 50.0f);
+  EXPECT_TRUE(result.xy[1].isPercentage());
+  EXPECT_EQ(result.xy[1].asFloat(), 50.0f);
   EXPECT_EQ(result.z, 15.0f);
 }
 

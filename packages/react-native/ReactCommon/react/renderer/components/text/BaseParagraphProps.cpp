@@ -157,4 +157,34 @@ SharedDebugStringConvertibleList BaseParagraphProps::getDebugProps() const {
           debugStringConvertibleItem("selectable", isSelectable)};
 }
 #endif
+
+void BaseParagraphProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
+  }
+  ViewProps::resolveProperties(resolver);
+
+  paragraphAttributes.resolveProperties(resolver);
+  textAttributes.resolveProperties(resolver);
+}
+
+void BaseParagraphProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  ViewProps::collectLiveResolvableIds(map, ids);
+
+  paragraphAttributes.collectLiveResolvableIds(map, ids);
+  textAttributes.collectLiveResolvableIds(map, ids);
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic BaseParagraphProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  auto props = ViewProps::getResolvedProps(resolver);
+  props.update(paragraphAttributes.getResolvedProps(resolver));
+  props.update(textAttributes.getResolvedProps(resolver));
+  return props;
+}
+#endif
+
 } // namespace facebook::react

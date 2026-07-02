@@ -8,6 +8,7 @@
 #import <UIKit/UIKit.h>
 
 #import <React/RCTComponentViewProtocol.h>
+#import <react/renderer/core/LayoutContext.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -29,6 +30,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)updateState:(const facebook::react::State::Shared &)state
            oldState:(const facebook::react::State::Shared &)oldState;
+
+- (void)updateLayoutContext:(const facebook::react::LayoutContext &)layoutContext;
 
 - (void)updateLayoutMetrics:(const facebook::react::LayoutMetrics &)layoutMetrics
            oldLayoutMetrics:(const facebook::react::LayoutMetrics &)oldLayoutMetrics;

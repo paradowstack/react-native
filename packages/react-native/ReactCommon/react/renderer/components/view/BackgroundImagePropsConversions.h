@@ -15,29 +15,60 @@
 namespace facebook::react {
 
 void parseProcessedBackgroundImage(
-    const PropsParserContext &context,
-    const RawValue &value,
-    std::vector<BackgroundImage> &result);
+    const PropsParserContext& context,
+    const RawValue& value,
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path);
 
 void parseUnprocessedBackgroundImageList(
-    const PropsParserContext &context,
-    const std::vector<RawValue> &value,
-    std::vector<BackgroundImage> &result);
+    const PropsParserContext& context,
+    const std::vector<RawValue>& value,
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path);
 
-void parseUnprocessedBackgroundImageString(const std::string &value, std::vector<BackgroundImage> &result);
+void parseUnprocessedBackgroundImageString(
+    const PropsParserContext& context,
+    const std::string& value,
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path);
 
-inline void fromRawValue(const PropsParserContext &context, const RawValue &value, std::vector<BackgroundImage> &result)
-{
+inline void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    std::vector<BackgroundImage>& result) {
+  DynamicPropertyPath path;
   if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
     if (value.hasType<std::string>()) {
-      parseUnprocessedBackgroundImageString((std::string)value, result);
+      parseUnprocessedBackgroundImageString(
+          context, (std::string)value, result, path);
     } else if (value.hasType<std::vector<RawValue>>()) {
-      parseUnprocessedBackgroundImageList(context, (std::vector<RawValue>)value, result);
+      parseUnprocessedBackgroundImageList(
+          context, (std::vector<RawValue>)value, result, path);
     } else {
       result = {};
     }
   } else {
-    parseProcessedBackgroundImage(context, value, result);
+    parseProcessedBackgroundImage(context, value, result, path);
+  }
+}
+
+inline void fromRawValueWithCalc(
+    DynamicPropertyPath& path,
+    const PropsParserContext& context,
+    const RawValue& value,
+    std::vector<BackgroundImage>& result) {
+  if (ReactNativeFeatureFlags::enableNativeCSSParsing()) {
+    if (value.hasType<std::string>()) {
+      parseUnprocessedBackgroundImageString(
+          context, (std::string)value, result, path);
+    } else if (value.hasType<std::vector<RawValue>>()) {
+      parseUnprocessedBackgroundImageList(
+          context, (std::vector<RawValue>)value, result, path);
+    } else {
+      result = {};
+    }
+  } else {
+    parseProcessedBackgroundImage(context, value, result, path);
   }
 }
 

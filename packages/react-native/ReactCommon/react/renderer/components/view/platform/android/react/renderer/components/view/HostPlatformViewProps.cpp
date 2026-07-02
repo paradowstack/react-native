@@ -9,6 +9,8 @@
 
 #include <algorithm>
 
+#include <folly/dynamic.h>
+#include <folly/json.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/renderer/components/view/accessibilityPropsConversions.h>
 #include <react/renderer/components/view/conversions.h>
@@ -490,7 +492,9 @@ ComponentName HostPlatformViewProps::getDiffPropsImplementationTarget() const {
 }
 
 folly::dynamic HostPlatformViewProps::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   folly::dynamic result = folly::dynamic::object();
 
   static const auto defaultProps = HostPlatformViewProps();
@@ -545,10 +549,6 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
     result["outlineColor"] = *outlineColor;
   }
 
-  if (outlineOffset != oldProps->outlineOffset) {
-    result["outlineOffset"] = outlineOffset;
-  }
-
   if (outlineStyle != oldProps->outlineStyle) {
     switch (outlineStyle) {
       case OutlineStyle::Solid:
@@ -563,18 +563,19 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
     }
   }
 
-  if (outlineWidth != oldProps->outlineWidth) {
-    result["outlineWidth"] = outlineWidth;
-  }
-
   if (shadowColor != oldProps->shadowColor) {
     result["shadowColor"] = *shadowColor;
   }
 
+  if (outlineOffset != oldProps->outlineOffset) {
+    result["outlineOffset"] = outlineOffset;
+  }
+  if (outlineWidth != oldProps->outlineWidth) {
+    result["outlineWidth"] = outlineWidth;
+  }
   if (shadowOpacity != oldProps->shadowOpacity) {
     result["shadowOpacity"] = shadowOpacity;
   }
-
   if (shadowRadius != oldProps->shadowRadius) {
     result["shadowRadius"] = shadowRadius;
   }
@@ -605,7 +606,11 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
   }
 
   if (boxShadow != oldProps->boxShadow) {
-    result["boxShadow"] = toDynamic(boxShadow);
+    folly::dynamic resolvedBoxShadow = folly::dynamic::array();
+    for (const auto& shadow : boxShadow) {
+      resolvedBoxShadow.push_back(toDynamic(shadow));
+    }
+    result["boxShadow"] = std::move(resolvedBoxShadow);
   }
 
   if (filter != oldProps->filter) {
@@ -844,9 +849,13 @@ folly::dynamic HostPlatformViewProps::getDiffProps(
         "onTouchCancel");
   }
 
+  LayoutContext lc{};
+  if (layoutContext) {
+    lc = *layoutContext;
+  }
   // Borders
-  auto borderWidths = getBorderWidths();
-  auto oldBorderWidths = oldProps->getBorderWidths();
+  auto borderWidths = getBorderWidths(lc);
+  auto oldBorderWidths = oldProps->getBorderWidths(lc);
   if (borderWidths != oldBorderWidths) {
     updateBorderWidthProps(result, borderWidths, oldBorderWidths);
   }

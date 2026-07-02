@@ -162,21 +162,21 @@
 
   if (std::holds_alternative<facebook::react::BackgroundSizeLengthPercentage>(backgroundSize)) {
     auto backgroundSizeLengthPercentage = std::get<facebook::react::BackgroundSizeLengthPercentage>(backgroundSize);
-    if (std::holds_alternative<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.x)) {
-      auto xValue = std::get<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.x);
-      if (xValue.unit == facebook::react::UnitType::Percent) {
-        itemFinalSize.width = xValue.value * positioningAreaSize.width / 100.0;
+    if (std::holds_alternative<facebook::react::UntypedNumericValue>(backgroundSizeLengthPercentage.x)) {
+      auto xValue = std::get<facebook::react::UntypedNumericValue>(backgroundSizeLengthPercentage.x);
+      if (xValue.isPercentage()) {
+        itemFinalSize.width = xValue.asFloat() * positioningAreaSize.width / 100.0;
       } else {
-        itemFinalSize.width = xValue.value;
+        itemFinalSize.width = xValue.asFloat();
       }
     }
 
-    if (std::holds_alternative<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.y)) {
-      auto yValue = std::get<facebook::react::ValueUnit>(backgroundSizeLengthPercentage.y);
-      if (yValue.unit == facebook::react::UnitType::Percent) {
-        itemFinalSize.height = yValue.value * positioningAreaSize.height / 100.0;
+    if (std::holds_alternative<facebook::react::UntypedNumericValue>(backgroundSizeLengthPercentage.y)) {
+      auto yValue = std::get<facebook::react::UntypedNumericValue>(backgroundSizeLengthPercentage.y);
+      if (yValue.isPercentage()) {
+        itemFinalSize.height = yValue.asFloat() * positioningAreaSize.height / 100.0;
       } else {
-        itemFinalSize.height = yValue.value;
+        itemFinalSize.height = yValue.asFloat();
       }
     }
   }

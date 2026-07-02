@@ -91,6 +91,8 @@ class ShadowNodeTraits {
     // **Deprecated**: This trait is deprecated and will be removed in a future
     // version of React Native.
     DirtyYogaNode = 1 << 14,
+
+    CreatedWithResolvableProperties = 1 << 15,
   };
 
   /*

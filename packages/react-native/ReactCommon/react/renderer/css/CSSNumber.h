@@ -13,6 +13,8 @@
 
 namespace facebook::react {
 
+struct CSSCalc;
+
 /**
  * Representation of CSS <number> data type
  * https://www.w3.org/TR/css-values-4/#numbers
@@ -21,6 +23,8 @@ struct CSSNumber {
   float value{};
 
   constexpr bool operator==(const CSSNumber &rhs) const = default;
+
+  static constexpr std::optional<CSSNumber> fromCalc(const CSSCalc &calc);
 };
 
 template <>

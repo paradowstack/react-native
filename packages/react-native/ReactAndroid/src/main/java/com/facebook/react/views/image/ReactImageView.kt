@@ -44,6 +44,7 @@ import com.facebook.imagepipeline.request.ImageRequest
 import com.facebook.imagepipeline.request.ImageRequest.RequestLevel
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.facebook.imagepipeline.request.Postprocessor
+import com.facebook.react.bridge.Dynamic
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
@@ -227,18 +228,14 @@ public class ReactImageView(
     BackgroundStyleApplicator.setBorderWidth(this, LogicalEdge.ALL, borderWidth)
   }
 
-  public fun setBorderRadius(borderRadius: Float) {
-    val radius =
-        if (borderRadius.isNaN()) null
-        else LengthPercentage(borderRadius.pxToDp(), LengthPercentageType.POINT)
-    BackgroundStyleApplicator.setBorderRadius(this, BorderRadiusProp.BORDER_RADIUS, radius)
+  public fun setBorderRadius(borderRadius: Dynamic) {
+    val borderRadius = LengthPercentage.setFromDynamic(borderRadius)
+    BackgroundStyleApplicator.setBorderRadius(this, BorderRadiusProp.BORDER_RADIUS, borderRadius)
   }
 
-  public fun setBorderRadius(borderRadius: Float, position: Int) {
-    val radius =
-        if (borderRadius.isNaN()) null
-        else LengthPercentage(borderRadius.pxToDp(), LengthPercentageType.POINT)
-    BackgroundStyleApplicator.setBorderRadius(this, BorderRadiusProp.values()[position], radius)
+  public fun setBorderRadius(borderRadius: Dynamic, position: Int) {
+    val borderRadius = LengthPercentage.setFromDynamic(borderRadius)
+    BackgroundStyleApplicator.setBorderRadius(this, BorderRadiusProp.values()[position], borderRadius)
   }
 
   public fun setScaleType(scaleType: ScalingUtils.ScaleType) {

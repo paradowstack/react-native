@@ -14,6 +14,7 @@
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/core/EventEmitter.h>
+#import <react/renderer/core/LayoutContext.h>
 #import <react/renderer/core/LayoutMetrics.h>
 #import <react/renderer/core/Props.h>
 
@@ -25,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RCTViewComponentView : UIView <RCTComponentViewProtocol, RCTTouchableComponentViewProtocol> {
  @protected
   facebook::react::LayoutMetrics _layoutMetrics;
+  facebook::react::LayoutContext _layoutContext;
   facebook::react::SharedViewProps _props;
   facebook::react::SharedViewEventEmitter _eventEmitter;
 }
@@ -70,6 +72,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)updateProps:(const facebook::react::Props::Shared &)props
            oldProps:(const facebook::react::Props::Shared &)oldProps NS_REQUIRES_SUPER;
 - (void)updateEventEmitter:(const facebook::react::EventEmitter::Shared &)eventEmitter NS_REQUIRES_SUPER;
+- (void)updateLayoutContext:(const facebook::react::LayoutContext &)layoutContext NS_REQUIRES_SUPER;
 - (void)updateLayoutMetrics:(const facebook::react::LayoutMetrics &)layoutMetrics
            oldLayoutMetrics:(const facebook::react::LayoutMetrics &)oldLayoutMetrics NS_REQUIRES_SUPER;
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask NS_REQUIRES_SUPER;

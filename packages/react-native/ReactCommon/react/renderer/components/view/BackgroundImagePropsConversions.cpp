@@ -10,6 +10,7 @@
 #include <glog/logging.h>
 #include <react/debug/react_native_expect.h>
 #include <react/renderer/components/view/CSSConversions.h>
+#include <react/renderer/components/view/NumericValueConversions.h>
 #include <react/renderer/components/view/conversions.h>
 #include <react/renderer/css/CSSBackgroundImage.h>
 #include <react/renderer/css/CSSLengthUnit.h>
@@ -18,7 +19,6 @@
 #include <react/renderer/graphics/ColorStop.h>
 #include <react/renderer/graphics/LinearGradient.h>
 #include <react/renderer/graphics/RadialGradient.h>
-#include <react/renderer/graphics/ValueUnit.h>
 
 namespace facebook::react {
 
@@ -42,7 +42,8 @@ inline GradientKeyword parseGradientKeyword(const std::string& keyword) {
 void parseProcessedBackgroundImage(
     const PropsParserContext& context,
     const RawValue& value,
-    std::vector<BackgroundImage>& result) {
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path) {
   react_native_expect(value.hasType<RawValueList>());
   if (!value.hasType<RawValueList>()) {
     result = {};
@@ -67,6 +68,9 @@ void parseProcessedBackgroundImage(
       continue;
     }
 
+    DynamicPropertyPath::ScopedLevel level{
+        path, std::to_string(backgroundImage.size())};
+
     std::string type = (std::string)(typeIt->second);
     std::vector<ColorStop> colorStops;
 
@@ -74,6 +78,8 @@ void parseProcessedBackgroundImage(
     if (colorStopsIt != rawBackgroundImageMap.end() &&
         colorStopsIt->second.hasType<RawValueList>()) {
       auto rawColorStops = static_cast<RawValueList>(colorStopsIt->second);
+      DynamicPropertyPath::ScopedLevel level{path, "colorStops"};
+
       for (const auto& stop : rawColorStops) {
         if (stop.hasType<RawValueMap>()) {
           auto stopMap = static_cast<RawValueMap>(stop);
@@ -81,14 +87,17 @@ void parseProcessedBackgroundImage(
           auto colorIt = stopMap.find("color");
 
           if (positionIt != stopMap.end() && colorIt != stopMap.end()) {
+            DynamicPropertyPath::ScopedLevel level{
+                path, std::to_string(colorStops.size())};
             ColorStop colorStop;
             if (positionIt->second.hasValue()) {
-              auto valueUnit = toValueUnit(positionIt->second);
-              if (!valueUnit) {
+              auto value = parseNumericValue<NumericValueLengthPercentage>(
+                  context, positionIt->second, path);
+              if (!value) {
                 result = {};
                 return;
               }
-              colorStop.position = valueUnit;
+              colorStop.position = *value;
             }
             if (colorIt->second.hasValue()) {
               fromRawValue(
@@ -167,11 +176,17 @@ void parseProcessedBackgroundImage(
           auto sizeMap = static_cast<RawValueMap>(sizeIt->second);
           auto xIt = sizeMap.find("x");
           auto yIt = sizeMap.find("y");
+          DynamicPropertyPath::ScopedLevel level{path, "size"};
+
           if (xIt != sizeMap.end() && yIt != sizeMap.end()) {
             radialGradient.size = RadialGradientSize{
                 .value = RadialGradientSize::Dimensions{
-                    .x = toValueUnit(xIt->second),
-                    .y = toValueUnit(yIt->second)}};
+                    .x = parseNumericValueAs<NumericValueLengthPercentage>(
+                             context, xIt->second, path.node("x"))
+                             .value_or(LengthPercentageValue{}),
+                    .y = parseNumericValueAs<NumericValueLengthPercentage>(
+                             context, yIt->second, path.node("y"))
+                             .value_or(LengthPercentageValue{})}};
           }
         }
 
@@ -186,18 +201,27 @@ void parseProcessedBackgroundImage(
           auto rightIt = positionMap.find("right");
 
           if (topIt != positionMap.end()) {
-            auto topValue = toValueUnit(topIt->second);
+            auto topValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                context, topIt->second, path.node("top"))
+                                .value_or(LengthPercentageValue{});
             radialGradient.position.top = topValue;
           } else if (bottomIt != positionMap.end()) {
-            auto bottomValue = toValueUnit(bottomIt->second);
+            auto bottomValue =
+                parseNumericValueAs<NumericValueLengthPercentage>(
+                    context, bottomIt->second, path.node("bottom"))
+                    .value_or(LengthPercentageValue{});
             radialGradient.position.bottom = bottomValue;
           }
 
           if (leftIt != positionMap.end()) {
-            auto leftValue = toValueUnit(leftIt->second);
+            auto leftValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                 context, leftIt->second, path.node("left"))
+                                 .value_or(LengthPercentageValue{});
             radialGradient.position.left = leftValue;
           } else if (rightIt != positionMap.end()) {
-            auto rightValue = toValueUnit(rightIt->second);
+            auto rightValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                  context, rightIt->second, path.node("right"))
+                                  .value_or(LengthPercentageValue{});
             radialGradient.position.right = rightValue;
           }
         }
@@ -217,7 +241,8 @@ void parseProcessedBackgroundImage(
 void parseUnprocessedBackgroundImageList(
     const PropsParserContext& context,
     const std::vector<RawValue>& value,
-    std::vector<BackgroundImage>& result) {
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path) {
   std::vector<BackgroundImage> backgroundImage{};
   for (const auto& rawBackgroundImageValue : value) {
     bool isMap = rawBackgroundImageValue.hasType<RawValueMap>();
@@ -235,6 +260,8 @@ void parseUnprocessedBackgroundImageList(
         !typeIt->second.hasType<std::string>()) {
       continue;
     }
+    DynamicPropertyPath::ScopedLevel level{
+        path, std::to_string(backgroundImage.size())};
 
     std::string type = (std::string)(typeIt->second);
     std::vector<ColorStop> colorStops;
@@ -259,7 +286,9 @@ void parseUnprocessedBackgroundImageList(
               return;
             }
             colorStops.push_back(
-                ColorStop{.color = std::move(color), .position = ValueUnit()});
+                ColorStop{
+                    .color = std::move(color),
+                    .position = LengthPercentageValue{}});
             continue;
           }
 
@@ -269,7 +298,9 @@ void parseUnprocessedBackgroundImageList(
               positionsIt->second.hasType<RawValueList>()) {
             auto positions = static_cast<RawValueList>(positionsIt->second);
             for (const auto& position : positions) {
-              auto positionValue = toValueUnit(position);
+              auto positionValue =
+                  parseNumericValue<NumericValueLengthPercentage>(
+                      context, position);
               if (!positionValue) {
                 // invalid position
                 result = {};
@@ -277,7 +308,7 @@ void parseUnprocessedBackgroundImageList(
               }
 
               ColorStop colorStop;
-              colorStop.position = positionValue;
+              colorStop.position = *positionValue;
               if (colorIt != stopMap.end()) {
                 auto color = coerceColor(colorIt->second, context);
                 if (color) {
@@ -309,9 +340,9 @@ void parseUnprocessedBackgroundImageList(
             if (std::holds_alternative<CSSAngle>(direction.value)) {
               linearGradient.direction =
                   std::get<CSSAngle>(direction.value).degrees;
-            } else if (std::holds_alternative<
-                           CSSLinearGradientDirectionKeyword>(
-                           direction.value)) {
+            } else if (
+                std::holds_alternative<CSSLinearGradientDirectionKeyword>(
+                    direction.value)) {
               auto keyword =
                   std::get<CSSLinearGradientDirectionKeyword>(direction.value);
 
@@ -372,7 +403,12 @@ void parseUnprocessedBackgroundImageList(
           auto yIt = sizeMap.find("y");
           if (xIt != sizeMap.end() && yIt != sizeMap.end()) {
             radialGradient.size = {RadialGradientSize::Dimensions{
-                .x = toValueUnit(xIt->second), .y = toValueUnit(yIt->second)}};
+                .x = parseNumericValueAs<NumericValueLengthPercentage>(
+                         context, xIt->second)
+                         .value_or(LengthPercentageValue{}),
+                .y = parseNumericValueAs<NumericValueLengthPercentage>(
+                         context, yIt->second)
+                         .value_or(LengthPercentageValue{})}};
           }
         }
 
@@ -387,18 +423,27 @@ void parseUnprocessedBackgroundImageList(
           auto rightIt = positionMap.find("right");
 
           if (topIt != positionMap.end()) {
-            auto topValue = toValueUnit(topIt->second);
+            auto topValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                context, topIt->second)
+                                .value_or(LengthPercentageValue{});
             radialGradient.position.top = topValue;
           } else if (bottomIt != positionMap.end()) {
-            auto bottomValue = toValueUnit(bottomIt->second);
+            auto bottomValue =
+                parseNumericValueAs<NumericValueLengthPercentage>(
+                    context, bottomIt->second)
+                    .value_or(LengthPercentageValue{});
             radialGradient.position.bottom = bottomValue;
           }
 
           if (leftIt != positionMap.end()) {
-            auto leftValue = toValueUnit(leftIt->second);
+            auto leftValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                 context, leftIt->second)
+                                 .value_or(LengthPercentageValue{});
             radialGradient.position.left = leftValue;
           } else if (rightIt != positionMap.end()) {
-            auto rightValue = toValueUnit(rightIt->second);
+            auto rightValue = parseNumericValueAs<NumericValueLengthPercentage>(
+                                  context, rightIt->second)
+                                  .value_or(LengthPercentageValue{});
             radialGradient.position.right = rightValue;
           }
         }
@@ -416,16 +461,26 @@ void parseUnprocessedBackgroundImageList(
 }
 
 namespace {
-ValueUnit convertLengthPercentageToValueUnit(
-    const std::variant<CSSLength, CSSPercentage>& value) {
-  if (std::holds_alternative<CSSLength>(value)) {
-    return {std::get<CSSLength>(value).value, UnitType::Point};
-  } else {
-    return {std::get<CSSPercentage>(value).value, UnitType::Percent};
+LengthPercentageValue convertCalcToNumericValue(
+    const PropsParserContext& context,
+    const CSSCalc& calc) {
+  if (calc.isUnitless()) {
+    return {};
   }
+  if (!calc.isComplex() && calc.percent == 0.0f) {
+    return LengthPercentageValue::length(calc.px);
+  }
+  if (calc.isPercentOnly()) {
+    return LengthPercentageValue::percentage(calc.percent);
+  }
+  if (calc.percent != 0.0f) {
+    return numericValueFromCSSCalc<NumericValueLengthPercentage>(context, calc);
+  }
+  return numericValueFromCSSCalc<NumericValueLength>(context, calc);
 }
 
 void fromCSSColorStop(
+    const PropsParserContext& context,
     const std::variant<CSSColorStop, CSSColorHint>& item,
     std::vector<ColorStop>& colorStops) {
   if (std::holds_alternative<CSSColorStop>(item)) {
@@ -439,15 +494,15 @@ void fromCSSColorStop(
       colorStops.push_back(
           ColorStop{
               .color = fromCSSColor(colorStop.color),
-              .position = convertLengthPercentageToValueUnit(
-                  *colorStop.startPosition)});
+              .position = convertCalcToNumericValue(
+                  context, *colorStop.startPosition)});
 
       // second stop with end position (same color)
       colorStops.push_back(
           ColorStop{
               .color = fromCSSColor(colorStop.color),
               .position =
-                  convertLengthPercentageToValueUnit(*colorStop.endPosition)});
+                  convertCalcToNumericValue(context, *colorStop.endPosition)});
     } else {
       // single color stop
       ColorStop stop;
@@ -456,7 +511,7 @@ void fromCSSColorStop(
       // handle start position if present
       if (colorStop.startPosition.has_value()) {
         stop.position =
-            convertLengthPercentageToValueUnit(*colorStop.startPosition);
+            convertCalcToNumericValue(context, *colorStop.startPosition);
       }
 
       colorStops.push_back(stop);
@@ -465,12 +520,13 @@ void fromCSSColorStop(
     const auto& colorHint = std::get<CSSColorHint>(item);
     // color hint: add a stop with null color and the hint position
     ColorStop hintStop;
-    hintStop.position = convertLengthPercentageToValueUnit(colorHint.position);
+    hintStop.position = convertCalcToNumericValue(context, colorHint.position);
     colorStops.push_back(hintStop);
   }
 }
 
 std::optional<BackgroundImage> fromCSSBackgroundImage(
+    const PropsParserContext& context,
     const CSSBackgroundImage& cssBackgroundImage) {
   if (std::holds_alternative<CSSLinearGradientFunction>(cssBackgroundImage)) {
     const auto& gradient =
@@ -481,8 +537,9 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
       if (std::holds_alternative<CSSAngle>(gradient.direction->value)) {
         const auto& angle = std::get<CSSAngle>(gradient.direction->value);
         linearGradient.direction = angle.degrees;
-      } else if (std::holds_alternative<CSSLinearGradientDirectionKeyword>(
-                     gradient.direction->value)) {
+      } else if (
+          std::holds_alternative<CSSLinearGradientDirectionKeyword>(
+              gradient.direction->value)) {
         const auto& dirKeyword = std::get<CSSLinearGradientDirectionKeyword>(
             gradient.direction->value);
         switch (dirKeyword) {
@@ -503,13 +560,13 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
     }
 
     for (const auto& item : gradient.items) {
-      fromCSSColorStop(item, linearGradient.colorStops);
+      fromCSSColorStop(context, item, linearGradient.colorStops);
     }
 
     return BackgroundImage{linearGradient};
 
-  } else if (std::holds_alternative<CSSRadialGradientFunction>(
-                 cssBackgroundImage)) {
+  } else if (
+      std::holds_alternative<CSSRadialGradientFunction>(cssBackgroundImage)) {
     const auto& gradient =
         std::get<CSSRadialGradientFunction>(cssBackgroundImage);
     RadialGradient radialGradient;
@@ -543,13 +600,14 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
                 RadialGradientSize::SizeKeyword::FarthestCorner;
             break;
         }
-      } else if (std::holds_alternative<CSSRadialGradientExplicitSize>(
-                     *gradient.size)) {
+      } else if (
+          std::holds_alternative<CSSRadialGradientExplicitSize>(
+              *gradient.size)) {
         const auto& explicitSize =
             std::get<CSSRadialGradientExplicitSize>(*gradient.size);
         radialGradient.size.value = RadialGradientSize::Dimensions{
-            .x = convertLengthPercentageToValueUnit(explicitSize.sizeX),
-            .y = convertLengthPercentageToValueUnit(explicitSize.sizeY)};
+            .x = convertCalcToNumericValue(context, explicitSize.sizeX),
+            .y = convertCalcToNumericValue(context, explicitSize.sizeY)};
       }
     }
 
@@ -557,24 +615,24 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
       const auto& pos = *gradient.position;
       if (pos.top.has_value()) {
         radialGradient.position.top =
-            convertLengthPercentageToValueUnit(*pos.top);
+            convertCalcToNumericValue(context, *pos.top);
       }
       if (pos.bottom.has_value()) {
         radialGradient.position.bottom =
-            convertLengthPercentageToValueUnit(*pos.bottom);
+            convertCalcToNumericValue(context, *pos.bottom);
       }
       if (pos.left.has_value()) {
         radialGradient.position.left =
-            convertLengthPercentageToValueUnit(*pos.left);
+            convertCalcToNumericValue(context, *pos.left);
       }
       if (pos.right.has_value()) {
         radialGradient.position.right =
-            convertLengthPercentageToValueUnit(*pos.right);
+            convertCalcToNumericValue(context, *pos.right);
       }
     }
 
     for (const auto& item : gradient.items) {
-      fromCSSColorStop(item, radialGradient.colorStops);
+      fromCSSColorStop(context, item, radialGradient.colorStops);
     }
 
     return BackgroundImage{radialGradient};
@@ -585,8 +643,10 @@ std::optional<BackgroundImage> fromCSSBackgroundImage(
 } // namespace
 
 void parseUnprocessedBackgroundImageString(
+    const PropsParserContext& context,
     const std::string& value,
-    std::vector<BackgroundImage>& result) {
+    std::vector<BackgroundImage>& result,
+    DynamicPropertyPath& path) {
   auto backgroundImageList = parseCSSProperty<CSSBackgroundImageList>(value);
   if (!std::holds_alternative<CSSBackgroundImageList>(backgroundImageList)) {
     result = {};
@@ -596,7 +656,10 @@ void parseUnprocessedBackgroundImageString(
   std::vector<BackgroundImage> backgroundImages;
   for (const auto& cssBackgroundImage :
        std::get<CSSBackgroundImageList>(backgroundImageList)) {
-    if (auto backgroundImage = fromCSSBackgroundImage(cssBackgroundImage)) {
+    DynamicPropertyPath::ScopedLevel level{
+        path, std::to_string(backgroundImages.size())};
+    if (auto backgroundImage =
+            fromCSSBackgroundImage(context, cssBackgroundImage)) {
       backgroundImages.push_back(std::move(*backgroundImage));
     } else {
       result = {};

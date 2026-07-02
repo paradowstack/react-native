@@ -10,6 +10,7 @@
 #include <react/renderer/components/view/AccessibilityProps.h>
 #include <react/renderer/components/view/YogaStylableProps.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -28,22 +29,31 @@
 
 namespace facebook::react {
 
+/**
+ * Surface-wide and node-local inputs required to resolve environment-dependent
+ * style values at the platform boundary.
+ */
+
 class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
  public:
   BaseViewProps() = default;
   BaseViewProps(
-      const PropsParserContext &context,
-      const BaseViewProps &sourceProps,
-      const RawProps &rawProps,
-      const std::function<bool(const std::string &)> &filterObjectKeys = nullptr);
+      const PropsParserContext& context,
+      const BaseViewProps& sourceProps,
+      const RawProps& rawProps,
+      const std::function<bool(const std::string&)>& filterObjectKeys =
+          nullptr);
 
-  void
-  setProp(const PropsParserContext &context, RawPropsPropNameHash hash, const char *propName, const RawValue &value);
+  void setProp(
+      const PropsParserContext& context,
+      RawPropsPropNameHash hash,
+      const char* propName,
+      const RawValue& value);
 
 #pragma mark - Props
 
   // Color
-  Float opacity{1.0};
+  Float opacity{1.0f};
   SharedColor backgroundColor{};
 
   // Borders
@@ -54,15 +64,15 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
   // Outline
   SharedColor outlineColor{};
-  Float outlineOffset{};
+  Float outlineOffset{0.0f};
   OutlineStyle outlineStyle{OutlineStyle::Solid};
   Float outlineWidth{};
 
   // Shadow
   SharedColor shadowColor{};
   Size shadowOffset{0, -3};
-  Float shadowOpacity{};
-  Float shadowRadius{3};
+  Float shadowOpacity{0.0f};
+  Float shadowRadius{3.0f};
 
   Cursor cursor{};
 
@@ -111,13 +121,33 @@ class BaseViewProps : public YogaStylableProps, public AccessibilityProps {
 
 #pragma mark - Convenience Methods
 
-  CascadedBorderWidths getBorderWidths() const;
-  BorderMetrics resolveBorderMetrics(const LayoutMetrics &layoutMetrics) const;
-  Transform resolveTransform(const LayoutMetrics &layoutMetrics) const;
+  CascadedBorderWidths getBorderWidths(
+      const LayoutContext& layoutContext) const;
+  BorderMetrics resolveBorderMetrics(const LayoutMetrics& layoutMetrics) const;
+  BorderMetrics resolveBorderMetrics(
+      const LayoutMetrics& layoutMetrics,
+      const LayoutContext& layoutContext) const;
+  Transform resolveTransform(
+      const LayoutMetrics& layoutMetrics,
+      const LayoutContext& layoutContext) const;
+  Transform resolveTransform(const DynamicResolver& resolver) const;
   bool getClipsContentToBounds() const;
 
-  static Transform
-  resolveTransform(const Size &frameSize, const Transform &transform, const TransformOrigin &transformOrigin);
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
+      std::unordered_set<DynamicPropertyId>& ids) const override;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
+#endif
+
+ public:
+  static Transform resolveTransform(
+      const DynamicResolver& resolver,
+      const Transform& transform,
+      const TransformOrigin& transformOrigin);
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;

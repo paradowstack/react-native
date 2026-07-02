@@ -10,6 +10,8 @@
 #include <limits>
 
 #include <react/renderer/attributedstring/primitives.h>
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Float.h>
 #include <react/utils/hash_combine.h>
@@ -25,7 +27,8 @@ using SharedParagraphAttributes = std::shared_ptr<const ParagraphAttributes>;
  * Two data structures, ParagraphAttributes and AttributedText, should be
  * enough to define visual representation of a piece of text on the screen.
  */
-class ParagraphAttributes : public DebugStringConvertible {
+class ParagraphAttributes : public DebugStringConvertible,
+                            public DynamicPropertiesHolder {
  public:
 #pragma mark - Fields
 
@@ -82,12 +85,22 @@ class ParagraphAttributes : public DebugStringConvertible {
    */
   std::optional<TextAlignmentVertical> textAlignVertical{};
 
-  bool operator==(const ParagraphAttributes &rhs) const;
+  bool operator==(const ParagraphAttributes& rhs) const;
 
 #pragma mark - DebugStringConvertible
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;
+#endif
+
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
+      std::unordered_set<DynamicPropertyId>& ids) const override;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
 #endif
 };
 
@@ -97,8 +110,8 @@ namespace std {
 
 template <>
 struct hash<facebook::react::ParagraphAttributes> {
-  size_t operator()(const facebook::react::ParagraphAttributes &attributes) const
-  {
+  size_t operator()(
+      const facebook::react::ParagraphAttributes& attributes) const {
     return facebook::react::hash_combine(
         attributes.maximumNumberOfLines,
         attributes.ellipsizeMode,

@@ -28,7 +28,10 @@ class UnimplementedViewProps final : public ViewProps {
   ComponentName getComponentName() const;
 
 #ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic getDiffProps(const Props *prevProps) const override;
+  folly::dynamic getDiffProps(
+      const Props *prevProps,
+      const LayoutMetrics *layoutMetrics = nullptr,
+      const LayoutContext *layoutContext = nullptr) const override;
 #endif
 
  private:

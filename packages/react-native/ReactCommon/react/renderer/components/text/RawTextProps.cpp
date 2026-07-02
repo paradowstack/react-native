@@ -34,7 +34,10 @@ ComponentName RawTextProps::getDiffPropsImplementationTarget() const {
   return "RawText";
 }
 
-folly::dynamic RawTextProps::getDiffProps(const Props* prevProps) const {
+folly::dynamic RawTextProps::getDiffProps(
+    const Props* prevProps,
+    const LayoutMetrics* /*layoutMetrics*/,
+    const LayoutContext* /*layoutContext*/) const {
   folly::dynamic result = folly::dynamic::object();
 
   static const auto defaultProps = RawTextProps();

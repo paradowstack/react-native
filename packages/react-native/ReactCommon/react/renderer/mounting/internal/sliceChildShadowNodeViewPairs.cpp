@@ -53,7 +53,8 @@ static void sliceChildShadowNodeViewPairsRecursively(
     ViewNodePairScope& scope,
     Point layoutOffset,
     const ShadowNode& shadowNode,
-    const CullingContext& cullingContext) {
+    const CullingContext& cullingContext,
+    const DynamicResolveContext& dynamicResolveContext = {}) {
   for (const auto& sharedChildShadowNode : shadowNode.getChildren()) {
     auto& childShadowNode = *sharedChildShadowNode;
     // T153547836: Disabled on Android because the mounting infrastructure
@@ -66,6 +67,9 @@ static void sliceChildShadowNodeViewPairsRecursively(
       continue;
     }
     auto shadowView = ShadowView(childShadowNode);
+    if (dynamicResolveContext.layoutContext.viewportSize.width > 0.0f) {
+      shadowView = ShadowView(childShadowNode, dynamicResolveContext);
+    }
 
     if (ReactNativeFeatureFlags::enableViewCulling()) {
       auto isViewCullable =
@@ -140,25 +144,31 @@ static void sliceChildShadowNodeViewPairsRecursively(
       pairList.insert(it, &scope.back());
       startOfStaticIndex++;
       if (areChildrenFlattened) {
+        DynamicResolveContext c{
+            shadowView.layoutMetrics, dynamicResolveContext.layoutContext};
         sliceChildShadowNodeViewPairsRecursively(
             pairList,
             startOfStaticIndex,
             scope,
             origin,
             childShadowNode,
-            cullingContextCopy);
+            cullingContextCopy,
+            c);
       }
     } else {
       pairList.push_back(&scope.back());
       if (areChildrenFlattened) {
         size_t pairListSize = pairList.size();
+        DynamicResolveContext c{
+            shadowView.layoutMetrics, dynamicResolveContext.layoutContext};
         sliceChildShadowNodeViewPairsRecursively(
             pairList,
             pairListSize,
             scope,
             origin,
             childShadowNode,
-            cullingContextCopy);
+            cullingContextCopy,
+            c);
       }
     }
   }
@@ -169,7 +179,8 @@ std::vector<ShadowViewNodePair*> sliceChildShadowNodeViewPairs(
     ViewNodePairScope& scope,
     bool allowFlattened,
     Point layoutOffset,
-    const CullingContext& cullingContext) {
+    const CullingContext& cullingContext,
+    const DynamicResolveContext& dynamicResolveContext) {
   const auto& shadowNode = *shadowNodePair.shadowNode;
   auto pairList = std::vector<ShadowViewNodePair*>{};
 
@@ -186,7 +197,8 @@ std::vector<ShadowViewNodePair*> sliceChildShadowNodeViewPairs(
       scope,
       layoutOffset,
       shadowNode,
-      cullingContext);
+      cullingContext,
+      dynamicResolveContext);
 
   // Sorting pairs based on `orderIndex` if needed.
   reorderInPlaceIfNeeded(pairList);

@@ -33,13 +33,33 @@ SharedDebugStringConvertibleList TextProps::getDebugProps() const {
 }
 #endif
 
+void TextProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
+  }
+
+  BaseTextProps::resolveProperties(resolver);
+}
+void TextProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  BaseTextProps::collectLiveResolvableIds(map, ids);
+}
+
 #ifdef RN_SERIALIZABLE_STATE
+folly::dynamic TextProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  return BaseTextProps::getResolvedProps(resolver);
+}
 
 ComponentName TextProps::getDiffPropsImplementationTarget() const {
   return "Text";
 }
 
-folly::dynamic TextProps::getDiffProps(const Props* prevProps) const {
+folly::dynamic TextProps::getDiffProps(
+    const Props* prevProps,
+    const LayoutMetrics* /*layoutMetrics*/,
+    const LayoutContext* /*layoutContext*/) const {
   folly::dynamic result = folly::dynamic::object();
 
   static const auto defaultProps = TextProps();

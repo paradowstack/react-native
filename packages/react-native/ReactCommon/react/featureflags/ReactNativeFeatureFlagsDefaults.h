@@ -200,7 +200,7 @@ class ReactNativeFeatureFlagsDefaults : public ReactNativeFeatureFlagsProvider {
   }
 
   bool enableSwiftUIBasedFilters() override {
-    return false;
+    return true;
   }
 
   bool enableViewCulling() override {

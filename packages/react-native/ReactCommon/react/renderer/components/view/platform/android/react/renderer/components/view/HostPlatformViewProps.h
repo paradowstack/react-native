@@ -10,6 +10,7 @@
 #include <react/renderer/components/view/BaseViewProps.h>
 #include <react/renderer/components/view/NativeDrawable.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/Props.h>
 #include <react/renderer/core/PropsParserContext.h>
@@ -61,7 +62,24 @@ class HostPlatformViewProps : public BaseViewProps {
 
 #ifdef RN_SERIALIZABLE_STATE
   ComponentName getDiffPropsImplementationTarget() const override;
-  folly::dynamic getDiffProps(const Props *prevProps) const override;
+  folly::dynamic getDiffProps(
+      const Props *prevProps,
+      const LayoutMetrics *layoutMetrics = nullptr,
+      const LayoutContext *layoutContext = nullptr) const override;
+
+  /**
+   * `getProps` falls back to `rawProps` / `diffDynamicProps` when
+   * `enablePropsUpdateReconciliationAndroid` is off (or for non-View targets).
+   * Those maps still contain authored calc strings; Java expects doubles.
+   * Resolves opacity, outline props, border widths, and border radii from
+   * layout / parsed props.
+   * Not used when the full `getDiffProps` path runs (already resolved there).
+   */
+  static void normalizeOutlinePropsForAndroidMounting(
+      folly::dynamic &propsMap,
+      const Props &props,
+      const LayoutMetrics &layoutMetrics,
+      const LayoutContext &layoutContext);
 #endif
 };
 

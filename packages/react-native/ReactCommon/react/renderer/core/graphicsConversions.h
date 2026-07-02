@@ -17,6 +17,7 @@
 #include <react/renderer/debug/DebugStringConvertible.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <react/renderer/graphics/PlatformColorParser.h>
 #include <react/renderer/graphics/Point.h>
 #include <react/renderer/graphics/Rect.h>
@@ -32,28 +33,27 @@ namespace facebook::react {
 
 #pragma mark - Color
 
-inline void fromRawValue(const PropsParserContext &context, const RawValue &value, SharedColor &result)
-{
+inline void fromRawValue(
+    const PropsParserContext& context,
+    const RawValue& value,
+    SharedColor& result) {
   fromRawValue(context.contextContainer, context.surfaceId, value, result);
 }
 
 #ifdef ANDROID
-inline int toAndroidRepr(const SharedColor &color)
-{
+inline int toAndroidRepr(const SharedColor& color) {
   return *color;
 }
 #endif
 
-inline std::string toString(const SharedColor &value)
-{
+inline std::string toString(const SharedColor& value) {
   return value.toString();
 }
 
 #pragma mark - Geometry
 
 #ifdef RN_SERIALIZABLE_STATE
-inline folly::dynamic toDynamic(const YGValue &dimension)
-{
+inline folly::dynamic toDynamic(const YGValue& dimension) {
   switch (dimension.unit) {
     case YGUnitUndefined:
       return "undefined";
@@ -78,8 +78,7 @@ inline folly::dynamic toDynamic(const YGValue &dimension)
   return nullptr;
 }
 
-inline folly::dynamic toDynamic(const Point &point)
-{
+inline folly::dynamic toDynamic(const Point& point) {
   folly::dynamic pointResult = folly::dynamic::object();
   pointResult["x"] = point.x;
   pointResult["y"] = point.y;
@@ -87,11 +86,13 @@ inline folly::dynamic toDynamic(const Point &point)
 }
 #endif
 
-inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, Point &result)
-{
+inline void fromRawValue(
+    const PropsParserContext& /*context*/,
+    const RawValue& value,
+    Point& result) {
   if (value.hasType<std::unordered_map<std::string, Float>>()) {
     auto map = (std::unordered_map<std::string, Float>)value;
-    for (const auto &pair : map) {
+    for (const auto& pair : map) {
       if (pair.first == "x") {
         result.x = pair.second;
       } else if (pair.first == "y") {
@@ -116,11 +117,13 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
   }
 }
 
-inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, Size &result)
-{
+inline void fromRawValue(
+    const PropsParserContext& /*context*/,
+    const RawValue& value,
+    Size& result) {
   if (value.hasType<std::unordered_map<std::string, Float>>()) {
     auto map = (std::unordered_map<std::string, Float>)value;
-    for (const auto &pair : map) {
+    for (const auto& pair : map) {
       if (pair.first == "width") {
         result.width = pair.second;
       } else if (pair.first == "height") {
@@ -148,8 +151,10 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
   }
 }
 
-inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, EdgeInsets &result)
-{
+inline void fromRawValue(
+    const PropsParserContext& /*context*/,
+    const RawValue& value,
+    EdgeInsets& result) {
   if (value.hasType<Float>()) {
     auto number = (Float)value;
     result = {.left = number, .top = number, .right = number, .bottom = number};
@@ -158,7 +163,7 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
 
   if (value.hasType<std::unordered_map<std::string, Float>>()) {
     auto map = (std::unordered_map<std::string, Float>)value;
-    for (const auto &pair : map) {
+    for (const auto& pair : map) {
       if (pair.first == "top") {
         result.top = pair.second;
       } else if (pair.first == "left") {
@@ -180,7 +185,11 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
     auto array = (std::vector<Float>)value;
     react_native_expect(array.size() == 4);
     if (array.size() >= 4) {
-      result = {.left = array.at(0), .top = array.at(1), .right = array.at(2), .bottom = array.at(3)};
+      result = {
+          .left = array.at(0),
+          .top = array.at(1),
+          .right = array.at(2),
+          .bottom = array.at(3)};
     } else {
       result = {.left = 0, .top = 0, .right = 0, .bottom = 0};
       LOG(ERROR) << "Unsupported EdgeInsets vector size: " << array.size();
@@ -191,8 +200,7 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
 }
 
 #ifdef RN_SERIALIZABLE_STATE
-inline folly::dynamic toDynamic(const EdgeInsets &edgeInsets)
-{
+inline folly::dynamic toDynamic(const EdgeInsets& edgeInsets) {
   folly::dynamic edgeInsetsResult = folly::dynamic::object();
   edgeInsetsResult["left"] = edgeInsets.left;
   edgeInsetsResult["top"] = edgeInsets.top;
@@ -202,17 +210,23 @@ inline folly::dynamic toDynamic(const EdgeInsets &edgeInsets)
 }
 #endif
 
-inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue &value, CornerInsets &result)
-{
+inline void fromRawValue(
+    const PropsParserContext& /*context*/,
+    const RawValue& value,
+    CornerInsets& result) {
   if (value.hasType<Float>()) {
     auto number = (Float)value;
-    result = {.topLeft = number, .topRight = number, .bottomLeft = number, .bottomRight = number};
+    result = {
+        .topLeft = number,
+        .topRight = number,
+        .bottomLeft = number,
+        .bottomRight = number};
     return;
   }
 
   if (value.hasType<std::unordered_map<std::string, Float>>()) {
     auto map = (std::unordered_map<std::string, Float>)value;
-    for (const auto &pair : map) {
+    for (const auto& pair : map) {
       if (pair.first == "topLeft") {
         result.topLeft = pair.second;
       } else if (pair.first == "topRight") {
@@ -234,7 +248,11 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
     auto array = (std::vector<Float>)value;
     react_native_expect(array.size() == 4);
     if (array.size() >= 4) {
-      result = {.topLeft = array.at(0), .topRight = array.at(1), .bottomLeft = array.at(2), .bottomRight = array.at(3)};
+      result = {
+          .topLeft = array.at(0),
+          .topRight = array.at(1),
+          .bottomLeft = array.at(2),
+          .bottomRight = array.at(3)};
     } else {
       LOG(ERROR) << "Unsupported CornerInsets vector size: " << array.size();
     }
@@ -248,31 +266,43 @@ inline void fromRawValue(const PropsParserContext & /*context*/, const RawValue 
 
 #if RN_DEBUG_STRING_CONVERTIBLE
 
-inline std::string toString(const Point &point)
-{
+inline std::string toString(const Point& point) {
   return "{" + toString(point.x) + ", " + toString(point.y) + "}";
 }
 
-inline std::string toString(const Size &size)
-{
+inline std::string toString(const Size& size) {
   return "{" + toString(size.width) + ", " + toString(size.height) + "}";
 }
 
-inline std::string toString(const Rect &rect)
-{
+inline std::string toString(const Rect& rect) {
   return "{" + toString(rect.origin) + ", " + toString(rect.size) + "}";
 }
 
-inline std::string toString(const EdgeInsets &edgeInsets)
-{
-  return "{" + toString(edgeInsets.left) + ", " + toString(edgeInsets.top) + ", " + toString(edgeInsets.right) + ", " +
-      toString(edgeInsets.bottom) + "}";
+inline std::string toString(const EdgeInsets& edgeInsets) {
+  return "{" + toString(edgeInsets.left) + ", " + toString(edgeInsets.top) +
+      ", " + toString(edgeInsets.right) + ", " + toString(edgeInsets.bottom) +
+      "}";
 }
 
-inline std::string toString(const CornerInsets &cornerInsets)
-{
-  return "{" + toString(cornerInsets.topLeft) + ", " + toString(cornerInsets.topRight) + ", " +
-      toString(cornerInsets.bottomLeft) + ", " + toString(cornerInsets.bottomRight) + "}";
+inline std::string toString(const CornerInsets& cornerInsets) {
+  return "{" + toString(cornerInsets.topLeft) + ", " +
+      toString(cornerInsets.topRight) + ", " +
+      toString(cornerInsets.bottomLeft) + ", " +
+      toString(cornerInsets.bottomRight) + "}";
+}
+
+inline std::string toString(const UntypedNumericValue& value) {
+  switch (value.kind()) {
+    case NumericValueKind::Number:
+      return react::toString(value.asFloat());
+    case NumericValueKind::Length:
+      return react::toString(value.asFloat()) + "px";
+    case NumericValueKind::Percentage:
+      return react::toString(value.asFloat());
+    case NumericValueKind::Undefined:
+    case NumericValueKind::Dynamic:
+      return "undefined";
+  }
 }
 
 #endif

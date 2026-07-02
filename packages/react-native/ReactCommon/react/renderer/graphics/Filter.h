@@ -9,6 +9,7 @@
 
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
+#include <react/renderer/graphics/NumericValue.h>
 
 #include <optional>
 #include <string>
@@ -30,8 +31,8 @@ enum class FilterType {
   DropShadow
 };
 
-inline std::optional<FilterType> filterTypeFromString(std::string_view filterName)
-{
+inline std::optional<FilterType> filterTypeFromString(
+    std::string_view filterName) {
   if (filterName == "blur") {
     return FilterType::Blur;
   } else if (filterName == "brightness") {
@@ -57,8 +58,7 @@ inline std::optional<FilterType> filterTypeFromString(std::string_view filterNam
   }
 }
 
-inline std::string toString(const FilterType &filterType)
-{
+inline std::string toString(const FilterType& filterType) {
   switch (filterType) {
     case FilterType::Blur:
       return "blur";
@@ -86,20 +86,19 @@ inline std::string toString(const FilterType &filterType)
 }
 
 struct DropShadowParams {
-  bool operator==(const DropShadowParams &other) const = default;
+  bool operator==(const DropShadowParams& other) const = default;
 
-  Float offsetX{};
-  Float offsetY{};
-  Float standardDeviation{};
+  LengthValue offsetX{LengthValue::length(0.0f)};
+  LengthValue offsetY{LengthValue::length(0.0f)};
+  LengthValue standardDeviation{LengthValue::length(0.0f)};
   SharedColor color{};
 
 #ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic toDynamic() const
-  {
+  folly::dynamic toDynamic() const {
     folly::dynamic result = folly::dynamic::object();
-    result["offsetX"] = offsetX;
-    result["offsetY"] = offsetY;
-    result["standardDeviation"] = standardDeviation;
+    result["offsetX"] = offsetX.toDynamic();
+    result["offsetY"] = offsetY.toDynamic();
+    result["standardDeviation"] = standardDeviation.toDynamic();
     result["color"] = *color;
     return result;
   }
@@ -107,20 +106,19 @@ struct DropShadowParams {
 };
 
 struct FilterFunction {
-  bool operator==(const FilterFunction &other) const = default;
+  bool operator==(const FilterFunction& other) const = default;
 
   FilterType type{};
-  std::variant<Float, DropShadowParams> parameters{};
+  std::variant<UntypedNumericValue, DropShadowParams> parameters{};
 
 #ifdef RN_SERIALIZABLE_STATE
-  folly::dynamic toDynamic() const
-  {
+  folly::dynamic toDynamic() const {
     folly::dynamic result = folly::dynamic::object();
     std::string typeKey = toString(type);
-    if (std::holds_alternative<Float>(parameters)) {
-      result[typeKey] = std::get<Float>(parameters);
+    if (std::holds_alternative<UntypedNumericValue>(parameters)) {
+      result[typeKey] = std::get<UntypedNumericValue>(parameters).toDynamic();
     } else if (std::holds_alternative<DropShadowParams>(parameters)) {
-      const auto &dropShadowParams = std::get<DropShadowParams>(parameters);
+      const auto& dropShadowParams = std::get<DropShadowParams>(parameters);
       result[typeKey] = dropShadowParams.toDynamic();
     }
     return result;
@@ -129,8 +127,7 @@ struct FilterFunction {
 };
 
 #ifdef RN_SERIALIZABLE_STATE
-inline folly::dynamic toDynamic(const FilterFunction &filterFunction)
-{
+inline folly::dynamic toDynamic(const FilterFunction& filterFunction) {
   return filterFunction.toDynamic();
 }
 #endif

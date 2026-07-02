@@ -212,10 +212,7 @@ function processColorStops(bgImage: BackgroundImageValue): ReadonlyArray<{
       positions.length === 1
     ) {
       const position = positions[0];
-      if (
-        typeof position === 'number' ||
-        (typeof position === 'string' && position.endsWith('%'))
-      ) {
+      if (typeof position === 'number' || typeof position === 'string') {
         processedColorStops.push({
           color: null,
           position,
@@ -232,10 +229,7 @@ function processColorStops(bgImage: BackgroundImageValue): ReadonlyArray<{
       }
       if (positions != null && positions.length > 0) {
         for (const position of positions) {
-          if (
-            typeof position === 'number' ||
-            (typeof position === 'string' && position.endsWith('%'))
-          ) {
+          if (typeof position === 'number' || typeof position === 'string') {
             processedColorStops.push({
               color: processedColor,
               position,
@@ -319,7 +313,7 @@ function parseRadialGradientCSSString(
     ) {
       size = tokenTrimmed;
       hasShapeSizeOrPositionString = true;
-    } else if (tokenTrimmed.endsWith('px') || tokenTrimmed.endsWith('%')) {
+    } else if (tokenTrimmed.endsWith('px')) {
       let sizeX = getPositionFromCSSValue(tokenTrimmed);
       if (sizeX == null) {
         // If a size is invalid, return null and do not apply any gradient. Same as web.
@@ -337,7 +331,7 @@ function parseRadialGradientCSSString(
         continue;
       }
       tokenTrimmed = token.toLowerCase().trim();
-      if (tokenTrimmed.endsWith('px') || tokenTrimmed.endsWith('%')) {
+      if (tokenTrimmed.endsWith('px')) {
         const sizeY = getPositionFromCSSValue(tokenTrimmed);
         if (sizeY == null) {
           // If a size is invalid, return null and do not apply any gradient. Same as web.
@@ -386,7 +380,7 @@ function parseRadialGradientCSSString(
         } else if (tokenTrimmed === 'bottom') {
           left = '50%';
           top = '100%';
-        } else if (tokenTrimmed.endsWith('px') || tokenTrimmed.endsWith('%')) {
+        } else if (tokenTrimmed.endsWith('px')) {
           const value = getPositionFromCSSValue(tokenTrimmed);
           if (value == null) {
             // If a position is invalid, return null and do not apply any gradient. Same as web.
@@ -435,7 +429,7 @@ function parseRadialGradientCSSString(
             left = '50%';
           } else if (token1 === 'right') {
             left = '100%';
-          } else if (token1.endsWith('px') || token1.endsWith('%')) {
+          } else if (token1.endsWith('px')) {
             const value = getPositionFromCSSValue(token1);
             if (value == null) {
               // If a position is invalid, return null and do not apply any gradient. Same as web.
@@ -453,7 +447,7 @@ function parseRadialGradientCSSString(
             top = '50%';
           } else if (token2 === 'bottom') {
             top = '100%';
-          } else if (token2.endsWith('px') || token2.endsWith('%')) {
+          } else if (token2.endsWith('px')) {
             const value = getPositionFromCSSValue(token2);
             if (value == null) {
               // If a position is invalid, return null and do not apply any gradient. Same as web.
@@ -794,8 +788,10 @@ function getPositionFromCSSValue(position: string) {
   if (position.endsWith('px')) {
     return parseFloat(position);
   }
-
   if (position.endsWith('%')) {
+    return position;
+  }
+  if (position.startsWith('calc(') && position.endsWith(')')) {
     return position;
   }
 }

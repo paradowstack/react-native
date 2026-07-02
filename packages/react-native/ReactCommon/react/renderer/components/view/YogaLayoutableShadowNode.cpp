@@ -11,6 +11,7 @@
 #include <react/debug/flags.h>
 #include <react/debug/react_native_assert.h>
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/root/RootProps.h>
 #include <react/renderer/components/view/LayoutConformanceShadowNode.h>
 #include <react/renderer/components/view/ViewProps.h>
 #include <react/renderer/components/view/ViewShadowNode.h>
@@ -62,8 +63,6 @@ static int FabricDefaultYogaLog(
   return size_s;
 }
 
-thread_local LayoutContext threadLocalLayoutContext;
-
 YogaLayoutableShadowNode::YogaLayoutableShadowNode(
     const ShadowNodeFragment& fragment,
     const ShadowNodeFamily::Shared& family,
@@ -85,6 +84,9 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
         &yogaNode_,
         YogaLayoutableShadowNode::yogaNodeBaselineCallbackConnector);
   }
+  //  if (auto rootProps = std::dynamic_pointer_cast<const RootProps>(props_)) {
+  //    threadLocalLayoutContext = rootProps->layoutContext;
+  //  }
 
   updateYogaProps();
   updateYogaChildren();
@@ -137,6 +139,10 @@ YogaLayoutableShadowNode::YogaLayoutableShadowNode(
         static_cast<const YogaLayoutableShadowNode&>(sourceShadowNode)
             .yogaTreeHasBeenConfigured_;
   }
+
+  //  if (auto rootProps = std::dynamic_pointer_cast<const RootProps>(props_)) {
+  //    threadLocalLayoutContext = rootProps->layoutContext;
+  //  }
 
   if (fragment.props) {
     auto& sourceProps =
@@ -392,7 +398,7 @@ void YogaLayoutableShadowNode::updateYogaChildren() {
 }
 
 void YogaLayoutableShadowNode::updateYogaProps(
-    const CalcExpressions& previousCalcExpressions) {
+    const DynamicPropertiesMap& previousCalcExpressions) {
   ensureUnsealed();
 
   auto& props = static_cast<const YogaStylableProps&>(*props_);
@@ -639,6 +645,7 @@ void YogaLayoutableShadowNode::setPositionType(
 void YogaLayoutableShadowNode::layoutTree(
     LayoutContext layoutContext,
     LayoutConstraints layoutConstraints) {
+  LayoutableShadowNode::layoutTree(layoutContext, layoutConstraints);
   ensureUnsealed();
 
   TraceSection s1("YogaLayoutableShadowNode::layoutTree");
@@ -704,7 +711,7 @@ void YogaLayoutableShadowNode::layoutTree(
   auto direction =
       yogaDirectionFromLayoutDirection(layoutConstraints.layoutDirection);
 
-  threadLocalLayoutContext = layoutContext;
+  //  threadLocalLayoutContext = layoutContext;
 
   {
     TraceSection s3("YogaLayoutableShadowNode::YGNodeCalculateLayout");
@@ -897,7 +904,7 @@ YGSize YogaLayoutableShadowNode::yogaNodeMeasureCallbackConnector(
   }
 
   auto size = shadowNode.measureContent(
-      threadLocalLayoutContext,
+      getLayoutContext(),
       {.minimumSize = minimumSize, .maximumSize = maximumSize});
 
 #ifdef REACT_NATIVE_DEBUG
@@ -927,7 +934,7 @@ float YogaLayoutableShadowNode::yogaNodeBaselineCallbackConnector(
 
   auto& shadowNode = shadowNodeFromContext(yogaNode);
   auto baseline = shadowNode.baseline(
-      threadLocalLayoutContext,
+      getLayoutContext(),
       {.width = floatFromYogaFloat(width),
        .height = floatFromYogaFloat(height)});
 
@@ -954,12 +961,16 @@ YGValue YogaLayoutableShadowNode::yogaNodeCalcValueResolver(
     return {};
   }
 
-  auto& calc = props.calcExpressions.at(id);
+  auto& entry = props.calcExpressions.at(id);
   return YGValue(
-      calc.resolve(
-          context.referenceLength,
-          threadLocalLayoutContext.viewportSize.width,
-          threadLocalLayoutContext.viewportSize.height),
+      std::visit(
+          [&](const auto& e) {
+            return e.calc.resolve(
+                context.referenceLength,
+                getLayoutContext().viewportSize.width,
+                getLayoutContext().viewportSize.height);
+          },
+          entry),
       YGUnitPoint);
 };
 

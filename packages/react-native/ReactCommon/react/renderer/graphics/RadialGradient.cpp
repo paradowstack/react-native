@@ -108,7 +108,7 @@ void RadialGradient::toString(std::stringstream& ss) const {
     }
   } else {
     auto& dimensions = std::get<RadialGradientSize::Dimensions>(size.value);
-    ss << react::toString(dimensions.x) << " " << react::toString(dimensions.y);
+    ss << dimensions.x.toString() << " " << dimensions.y.toString();
   }
 
   ss << " at ";

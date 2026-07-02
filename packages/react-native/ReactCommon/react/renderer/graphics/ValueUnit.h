@@ -16,11 +16,7 @@
 
 namespace facebook::react {
 
-enum class UnitType {
-  Undefined,
-  Point,
-  Percent,
-};
+enum class UnitType { Undefined, Point, Percent };
 
 struct ValueUnit {
   float value{0.0f};
@@ -29,10 +25,9 @@ struct ValueUnit {
   constexpr ValueUnit() = default;
   constexpr ValueUnit(float v, UnitType u) : value(v), unit(u) {}
 
-  constexpr bool operator==(const ValueUnit &other) const = default;
+  constexpr bool operator==(const ValueUnit& other) const = default;
 
-  constexpr float resolve(float referenceLength) const
-  {
+  constexpr float resolve(float referenceLength) const {
     switch (unit) {
       case UnitType::Point:
         return value;
@@ -44,8 +39,7 @@ struct ValueUnit {
     }
   }
 
-  constexpr operator bool() const
-  {
+  constexpr operator bool() const {
     return unit != UnitType::Undefined;
   }
 

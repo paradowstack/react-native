@@ -7,20 +7,22 @@
 
 #pragma once
 
-#include <react/renderer/graphics/ValueUnit.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <optional>
 
 namespace facebook::react {
 
 struct BackgroundPosition {
-  std::optional<ValueUnit> top;
-  std::optional<ValueUnit> left;
-  std::optional<ValueUnit> right;
-  std::optional<ValueUnit> bottom;
+  std::optional<UntypedNumericValue> top;
+  std::optional<UntypedNumericValue> left;
+  std::optional<UntypedNumericValue> right;
+  std::optional<UntypedNumericValue> bottom;
 
-  BackgroundPosition() : top(ValueUnit{0.0f, UnitType::Point}), left(ValueUnit{0.0f, UnitType::Point}) {}
+  BackgroundPosition()
+      : top(UntypedNumericValue::length(0.0f)),
+        left(UntypedNumericValue::length(0.0f)) {}
 
-  bool operator==(const BackgroundPosition &other) const = default;
+  bool operator==(const BackgroundPosition& other) const = default;
 };
 
 } // namespace facebook::react

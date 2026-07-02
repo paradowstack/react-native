@@ -15,6 +15,8 @@
 #include <folly/dynamic.h>
 #include <react/renderer/attributedstring/primitives.h>
 #include <react/renderer/components/view/AccessibilityPrimitives.h>
+#include <react/renderer/components/view/DynamicPropertiesHolder.h>
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/LayoutPrimitives.h>
 #include <react/renderer/core/ReactPrimitives.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
@@ -28,14 +30,15 @@ namespace facebook::react {
 struct TextEffectInfo {
   std::string name;
   folly::dynamic props;
-  bool operator==(const TextEffectInfo &) const = default;
+  bool operator==(const TextEffectInfo&) const = default;
 };
 
 class TextAttributes;
 
 using SharedTextAttributes = std::shared_ptr<const TextAttributes>;
 
-class TextAttributes : public DebugStringConvertible {
+class TextAttributes : public DebugStringConvertible,
+                       public DynamicPropertiesHolder {
  public:
   /*
    * Returns TextAttribute object which has actual default attribute values
@@ -103,12 +106,22 @@ class TextAttributes : public DebugStringConvertible {
 
 #pragma mark - Operators
 
-  bool operator==(const TextAttributes &rhs) const;
+  bool operator==(const TextAttributes& rhs) const;
 
 #pragma mark - DebugStringConvertible
 
 #if RN_DEBUG_STRING_CONVERTIBLE
   SharedDebugStringConvertibleList getDebugProps() const override;
+#endif
+
+  void resolveProperties(const DynamicResolver& resolver) override;
+  void collectLiveResolvableIds(
+      const DynamicPropertiesMap& map,
+      std::unordered_set<DynamicPropertyId>& ids) const override;
+
+#ifdef RN_SERIALIZABLE_STATE
+  folly::dynamic getResolvedProps(
+      const DynamicResolver& resolver) const override;
 #endif
 };
 
@@ -118,18 +131,17 @@ namespace std {
 
 template <>
 struct hash<facebook::react::TextEffectInfo> {
-  size_t operator()(const facebook::react::TextEffectInfo &info) const
-  {
+  size_t operator()(const facebook::react::TextEffectInfo& info) const {
     return facebook::react::hash_combine(info.name, info.props);
   }
 };
 
 template <>
 struct hash<facebook::react::TextAttributes> {
-  size_t operator()(const facebook::react::TextAttributes &textAttributes) const
-  {
+  size_t operator()(
+      const facebook::react::TextAttributes& textAttributes) const {
     size_t textEffectsHash = 0;
-    for (const auto &effect : textAttributes.textEffects) {
+    for (const auto& effect : textAttributes.textEffects) {
       facebook::react::hash_combine(textEffectsHash, effect);
     }
     return facebook::react::hash_combine(

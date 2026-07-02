@@ -8,6 +8,7 @@
 #include "ViewShadowNode.h"
 #include <react/renderer/components/view/HostPlatformViewTraitsInitializer.h>
 #include <react/renderer/components/view/primitives.h>
+#include <react/utils/FloatComparison.h>
 
 namespace facebook::react {
 
@@ -45,7 +46,8 @@ void ViewShadowNode::initialize() noexcept {
       viewProps.pointerEvents == PointerEventsMode::BoxOnly ||
       viewProps.pointerEvents == PointerEventsMode::None ||
       !viewProps.nativeId.empty() || viewProps.accessible ||
-      viewProps.opacity != 1.0 || viewProps.transform != Transform{} ||
+      !floatEquality(viewProps.opacity, static_cast<Float>(1.0f)) ||
+      viewProps.transform != Transform{} ||
       (viewProps.zIndex.has_value() &&
        viewProps.yogaStyle.positionType() != yoga::PositionType::Static) ||
       viewProps.yogaStyle.display() == yoga::Display::None ||

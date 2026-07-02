@@ -79,4 +79,40 @@ SharedDebugStringConvertibleList ParagraphAttributes::getDebugProps() const {
 }
 #endif
 
+void ParagraphAttributes::resolveProperties(const DynamicResolver& resolver) {
+  resolver.resolve(fnv1a("minimumFontSize"), minimumFontSize);
+  resolver.resolve(fnv1a("maximumFontSize"), maximumFontSize);
+  resolver.resolve(fnv1a("minimumFontScale"), minimumFontScale);
+}
+
+void ParagraphAttributes::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  auto addById = [&](auto id) {
+    if (map.contains(id))
+      ids.insert(id);
+  };
+  addById(fnv1a("minimumFontSize"));
+  addById(fnv1a("maximumFontSize"));
+  addById(fnv1a("minimumFontScale"));
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic ParagraphAttributes::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  folly::dynamic props = folly::dynamic::object();
+  if (resolver.propertiesMap.contains(fnv1a("minimumFontSize"))) {
+    props["minimumFontSize"] = resolver.resolveNumber(fnv1a("minimumFontSize"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("maximumFontSize"))) {
+    props["maximumFontSize"] = resolver.resolveNumber(fnv1a("maximumFontSize"));
+  }
+  if (resolver.propertiesMap.contains(fnv1a("minimumFontScale"))) {
+    props["minimumFontScale"] =
+        resolver.resolveNumber(fnv1a("minimumFontScale"));
+  }
+  return props;
+}
+#endif
+
 } // namespace facebook::react

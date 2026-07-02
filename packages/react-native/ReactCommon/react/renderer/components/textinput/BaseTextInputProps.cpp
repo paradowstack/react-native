@@ -239,7 +239,6 @@ TextAttributes BaseTextInputProps::getEffectiveTextAttributes(
    */
   result.backgroundColor = clearColor();
   result.opacity = 1;
-
   return result;
 }
 
@@ -251,4 +250,30 @@ SubmitBehavior BaseTextInputProps::getNonDefaultSubmitBehavior() const {
   return submitBehavior;
 }
 
+void BaseTextInputProps::resolveProperties(const DynamicResolver& resolver) {
+  if (!needsToResolveStyleValues) {
+    return;
+  }
+
+  ViewProps::resolveProperties(resolver);
+  BaseTextProps::resolveProperties(resolver);
+  paragraphAttributes.resolveProperties(resolver);
+}
+void BaseTextInputProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  ViewProps::collectLiveResolvableIds(map, ids);
+  BaseTextProps::collectLiveResolvableIds(map, ids);
+  paragraphAttributes.collectLiveResolvableIds(map, ids);
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic BaseTextInputProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  auto props = ViewProps::getResolvedProps(resolver);
+  props.update(BaseTextProps::getResolvedProps(resolver));
+  props.update(paragraphAttributes.getResolvedProps(resolver));
+  return props;
+}
+#endif
 } // namespace facebook::react

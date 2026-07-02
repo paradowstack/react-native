@@ -73,10 +73,10 @@ TEST_F(CSSBackgroundImageTest, LinearGradientWithRandomWhitespaces) {
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 30.0f}},
+              .startPosition = CSSCalc::fromPercent(30.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 80.0f}},
+              .startPosition = CSSCalc::fromPercent(80.0f)},
       }};
   ASSERT_EQ(result, expected);
 }
@@ -134,13 +134,13 @@ TEST_F(CSSBackgroundImageTest, LinearGradientWithMultipleColorStops) {
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 0.0f}},
+              .startPosition = CSSCalc::fromPercent(0.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 128, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 50.0f}},
+              .startPosition = CSSCalc::fromPercent(50.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 100.0f}},
+              .startPosition = CSSCalc::fromPercent(100.0f)},
       }};
   ASSERT_EQ(result, expected);
 }
@@ -154,11 +154,11 @@ TEST_F(CSSBackgroundImageTest, LinearGradientWithColorStopEndPosition) {
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 10.0f},
-              .endPosition = CSSPercentage{.value = 30.0f}},
+              .startPosition = CSSCalc::fromPercent(10.0f),
+              .endPosition = CSSCalc::fromPercent(30.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 50.0f}}}};
+              .startPosition = CSSCalc::fromPercent(50.0f)}}};
   ASSERT_EQ(result, expected);
 }
 
@@ -173,7 +173,7 @@ TEST_F(CSSBackgroundImageTest, LinearGradientMixedPositionedStops) {
           makeCSSColorStop(0, 128, 0),
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 60.0f}},
+              .startPosition = CSSCalc::fromPercent(60.0f)},
           makeCSSColorStop(255, 255, 0),
           makeCSSColorStop(128, 0, 128),
       }};
@@ -222,11 +222,11 @@ TEST_F(CSSBackgroundImageTest, LinearGradientWithMultipleTransitionHints) {
           CSSLinearGradientDirection{.value = CSSAngle{.degrees = 180.0f}},
       .items = {
           makeCSSColorStop(255, 0, 0),
-          CSSColorHint{.position = CSSPercentage{.value = 20.0f}},
+          CSSColorHint{.position = CSSCalc::fromPercent(20.0f)},
           makeCSSColorStop(0, 0, 255),
-          CSSColorHint{.position = CSSPercentage{.value = 60.0f}},
+          CSSColorHint{.position = CSSCalc::fromPercent(60.0f)},
           makeCSSColorStop(0, 128, 0),
-          CSSColorHint{.position = CSSPercentage{.value = 80.0f}},
+          CSSColorHint{.position = CSSCalc::fromPercent(80.0f)},
           makeCSSColorStop(255, 255, 0),
       }};
   ASSERT_EQ(result, expected);
@@ -254,16 +254,14 @@ TEST_F(CSSBackgroundImageTest, LinearGradientWithMixedUnits) {
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 10.0f}},
-          CSSColorHint{
-              .position = CSSLength{.value = 20.0f, .unit = CSSLengthUnit::Px}},
+              .startPosition = CSSCalc::fromPercent(10.0f)},
+          CSSColorHint{.position = CSSCalc::fromPoints(20.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 30.0f}},
+              .startPosition = CSSCalc::fromPercent(30.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 128, .g = 0, .b = 128, .a = 255},
-              .startPosition =
-                  CSSLength{.value = 40.0f, .unit = CSSLengthUnit::Px}},
+              .startPosition = CSSCalc::fromPoints(40.0f)},
       }};
   ASSERT_EQ(result, expected);
 }
@@ -276,8 +274,8 @@ TEST_F(CSSBackgroundImageTest, RadialGradientBasic) {
       .size = CSSRadialGradientSizeKeyword::FarthestCorner,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   ASSERT_EQ(result, expected);
 }
@@ -289,12 +287,12 @@ TEST_F(CSSBackgroundImageTest, RadialGradientInferCircleFromSingleLength) {
       .shape = CSSRadialGradientShape::Circle,
       .size =
           CSSRadialGradientExplicitSize{
-              .sizeX = CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px},
-              .sizeY = CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px}},
+              .sizeX = CSSCalc::fromPoints(100.0f),
+              .sizeY = CSSCalc::fromPoints(100.0f)},
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   ASSERT_EQ(result, expected);
 }
@@ -306,12 +304,12 @@ TEST_F(CSSBackgroundImageTest, RadialGradientInferEllipseFromDoubleLength) {
       .shape = CSSRadialGradientShape::Ellipse,
       .size =
           CSSRadialGradientExplicitSize{
-              .sizeX = CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px},
-              .sizeY = CSSLength{.value = 50.0f, .unit = CSSLengthUnit::Px}},
+              .sizeX = CSSCalc::fromPoints(100.0f),
+              .sizeY = CSSCalc::fromPoints(50.0f)},
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   ASSERT_EQ(result, expected);
 }
@@ -323,17 +321,17 @@ TEST_F(CSSBackgroundImageTest, RadialGradientExplicitShapeWithSize) {
       .shape = CSSRadialGradientShape::Circle,
       .size =
           CSSRadialGradientExplicitSize{
-              .sizeX = CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px},
-              .sizeY = CSSLength{.value = 100.0f, .unit = CSSLengthUnit::Px}},
+              .sizeX = CSSCalc::fromPoints(100.0f),
+              .sizeY = CSSCalc::fromPoints(100.0f)},
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {
           makeCSSColorStop(255, 0, 0),
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 80.0f}}}};
+              .startPosition = CSSCalc::fromPercent(80.0f)}}};
   ASSERT_EQ(result, expected);
 }
 
@@ -347,8 +345,8 @@ TEST_F(CSSBackgroundImageTest, RadialGradientPositionLengthSyntax) {
       .size = CSSRadialGradientSizeKeyword::FarthestCorner,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSLength{.value = 20.0f, .unit = CSSLengthUnit::Px}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPoints(20.0f)},
       .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   ASSERT_EQ(result, expected);
 }
@@ -363,8 +361,8 @@ TEST_F(CSSBackgroundImageTest, RadialGradientPositionKeywordCombinations) {
           .size = CSSRadialGradientSizeKeyword::FarthestCorner,
           .position =
               CSSRadialGradientPosition{
-                  .top = CSSPercentage{.value = 0.0f},
-                  .left = CSSPercentage{.value = 0.0f}},
+                  .top = CSSCalc::fromPercent(0.0f),
+                  .left = CSSCalc::fromPercent(0.0f)},
           .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   for (const auto& input : inputs) {
     auto result = parseCSSProperty<CSSBackgroundImage>(input);
@@ -379,18 +377,18 @@ TEST_F(CSSBackgroundImageTest, RadialGradientComplexPositionSyntax) {
       testCases = {
           {
               "radial-gradient(circle at left 20px, red, blue)",
-              {.top = CSSLength{.value = 20.0f, .unit = CSSLengthUnit::Px},
-               .left = CSSPercentage{.value = 0.f}},
+              {.top = CSSCalc::fromPoints(20.0f),
+               .left = CSSCalc::fromPercent(0.0f)},
           },
           {
               "radial-gradient(circle at 20px 20px, red, blue)",
-              {.top = CSSLength{.value = 20.0f, .unit = CSSLengthUnit::Px},
-               .left = CSSLength{.value = 20.0f, .unit = CSSLengthUnit::Px}},
+              {.top = CSSCalc::fromPoints(20.0f),
+               .left = CSSCalc::fromPoints(20.0f)},
           },
           {
               "radial-gradient(circle at right 50px, red, blue)",
-              {.top = CSSLength{.value = 50.0f, .unit = CSSLengthUnit::Px},
-               .right = CSSPercentage{.value = 0.f}},
+              {.top = CSSCalc::fromPoints(50.0f),
+               .right = CSSCalc::fromPercent(0.0f)},
           }};
   for (const auto& [input, expectedPosition] : testCases) {
     const auto result = parseCSSProperty<CSSBackgroundImage>(input);
@@ -413,8 +411,8 @@ TEST_F(CSSBackgroundImageTest, RadialGradientSeparatePositionPercentages) {
       .size = CSSRadialGradientSizeKeyword::FarthestCorner,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 0.0f},
-              .right = CSSPercentage{.value = 10.0f}},
+              .top = CSSCalc::fromPercent(0.0f),
+              .right = CSSCalc::fromPercent(10.0f)},
       .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   ASSERT_EQ(result, expected);
 }
@@ -427,20 +425,20 @@ TEST_F(CSSBackgroundImageTest, RadialGradientWithTransitionHints) {
       .size = CSSRadialGradientSizeKeyword::FarthestCorner,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 0.0f}},
-          CSSColorHint{.position = CSSPercentage{.value = 25.0f}},
+              .startPosition = CSSCalc::fromPercent(0.0f)},
+          CSSColorHint{.position = CSSCalc::fromPercent(25.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 50.0f}},
-          CSSColorHint{.position = CSSPercentage{.value = 75.0f}},
+              .startPosition = CSSCalc::fromPercent(50.0f)},
+          CSSColorHint{.position = CSSCalc::fromPercent(75.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 128, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 100.0f}},
+              .startPosition = CSSCalc::fromPercent(100.0f)},
       }};
   ASSERT_EQ(result, expected);
 }
@@ -454,8 +452,8 @@ TEST_F(CSSBackgroundImageTest, MultipleGradientsRadialAndLinear) {
            .size = CSSRadialGradientSizeKeyword::FarthestCorner,
            .position =
                CSSRadialGradientPosition{
-                   .top = CSSPercentage{.value = 0.0f},
-                   .left = CSSPercentage{.value = 0.0f}},
+                   .top = CSSCalc::fromPercent(0.0f),
+                   .left = CSSCalc::fromPercent(0.0f)},
            .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}},
        CSSLinearGradientFunction{
            .direction =
@@ -473,8 +471,8 @@ TEST_F(CSSBackgroundImageTest, RadialGradientMixedCase) {
       .size = CSSRadialGradientSizeKeyword::ClosestSide,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {makeCSSColorStop(255, 0, 0), makeCSSColorStop(0, 0, 255)}};
   ASSERT_EQ(result, expected);
 }
@@ -487,15 +485,15 @@ TEST_F(CSSBackgroundImageTest, RadialGradientWhitespaceVariations) {
       .size = CSSRadialGradientSizeKeyword::FarthestCorner,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 75.0f},
-              .left = CSSPercentage{.value = 25.0f}},
+              .top = CSSCalc::fromPercent(75.0f),
+              .left = CSSCalc::fromPercent(25.0f)},
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 0.0f}},
+              .startPosition = CSSCalc::fromPercent(0.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 100.0f}},
+              .startPosition = CSSCalc::fromPercent(100.0f)},
       }};
   ASSERT_EQ(result, expected);
 }
@@ -521,21 +519,21 @@ TEST_F(CSSBackgroundImageTest, RadialGradientMultipleColorStops) {
       .size = CSSRadialGradientSizeKeyword::FarthestCorner,
       .position =
           CSSRadialGradientPosition{
-              .top = CSSPercentage{.value = 50.0f},
-              .left = CSSPercentage{.value = 50.0f}},
+              .top = CSSCalc::fromPercent(50.0f),
+              .left = CSSCalc::fromPercent(50.0f)},
       .items = {
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 0, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 0.0f}},
+              .startPosition = CSSCalc::fromPercent(0.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 255, .g = 255, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 30.0f}},
+              .startPosition = CSSCalc::fromPercent(30.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 128, .b = 0, .a = 255},
-              .startPosition = CSSPercentage{.value = 60.0f}},
+              .startPosition = CSSCalc::fromPercent(60.0f)},
           CSSColorStop{
               .color = CSSColor{.r = 0, .g = 0, .b = 255, .a = 255},
-              .startPosition = CSSPercentage{.value = 100.0f}}}};
+              .startPosition = CSSCalc::fromPercent(100.0f)}}};
   ASSERT_EQ(result, expected);
 }
 

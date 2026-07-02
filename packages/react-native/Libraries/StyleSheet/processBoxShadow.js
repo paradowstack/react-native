@@ -17,15 +17,31 @@ const COMMA_SPLIT_REGEX = /,(?![^()]*\))/;
 const WHITESPACE_SPLIT_REGEX = /\s+(?![^(]*\))/;
 const LENGTH_PARSE_REGEX = /^([+-]?\d*\.?\d+)(px)?$/;
 const NEWLINE_REGEX = /\n/g;
+const CALC_FUNCTION_REGEX = /^calc\(.*\)$/;
 
 export type ParsedBoxShadow = {
-  offsetX: number,
-  offsetY: number,
+  offsetX: number | string,
+  offsetY: number | string,
   color?: ProcessedColorValue,
   blurRadius?: number,
   spreadDistance?: number,
   inset?: boolean,
 };
+
+function toValueWithUnit(value: number | string): string | number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    if (CALC_FUNCTION_REGEX.test(value)) {
+      return value;
+    }
+
+    return parseLength(value);
+  }
+
+  return value;
+}
 
 export default function processBoxShadow(
   rawBoxShadows: ?(ReadonlyArray<BoxShadowValue> | string),
@@ -50,46 +66,46 @@ export default function processBoxShadow(
     for (const arg in rawBoxShadow) {
       switch (arg) {
         case 'offsetX':
-          value =
-            typeof rawBoxShadow.offsetX === 'string'
-              ? parseLength(rawBoxShadow.offsetX)
-              : rawBoxShadow.offsetX;
-          if (value == null) {
-            return [];
-          }
+          // value = rawBoxShadow.offsetX;
+          value = toValueWithUnit(rawBoxShadow.offsetX);
+          // if (value == null) {
+          //   return [];
+          // }
 
           parsedBoxShadow.offsetX = value;
           break;
         case 'offsetY':
-          value =
-            typeof rawBoxShadow.offsetY === 'string'
-              ? parseLength(rawBoxShadow.offsetY)
-              : rawBoxShadow.offsetY;
-          if (value == null) {
-            return [];
-          }
+          value = toValueWithUnit(rawBoxShadow.offsetY);
+          // value =
+          //   typeof rawBoxShadow.offsetY === 'string'
+          //     ? parseLength(rawBoxShadow.offsetY)
+          //     : rawBoxShadow.offsetY;
+          // if (value == null) {
+          //   return [];
+          // }
 
           parsedBoxShadow.offsetY = value;
           break;
         case 'spreadDistance':
-          value =
-            typeof rawBoxShadow.spreadDistance === 'string'
-              ? parseLength(rawBoxShadow.spreadDistance)
-              : rawBoxShadow.spreadDistance;
-          if (value == null) {
-            return [];
-          }
+          value = toValueWithUnit(rawBoxShadow.spreadDistance);
+          // value =
+          //   typeof rawBoxShadow.spreadDistance === 'string'
+          //     ? parseLength(rawBoxShadow.spreadDistance)
+          //     : rawBoxShadow.spreadDistance;
+          // if (value == null) {
+          //   return [];
+          // }
 
           parsedBoxShadow.spreadDistance = value;
           break;
         case 'blurRadius':
-          value =
-            typeof rawBoxShadow.blurRadius === 'string'
-              ? parseLength(rawBoxShadow.blurRadius)
-              : rawBoxShadow.blurRadius;
-          if (value == null || value < 0) {
-            return [];
-          }
+          value = toValueWithUnit(rawBoxShadow.blurRadius);
+          // typeof rawBoxShadow.blurRadius === 'string'
+          // ? parseLength(rawBoxShadow.blurRadius)
+          // : rawBoxShadow.blurRadius;
+          // if (value == null || value < 0) {
+          // return [];
+          // }
 
           parsedBoxShadow.blurRadius = value;
           break;

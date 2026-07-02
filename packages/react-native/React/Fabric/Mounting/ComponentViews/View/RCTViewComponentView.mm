@@ -6,6 +6,7 @@
  */
 
 #import "RCTViewComponentView.h"
+#import "RCTLog.h"
 #import <React/RCTSurfaceHostingProxyRootView.h>
 
 #import <CoreGraphics/CoreGraphics.h>
@@ -27,6 +28,8 @@
 #import <react/renderer/components/view/ViewEventEmitter.h>
 #import <react/renderer/components/view/ViewProps.h>
 #import <react/renderer/components/view/accessibilityPropsConversions.h>
+#import <react/renderer/components/view/primitives.h>
+#import <react/renderer/core/LayoutContext.h>
 #import <react/renderer/graphics/BlendMode.h>
 
 #ifdef RCT_DYNAMIC_FRAMEWORKS
@@ -283,7 +286,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // `opacity`
   if (oldViewProps.opacity != newViewProps.opacity &&
       ![_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
-    self.layer.opacity = (float)newViewProps.opacity;
+    self.layer.opacity = newViewProps.opacity;
     needsInvalidateLayer = YES;
   }
 
@@ -316,13 +319,13 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
 
   // `shadowOpacity`
   if (oldViewProps.shadowOpacity != newViewProps.shadowOpacity) {
-    self.layer.shadowOpacity = (float)newViewProps.shadowOpacity;
+		self.layer.shadowOpacity = newViewProps.shadowOpacity;
     needsInvalidateLayer = YES;
   }
 
   // `shadowRadius`
   if (oldViewProps.shadowRadius != newViewProps.shadowRadius) {
-    self.layer.shadowRadius = (CGFloat)newViewProps.shadowRadius;
+    self.layer.shadowRadius = newViewProps.shadowRadius;
     needsInvalidateLayer = YES;
   }
 
@@ -351,7 +354,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   if ((oldViewProps.transform != newViewProps.transform ||
        oldViewProps.transformOrigin != newViewProps.transformOrigin) &&
       ![_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"transform"]) {
-    auto newTransform = newViewProps.resolveTransform(_layoutMetrics);
+		auto newTransform = newViewProps.resolveTransform(_layoutMetrics, _layoutContext);
     CATransform3D caTransform = RCTCATransform3DFromTransformMatrix(newTransform);
 
     self.layer.transform = caTransform;
@@ -374,17 +377,21 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     needsInvalidateLayer = YES;
   }
 
+	auto newResolvedBorderMetrics = newViewProps.resolveBorderMetrics(_layoutMetrics, _layoutContext);
+	auto oldResolvedBorderMetrics = oldViewProps.resolveBorderMetrics(_layoutMetrics, _layoutContext);
   // `border`
-  if (oldViewProps.borderStyles != newViewProps.borderStyles || oldViewProps.borderRadii != newViewProps.borderRadii ||
-      oldViewProps.borderColors != newViewProps.borderColors) {
+	if (oldResolvedBorderMetrics.borderStyles != newResolvedBorderMetrics.borderStyles ||
+			oldResolvedBorderMetrics.borderRadii != newResolvedBorderMetrics.borderRadii ||
+			oldResolvedBorderMetrics.borderColors != newResolvedBorderMetrics.borderColors) {
     needsInvalidateLayer = YES;
   }
 
+  auto newOutlineOffset = newViewProps.outlineOffset;
+  auto oldOutlineOffset = oldViewProps.outlineOffset;
   // `outline`
   if (oldViewProps.outlineStyle != newViewProps.outlineStyle ||
       oldViewProps.outlineColor != newViewProps.outlineColor ||
-      oldViewProps.outlineOffset != newViewProps.outlineOffset ||
-      oldViewProps.outlineWidth != newViewProps.outlineWidth) {
+      oldOutlineOffset != newOutlineOffset || newViewProps.outlineWidth != oldViewProps.outlineWidth) {
     needsInvalidateLayer = YES;
   }
 
@@ -611,6 +618,15 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   _props = std::static_pointer_cast<const ViewProps>(props);
 }
 
+- (void)updateLayoutContext:(const LayoutContext &)layoutContext
+{
+  [super updateLayoutContext:layoutContext];
+  if (_layoutContext == layoutContext) {
+    return;
+  }
+	_layoutContext = layoutContext;
+}
+
 - (void)updateEventEmitter:(const EventEmitter::Shared &)eventEmitter
 {
   assert(std::dynamic_pointer_cast<const ViewEventEmitter>(eventEmitter));
@@ -653,7 +669,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   // the view was recycled with stale dimensions.
   if ((_props->transformOrigin.isSet() || !_props->transform.operations.empty()) &&
       layoutMetrics.frame.size != previousFrameSize) {
-    auto newTransform = _props->resolveTransform(layoutMetrics);
+		auto newTransform = _props->resolveTransform(_layoutMetrics, _layoutContext);
     self.layer.transform = RCTCATransform3DFromTransformMatrix(newTransform);
   }
 
@@ -694,7 +710,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
     self.layer.transform = RCTCATransform3DFromTransformMatrix(props.transform);
   }
   if ([_propKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN containsObject:@"opacity"]) {
-    self.layer.opacity = (float)props.opacity;
+    self.layer.opacity = props.opacity;
   }
 
   // Clean up box shadow layers to prevent cross-component contamination
@@ -723,6 +739,7 @@ static BOOL RCTLayerTransformCollapsesAxis(CALayer *layer)
   _removeClippedSubviews = NO;
   _reactSubviews = [NSMutableArray new];
   _layoutMetrics = {};
+  _layoutContext = {};
 }
 
 - (void)setPropKeysManagedByAnimated_DO_NOT_USE_THIS_IS_BROKEN:(NSSet<NSString *> *_Nullable)props
@@ -893,7 +910,7 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
 
 - (BOOL)styleWouldClipOverflowInk
 {
-  const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics);
+  const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
   BOOL nonZeroBorderWidth = !(borderMetrics.borderWidths.isUniform() && borderMetrics.borderWidths.left == 0);
   BOOL clipToPaddingBox = ReactNativeFeatureFlags::enableIOSViewClipToPaddingBox();
   return _props->getClipsContentToBounds() &&
@@ -994,8 +1011,21 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
     return;
   }
 
-  const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics);
-
+  const auto borderMetrics = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
+  // log content of borderMetrics
+	if (borderMetrics.borderRadii.bottomLeft.horizontal > 0.0f) {
+		RCTLogInfo(
+							 @"Invalidate layer with border radii (%.2f, %.2f, %.2f, %.2f)",
+							 borderMetrics.borderRadii.topLeft.horizontal,
+							 borderMetrics.borderRadii.topRight.horizontal,
+							 borderMetrics.borderRadii.bottomLeft.horizontal,
+							 borderMetrics.borderRadii.bottomRight.horizontal);
+		
+		if (borderMetrics.borderRadii.bottomLeft.horizontal == 210.0f) {
+			RCTLogInfo(@"Co");
+			auto bm = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
+		}
+	}
   // Stage 1. Shadow Path
   BOOL const layerHasShadow = layer.shadowOpacity > 0 && CGColorGetAlpha(layer.shadowColor) > 0;
   if (layerHasShadow) {
@@ -1114,32 +1144,41 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   // outline
   [_outlineLayer removeFromSuperlayer];
   _outlineLayer = nil;
-  if (_props->outlineWidth != 0) {
-    if (!_outlineLayer) {
-      CALayer *outlineLayer = [CALayer new];
-      outlineLayer.magnificationFilter = kCAFilterNearest;
-      outlineLayer.zPosition = BACKGROUND_COLOR_ZPOSITION + 2;
+  {
+		Float resolvedOutlineOffset = _props->outlineOffset;
+    if (_props->outlineWidth != 0) {
+      if (!_outlineLayer) {
+        CALayer *outlineLayer = [CALayer new];
+        outlineLayer.magnificationFilter = kCAFilterNearest;
+        outlineLayer.zPosition = BACKGROUND_COLOR_ZPOSITION + 2;
 
-      [layer addSublayer:outlineLayer];
-      _outlineLayer = outlineLayer;
-    }
-    _outlineLayer.frame = CGRectInset(
-        layer.bounds, -_props->outlineOffset - _props->outlineWidth, -_props->outlineOffset - _props->outlineWidth);
+        [layer addSublayer:outlineLayer];
+        _outlineLayer = outlineLayer;
+      }
+      _outlineLayer.frame = CGRectInset(
+          layer.bounds,
+          -resolvedOutlineOffset - _props->outlineWidth,
+          -resolvedOutlineOffset - _props->outlineWidth);
 
-    if (areBorderRadiiCircular(borderMetrics.borderRadii) && borderMetrics.borderRadii.topLeft.horizontal == 0) {
-      UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
-      _outlineLayer.borderWidth = _props->outlineWidth;
-      _outlineLayer.borderColor = outlineColor.CGColor;
-    } else {
-      UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
+      if (areBorderRadiiCircular(borderMetrics.borderRadii) && borderMetrics.borderRadii.topLeft.horizontal == 0) {
+        UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
+        _outlineLayer.borderWidth = _props->outlineWidth;
+        _outlineLayer.borderColor = outlineColor.CGColor;
+      } else {
+        UIColor *outlineColor = RCTUIColorFromSharedColor(_props->outlineColor);
 
-      RCTAddContourEffectToLayer(
-          _outlineLayer,
-          RCTCreateOutlineCornerRadiiFromBorderRadii(
-              borderMetrics.borderRadii, _props->outlineWidth, _props->outlineOffset),
-          RCTBorderColors{outlineColor, outlineColor, outlineColor, outlineColor},
-          UIEdgeInsets{_props->outlineWidth, _props->outlineWidth, _props->outlineWidth, _props->outlineWidth},
-          RCTBorderStyleFromOutlineStyle(_props->outlineStyle));
+        RCTAddContourEffectToLayer(
+            _outlineLayer,
+            RCTCreateOutlineCornerRadiiFromBorderRadii(
+                borderMetrics.borderRadii, _props->outlineWidth, resolvedOutlineOffset),
+            RCTBorderColors{outlineColor, outlineColor, outlineColor, outlineColor},
+            UIEdgeInsets{
+                _props->outlineWidth,
+                _props->outlineWidth,
+                _props->outlineWidth,
+                _props->outlineWidth},
+            RCTBorderStyleFromOutlineStyle(_props->outlineStyle));
+      }
     }
   }
 
@@ -1149,7 +1188,7 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   if (_swiftUIWrapper != nullptr) {
     [_swiftUIWrapper resetStyles];
   }
-  self.layer.opacity = (float)_props->opacity;
+  self.layer.opacity = _props->opacity;
   if (!_props->filter.empty()) {
     float multiplicativeBrightness = 1;
     bool hasBrightnessFilter = false;
@@ -1158,40 +1197,40 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
         if (_swiftUIWrapper != nullptr && std::holds_alternative<DropShadowParams>(primitive.parameters)) {
           const auto &dropShadowParams = std::get<DropShadowParams>(primitive.parameters);
           UIColor *shadowColor = RCTUIColorFromSharedColor(dropShadowParams.color);
-          [_swiftUIWrapper updateDropShadow:@(dropShadowParams.standardDeviation)
-                                          x:@(dropShadowParams.offsetX)
-                                          y:@(dropShadowParams.offsetY)
+          [_swiftUIWrapper updateDropShadow:@(dropShadowParams.standardDeviation.asFloat())
+                                          x:@(dropShadowParams.offsetX.asFloat())
+                                          y:@(dropShadowParams.offsetY.asFloat())
                                       color:shadowColor];
         }
-      } else if (std::holds_alternative<Float>(primitive.parameters)) {
+      } else if (std::holds_alternative<UntypedNumericValue>(primitive.parameters)) {
         if (primitive.type == FilterType::Brightness) {
-          multiplicativeBrightness *= std::get<Float>(primitive.parameters);
+          multiplicativeBrightness *= std::get<UntypedNumericValue>(primitive.parameters).asFloat();
           hasBrightnessFilter = true;
         } else if (primitive.type == FilterType::Opacity) {
-          self.layer.opacity *= std::get<Float>(primitive.parameters);
+          self.layer.opacity *= std::get<UntypedNumericValue>(primitive.parameters).asFloat();
         } else if (primitive.type == FilterType::Blur) {
           if (_swiftUIWrapper != nullptr) {
-            Float blurRadius = std::get<Float>(primitive.parameters);
+            Float blurRadius = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateBlurRadius:@(blurRadius)];
           }
         } else if (primitive.type == FilterType::Grayscale) {
           if (_swiftUIWrapper != nullptr) {
-            Float grayscale = std::get<Float>(primitive.parameters);
+            Float grayscale = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateGrayscale:@(grayscale)];
           }
         } else if (primitive.type == FilterType::Saturate) {
           if (_swiftUIWrapper != nullptr) {
-            Float saturation = std::get<Float>(primitive.parameters);
+            Float saturation = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateSaturation:@(saturation)];
           }
         } else if (primitive.type == FilterType::Contrast) {
           if (_swiftUIWrapper != nullptr) {
-            Float contrast = std::get<Float>(primitive.parameters);
+            Float contrast = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateContrast:@(contrast)];
           }
         } else if (primitive.type == FilterType::HueRotate) {
           if (_swiftUIWrapper != nullptr) {
-            Float hueRotateDegrees = std::get<Float>(primitive.parameters);
+            Float hueRotateDegrees = std::get<UntypedNumericValue>(primitive.parameters).asFloat();
             [_swiftUIWrapper updateHueRotate:@(hueRotateDegrees)];
           }
         }
@@ -1217,7 +1256,7 @@ static RCTBorderStyle RCTBorderStyleFromOutlineStyle(OutlineStyle outlineStyle)
   // background image
   [self clearExistingBackgroundImageLayers];
   if (!_props->backgroundImage.empty()) {
-    const auto borderMetricsBI = _props->resolveBorderMetrics(_layoutMetrics);
+    const auto borderMetricsBI = _props->resolveBorderMetrics(_layoutMetrics, _layoutContext);
 
     // background-origin: padding-box
     CGRect backgroundPositioningArea = RCTCGRectFromRect(_layoutMetrics.getPaddingFrame());

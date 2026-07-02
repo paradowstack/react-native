@@ -33,6 +33,12 @@ class UnimplementedViewComponentDescriptor final : public ConcreteComponentDescr
    */
   Props::Shared cloneProps(const PropsParserContext &context, const Props::Shared &props, RawProps rawProps)
       const override;
+
+  Props::Shared cloneResolvedProps(
+    const PropsParserContext &context, 
+    const Props::Shared &props, 
+    RawProps rawProps,
+    DynamicResolveContext resolveContext) const override;
 };
 
 } // namespace facebook::react

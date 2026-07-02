@@ -12,6 +12,8 @@
 #include <react/renderer/css/CSSDataType.h>
 #include <react/renderer/css/CSSLengthUnit.h>
 
+struct CSSCalc;
+
 namespace facebook::react {
 
 /**
@@ -22,7 +24,11 @@ struct CSSLength {
   float value{};
   CSSLengthUnit unit{CSSLengthUnit::Px};
 
+  uint32_t calcId;
+
   constexpr bool operator==(const CSSLength &rhs) const = default;
+
+  // static constexpr std::optional<CSSLength> fromCalc(const CSSCalc &calc);
 };
 
 template <>

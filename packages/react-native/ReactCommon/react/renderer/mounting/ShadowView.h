@@ -29,7 +29,8 @@ struct ShadowView final {
   /*
    * Constructs a `ShadowView` from given `ShadowNode`.
    */
-  explicit ShadowView(const ShadowNode &shadowNode);
+	explicit ShadowView(const ShadowNode &shadowNode);
+	explicit ShadowView(const ShadowNode &shadowNode, const DynamicResolveContext& context);
 
   ShadowView &operator=(const ShadowView &other) = default;
   ShadowView &operator=(ShadowView &&other) = default;

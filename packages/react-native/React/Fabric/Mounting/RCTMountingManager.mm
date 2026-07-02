@@ -8,6 +8,7 @@
 #import "RCTMountingManager.h"
 
 #import <QuartzCore/QuartzCore.h>
+#import <folly/json.h>
 
 #import <React/RCTAssert.h>
 #import <React/RCTComponent.h>
@@ -16,6 +17,7 @@
 #import <cxxreact/TraceSection.h>
 #import <react/featureflags/ReactNativeFeatureFlags.h>
 #import <react/renderer/components/root/RootShadowNode.h>
+#import <react/renderer/core/LayoutContext.h>
 #import <react/renderer/core/LayoutableShadowNode.h>
 #import <react/renderer/core/RawProps.h>
 #import <react/renderer/mounting/TelemetryController.h>
@@ -24,6 +26,7 @@
 #import <React/RCTComponentViewProtocol.h>
 #import <React/RCTComponentViewRegistry.h>
 #import <React/RCTConversions.h>
+#import <React/RCTMountingManagerDelegate.h>
 #import <React/RCTMountingTransactionObserverCoordinator.h>
 
 using namespace facebook::react;
@@ -44,7 +47,8 @@ static void RCTPerformMountInstructions(
     const ShadowViewMutationList &mutations,
     RCTComponentViewRegistry *registry,
     RCTMountingTransactionObserverCoordinator &observerCoordinator,
-    SurfaceId surfaceId)
+    SurfaceId surfaceId,
+    const LayoutContext &layoutContext)
 {
   TraceSection s("RCTPerformMountInstructions");
 
@@ -80,6 +84,7 @@ static void RCTPerformMountInstructions(
 
         RCTAssert(newChildShadowView.props, @"`newChildShadowView.props` must not be null.");
 
+        [newChildComponentView updateLayoutContext:layoutContext];
         [newChildComponentView updateProps:newChildShadowView.props oldProps:nullptr];
         [newChildComponentView updateEventEmitter:newChildShadowView.eventEmitter];
         [newChildComponentView updateState:newChildShadowView.state oldState:nullptr];
@@ -109,6 +114,8 @@ static void RCTPerformMountInstructions(
 
         RCTAssert(newChildShadowView.props, @"`newChildShadowView.props` must not be null.");
 
+        [newChildComponentView updateLayoutContext:layoutContext];
+
         if (oldChildShadowView.props != newChildShadowView.props) {
           [newChildComponentView updateProps:newChildShadowView.props oldProps:oldChildShadowView.props];
           mask |= RNComponentViewUpdateMaskProps;
@@ -130,9 +137,7 @@ static void RCTPerformMountInstructions(
           mask |= RNComponentViewUpdateMaskLayoutMetrics;
         }
 
-        if (mask != RNComponentViewUpdateMaskNone) {
-          [newChildComponentView finalizeUpdates:mask];
-        }
+        [newChildComponentView finalizeUpdates:mask];
 
         break;
       }
@@ -262,8 +267,13 @@ static void RCTPerformMountInstructions(
         _observerCoordinator.notifyObserversMountingTransactionWillMount(transaction, surfaceTelemetry);
       },
       [&](const MountingTransaction &transaction, const SurfaceTelemetry &surfaceTelemetry) {
+        LayoutContext layoutContext{};
+        if (self.delegate != nil &&
+            [self.delegate respondsToSelector:@selector(mountingManager:layoutContextForRootTag:)]) {
+          layoutContext = [self.delegate mountingManager:self layoutContextForRootTag:surfaceId];
+        }
         RCTPerformMountInstructions(
-            transaction.getMutations(), _componentViewRegistry, _observerCoordinator, surfaceId);
+            transaction.getMutations(), _componentViewRegistry, _observerCoordinator, surfaceId, layoutContext);
       },
       [&](const MountingTransaction &transaction, const SurfaceTelemetry &surfaceTelemetry) {
         _observerCoordinator.notifyObserversMountingTransactionDidMount(transaction, surfaceTelemetry);
@@ -287,6 +297,7 @@ static void RCTPerformMountInstructions(
                       componentDescriptor:(const ComponentDescriptor &)componentDescriptor
 {
   RCTAssertMainQueue();
+	auto text = folly::toJson(props);
   bool updatesTransform = props.find("transform") != props.items().end();
   bool updatesOpacity = props.find("opacity") != props.items().end();
 
@@ -304,6 +315,12 @@ static void RCTPerformMountInstructions(
   }
 
   SurfaceId surfaceId = RCTSurfaceIdForView(componentView);
+	LayoutContext layoutContext;
+  if (self.delegate != nil &&
+      [self.delegate respondsToSelector:@selector(mountingManager:layoutContextForRootTag:)]) {
+    layoutContext = [self.delegate mountingManager:self layoutContextForRootTag:surfaceId];
+    [componentView updateLayoutContext:layoutContext];
+  }
   Props::Shared oldProps = [componentView props];
   Props::Shared newProps = componentDescriptor.cloneProps(
       PropsParserContext{surfaceId, *_contextContainer}, oldProps, RawProps(std::move(props)));
@@ -318,13 +335,13 @@ static void RCTPerformMountInstructions(
     auto layoutMetrics = LayoutMetrics();
     layoutMetrics.frame.size.width = componentView.layer.bounds.size.width;
     layoutMetrics.frame.size.height = componentView.layer.bounds.size.height;
-    CATransform3D newTransform = RCTCATransform3DFromTransformMatrix(newViewProps.resolveTransform(layoutMetrics));
+    CATransform3D newTransform = RCTCATransform3DFromTransformMatrix(newViewProps.resolveTransform(layoutMetrics, layoutContext));
     if (!CATransform3DEqualToTransform(newTransform, componentView.layer.transform)) {
       componentView.layer.transform = newTransform;
     }
   }
-  if (updatesOpacity && componentView.layer.opacity != (float)newViewProps.opacity) {
-    componentView.layer.opacity = newViewProps.opacity;
+	if (updatesOpacity && componentView.layer.opacity != newViewProps.opacity) {
+		componentView.layer.opacity = newViewProps.opacity;
   }
 
   [componentView finalizeUpdates:RNComponentViewUpdateMaskProps];

@@ -211,9 +211,11 @@ export interface FlexStyle {
 
 export interface ShadowStyleIOS {
   shadowColor?: ColorValue | undefined;
-  shadowOffset?: Readonly<{width: number; height: number}> | undefined;
+  shadowOffset?:
+    | Readonly<{width: number | string; height: number | string}>
+    | undefined;
   shadowOpacity?: AnimatableNumericValue | undefined;
-  shadowRadius?: number | undefined;
+  shadowRadius?: number | string | undefined;
 }
 
 interface PerspectiveTransform {
@@ -496,8 +498,8 @@ export interface ViewStyle extends FlexStyle, ShadowStyleIOS, TransformsStyle {
   outlineColor?: ColorValue | undefined;
   outlineOffset?: AnimatableNumericValue | undefined;
   outlineStyle?: 'solid' | 'dotted' | 'dashed' | undefined;
-  outlineWidth?: AnimatableNumericValue | undefined;
-  opacity?: AnimatableNumericValue | undefined;
+  outlineWidth?: AnimatableNumericValue | string | undefined;
+  opacity?: AnimatableNumericValue | string | undefined;
   /**
    * Sets the elevation of a view, using Android's underlying
    * [elevation API](https://developer.android.com/training/material/shadows-clipping.html#Elevation).

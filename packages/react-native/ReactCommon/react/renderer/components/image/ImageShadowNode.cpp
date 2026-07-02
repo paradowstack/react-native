@@ -50,8 +50,13 @@ void ImageShadowNode::updateStateIfNeeded() {
   auto newImageSource = getImageSource();
   const auto& oldImageRequestParams = savedState.getImageRequestParams();
   const auto& imageProps = getConcreteProps();
+
+  DynamicResolver r{
+      props_->calcExpressions, {getLayoutMetrics(), getLayoutContext()}};
+  auto blurRadius = imageProps.blurRadius;
+  r.resolve(fnv1a("blurRadius"), blurRadius);
   const auto& newImageRequestParams = ImageRequestParams(
-      imageProps.blurRadius
+      blurRadius
 #ifdef ANDROID
       ,
       imageProps.defaultSource,

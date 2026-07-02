@@ -8,15 +8,13 @@
 #include "YogaStylableProps.h"
 
 #include <react/featureflags/ReactNativeFeatureFlags.h>
+#include <react/renderer/components/view/YogaLayoutableShadowNode.h>
 #include <react/renderer/components/view/conversions.h>
 #include <react/renderer/components/view/propsConversions.h>
 #include <react/renderer/core/propsConversions.h>
 #include <react/renderer/debug/debugStringConvertibleUtils.h>
-#include <react/utils/fnv1a.h>
 #include <yoga/Yoga.h>
-#include <yoga/style/StyleLength.h>
 
-#include "YogaLayoutableShadowNode.h"
 #include "conversions.h"
 
 namespace facebook::react {
@@ -39,8 +37,11 @@ YogaStylableProps::YogaStylableProps(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.yogaStyle
               : convertRawProp(context, rawProps, sourceProps.yogaStyle)) {
-  calcExpressions =
-      buildCalcExpressions(context, rawProps, sourceProps.calcExpressions);
+  // yogaStyle =
+  //                ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
+  //    ? sourceProps.yogaStyle
+  //    : convertRawProp(context, rawProps, sourceProps.yogaStyle);
+
   if (!ReactNativeFeatureFlags::enableCppPropsIteratorSetter()) {
     convertRawPropAliases(context, sourceProps, rawProps);
   }
@@ -130,119 +131,6 @@ static inline const T getFieldValue(
       position, setPosition, yoga::Edge::Vertical, "insetBlock");    \
   REBUILD_YG_FIELD_SWITCH_CASE_INDEXED(                              \
       position, setPosition, yoga::Edge::All, "inset");
-
-#define APPLY_CALC_COMMON(fieldName, setPoints, setPercent, setDynamic)    \
-  {                                                                        \
-    if (const auto* rawValue = rawProps.at(fieldName, nullptr, nullptr)) { \
-      const auto& value = *rawValue;                                       \
-      if (value.hasType<std::string>()) {                                  \
-        constexpr auto key = fnv1a(fieldName);                            \
-        auto isCalcExpression{false};                                      \
-        auto parsed = parseCSSProperty<CSSCalc>((std::string)value);       \
-        if (std::holds_alternative<CSSCalc>(parsed)) {                     \
-          auto calc = std::get<CSSCalc>(parsed);                           \
-          if (calc.isPointsOnly()) {                                       \
-            setPoints(calc.px);                                            \
-          } else if (calc.isPercentOnly()) {                               \
-            setPercent(calc.percent);                                      \
-          } else {                                                         \
-            setDynamic(key);                                              \
-            calcExpressions[key] = std::move(calc);                       \
-            isCalcExpression = true;                                       \
-          }                                                                \
-        }                                                                  \
-        if (!isCalcExpression && calcExpressions.count(key)) {            \
-          calcExpressions.erase(key);                                     \
-        }                                                                  \
-      }                                                                    \
-    }                                                                      \
-  }
-
-#define APPLY_CALC_YG_INDEXED(setter, index, fieldName, LengthType)      \
-  APPLY_CALC_COMMON(                                                     \
-      fieldName,                                                         \
-      [&](float points) {                                                \
-        yogaStyle.setter(index, LengthType::points(points));             \
-      },                                                                 \
-      [&](float percent) {                                               \
-        yogaStyle.setter(index, LengthType::percent(percent));           \
-      },                                                                 \
-      [&](YGValueDynamicID dynamicId) {                                  \
-        yogaStyle.setter(                                                \
-            index,                                                       \
-            LengthType::dynamic(&yogaNodeCalcValueResolver, dynamicId)); \
-      })
-
-#define APPLY_CALC_YG_FIELD(setter, fieldName, LengthType)                    \
-  APPLY_CALC_COMMON(                                                          \
-      fieldName,                                                              \
-      [&](float points) { yogaStyle.setter(LengthType::points(points)); },    \
-      [&](float percent) { yogaStyle.setter(LengthType::percent(percent)); }, \
-      [&](YGValueDynamicID dynamicId) {                                       \
-        yogaStyle.setter(                                                     \
-            LengthType::dynamic(&yogaNodeCalcValueResolver, dynamicId));      \
-      })
-
-#define APPLY_CALC_YG_DIMENSION(setter, widthStr, heightStr)           \
-  APPLY_CALC_YG_INDEXED(                                               \
-      setter, yoga::Dimension::Width, widthStr, yoga::StyleSizeLength) \
-  APPLY_CALC_YG_INDEXED(                                               \
-      setter, yoga::Dimension::Height, heightStr, yoga::StyleSizeLength)
-
-#define APPLY_CALC_YG_EDGES_MARGIN(setter, LengthType, prefix)                 \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Left, prefix "Left", LengthType)   \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Top, prefix "Top", LengthType)     \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Right, prefix "Right", LengthType) \
-  APPLY_CALC_YG_INDEXED(                                                       \
-      setter, yoga::Edge::Bottom, prefix "Bottom", LengthType)                 \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Start, prefix "Start", LengthType) \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::End, prefix "End", LengthType)     \
-  APPLY_CALC_YG_INDEXED(                                                       \
-      setter, yoga::Edge::Horizontal, prefix "Horizontal", LengthType)         \
-  APPLY_CALC_YG_INDEXED(                                                       \
-      setter, yoga::Edge::Vertical, prefix "Vertical", LengthType)             \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::All, prefix, LengthType)
-
-#define APPLY_CALC_YG_EDGES_PADDING(setter, LengthType, prefix)                \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Left, prefix "Left", LengthType)   \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Top, prefix "Top", LengthType)     \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Right, prefix "Right", LengthType) \
-  APPLY_CALC_YG_INDEXED(                                                       \
-      setter, yoga::Edge::Bottom, prefix "Bottom", LengthType)                 \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::Start, prefix "Start", LengthType) \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::End, prefix "End", LengthType)     \
-  APPLY_CALC_YG_INDEXED(                                                       \
-      setter, yoga::Edge::Horizontal, prefix "Horizontal", LengthType)         \
-  APPLY_CALC_YG_INDEXED(                                                       \
-      setter, yoga::Edge::Vertical, prefix "Vertical", LengthType)             \
-  APPLY_CALC_YG_INDEXED(setter, yoga::Edge::All, prefix, LengthType)
-
-#define APPLY_CALC_YG_EDGES_POSITION()                                       \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Left, "left", yoga::StyleLength)              \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Top, "top", yoga::StyleLength)                \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Right, "right", yoga::StyleLength)            \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Bottom, "bottom", yoga::StyleLength)          \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Start, "start", yoga::StyleLength)            \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::End, "end", yoga::StyleLength)                \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Horizontal, "insetInline", yoga::StyleLength) \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::Vertical, "insetBlock", yoga::StyleLength)    \
-  APPLY_CALC_YG_INDEXED(                                                     \
-      setPosition, yoga::Edge::All, "inset", yoga::StyleLength)
-
-#define APPLY_CALC_YG_GUTTER()                                      \
-  APPLY_CALC_YG_INDEXED(                                            \
-      setGap, yoga::Gutter::Row, "rowGap", yoga::StyleLength)       \
-  APPLY_CALC_YG_INDEXED(                                            \
-      setGap, yoga::Gutter::Column, "columnGap", yoga::StyleLength) \
-  APPLY_CALC_YG_INDEXED(setGap, yoga::Gutter::All, "gap", yoga::StyleLength)
 
 void YogaStylableProps::setProp(
     const PropsParserContext& context,
@@ -645,20 +533,100 @@ void YogaStylableProps::convertRawPropAliases(
       yoga::StyleLength::undefined());
 }
 
-CalcExpressions YogaStylableProps::buildCalcExpressions(
-    const PropsParserContext& context,
-    const RawProps& rawProps,
-    const CalcExpressions& defaultValue) {
-  auto calcExpressions = defaultValue;
-  APPLY_CALC_YG_DIMENSION(setDimension, "width", "height")
-  APPLY_CALC_YG_DIMENSION(setMinDimension, "minWidth", "minHeight")
-  APPLY_CALC_YG_DIMENSION(setMaxDimension, "maxWidth", "maxHeight")
-  APPLY_CALC_YG_FIELD(setFlexBasis, "flexBasis", yoga::StyleSizeLength)
-  APPLY_CALC_YG_GUTTER()
-  APPLY_CALC_YG_EDGES_POSITION()
-  APPLY_CALC_YG_EDGES_MARGIN(setMargin, yoga::StyleLength, "margin")
-  APPLY_CALC_YG_EDGES_PADDING(setPadding, yoga::StyleLength, "padding")
-  return calcExpressions;
+void YogaStylableProps::collectLiveResolvableIds(
+    const DynamicPropertiesMap& map,
+    std::unordered_set<DynamicPropertyId>& ids) const {
+  Props::collectLiveResolvableIds(map, ids);
+
+  for (auto dim : {yoga::Dimension::Width, yoga::Dimension::Height}) {
+    if (auto id = yogaStyle.dimension(dim).callbackId())
+      ids.insert(id);
+    if (auto id = yogaStyle.minDimension(dim).callbackId())
+      ids.insert(id);
+    if (auto id = yogaStyle.maxDimension(dim).callbackId())
+      ids.insert(id);
+  }
+  if (auto id = yogaStyle.flexBasis().callbackId())
+    ids.insert(id);
+  for (auto edge :
+       {yoga::Edge::Left,
+        yoga::Edge::Top,
+        yoga::Edge::Right,
+        yoga::Edge::Bottom,
+        yoga::Edge::Start,
+        yoga::Edge::End,
+        yoga::Edge::Horizontal,
+        yoga::Edge::Vertical,
+        yoga::Edge::All}) {
+    if (auto id = yogaStyle.margin(edge).callbackId())
+      ids.insert(id);
+    if (auto id = yogaStyle.padding(edge).callbackId())
+      ids.insert(id);
+    if (auto id = yogaStyle.border(edge).callbackId())
+      ids.insert(id);
+    if (auto id = yogaStyle.position(edge).callbackId())
+      ids.insert(id);
+  }
+  for (auto gutter :
+       {yoga::Gutter::Row, yoga::Gutter::Column, yoga::Gutter::All}) {
+    if (auto id = yogaStyle.gap(gutter).callbackId())
+      ids.insert(id);
+  }
 }
+
+#ifdef RN_SERIALIZABLE_STATE
+folly::dynamic YogaStylableProps::getResolvedProps(
+    const DynamicResolver& resolver) const {
+  auto props = rawProps;
+  if (yogaStyle.dimension(yoga::Dimension::Width).isDynamic()) {
+    props["width"] = resolver.toDynamic(
+        yogaStyle.dimension(yoga::Dimension::Width),
+        resolver.context.frameWidth());
+  }
+  if (yogaStyle.dimension(yoga::Dimension::Height).isDynamic()) {
+    props["height"] = resolver.toDynamic(
+        yogaStyle.dimension(yoga::Dimension::Height),
+        resolver.context.frameHeight());
+  }
+  if (yogaStyle.border(yoga::Edge::All).isDynamic()) {
+    props["borderWidth"] =
+        resolver.toDynamic(yogaStyle.border(yoga::Edge::All));
+  }
+  if (yogaStyle.border(yoga::Edge::Left).isDynamic()) {
+    props["borderLeftWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Left));
+  }
+  if (yogaStyle.border(yoga::Edge::Right).isDynamic()) {
+    props["borderRightWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Right));
+  }
+  if (yogaStyle.border(yoga::Edge::Top).isDynamic()) {
+    props["borderTopWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Top));
+  }
+  if (yogaStyle.border(yoga::Edge::Bottom).isDynamic()) {
+    props["borderBottomWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Bottom));
+  }
+  if (yogaStyle.border(yoga::Edge::Start).isDynamic()) {
+    props["borderStartWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Start));
+  }
+  if (yogaStyle.border(yoga::Edge::End).isDynamic()) {
+    props["borderEndWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::End));
+  }
+  if (yogaStyle.border(yoga::Edge::Horizontal).isDynamic()) {
+    props["borderHorizontalWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Horizontal));
+  }
+  if (yogaStyle.border(yoga::Edge::Vertical).isDynamic()) {
+    props["borderVerticalWidth"] =
+        resolver.resolve(yogaStyle.border(yoga::Edge::Vertical));
+  }
+
+  return props;
+}
+#endif
 
 } // namespace facebook::react

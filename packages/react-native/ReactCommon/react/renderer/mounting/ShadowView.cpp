@@ -7,6 +7,7 @@
 
 #include "ShadowView.h"
 
+#include <react/renderer/core/ConcreteComponentDescriptor.h>
 #include <react/renderer/core/LayoutMetrics.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 
@@ -20,6 +21,27 @@ static LayoutMetrics layoutMetricsFromShadowNode(const ShadowNode& shadowNode) {
       : EmptyLayoutMetrics;
 }
 
+static Props::Shared resolveProps(const ShadowNode& shadowNode, const DynamicResolveContext& context) {
+	auto contextContainer = shadowNode.getContextContainer();
+	if (!contextContainer) {
+		contextContainer = std::make_shared<ContextContainer>();
+	}
+	PropsParserContext propsParserContext{
+			shadowNode.getSurfaceId(), *contextContainer};
+	
+#ifdef RN_SERIALIZABLE_STATE
+		RawProps rawProps = (RawProps)shadowNode.getProps()->rawProps;
+#else
+		RawProps rawProps{};
+#endif
+	
+  return shadowNode.getComponentDescriptor().cloneResolvedProps(
+			propsParserContext,
+			shadowNode.getProps(),
+			RawProps{rawProps},
+			context);
+}
+
 ShadowView::ShadowView(const ShadowNode& shadowNode)
     : componentName(shadowNode.getComponentName()),
       componentHandle(shadowNode.getComponentHandle()),
@@ -30,6 +52,17 @@ ShadowView::ShadowView(const ShadowNode& shadowNode)
       eventEmitter(shadowNode.getEventEmitter()),
       layoutMetrics(layoutMetricsFromShadowNode(shadowNode)),
       state(shadowNode.getState()) {}
+
+ShadowView::ShadowView(const ShadowNode& shadowNode, const DynamicResolveContext& context)
+		: componentName(shadowNode.getComponentName()),
+			componentHandle(shadowNode.getComponentHandle()),
+			surfaceId(shadowNode.getSurfaceId()),
+			tag(shadowNode.getTag()),
+			traits(shadowNode.getTraits()),
+			props(resolveProps(shadowNode, context)),
+			eventEmitter(shadowNode.getEventEmitter()),
+			layoutMetrics(layoutMetricsFromShadowNode(shadowNode)),
+			state(shadowNode.getState()) {}
 
 bool ShadowView::operator==(const ShadowView& rhs) const {
   return std::tie(

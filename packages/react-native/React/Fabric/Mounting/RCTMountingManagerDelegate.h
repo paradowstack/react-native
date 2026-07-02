@@ -8,6 +8,8 @@
 #import <UIKit/UIKit.h>
 
 #import <React/RCTPrimitives.h>
+#import <react/renderer/core/LayoutContext.h>
+#import <react/renderer/runtimescheduler/RuntimeScheduler.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -23,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
  * given `rootTag`.
  * Always called on the main queue.
  */
-- (void)mountingManager:(RCTMountingManager *)mountingManager willMountComponentsWithRootTag:(ReactTag)MountingManager;
+- (void)mountingManager:(RCTMountingManager *)mountingManager willMountComponentsWithRootTag:(ReactTag)rootTag;
 
 /*
  * Called right *after* execution of mount items which affect a Surface with
@@ -31,6 +33,15 @@ NS_ASSUME_NONNULL_BEGIN
  * Always called on the main queue.
  */
 - (void)mountingManager:(RCTMountingManager *)mountingManager didMountComponentsWithRootTag:(ReactTag)rootTag;
+
+/*
+ * Returns the current `LayoutContext` for the surface identified by `rootTag`
+ * (same as `SurfaceId`). Used when applying layout-dependent style resolution
+ * on the main thread (e.g. `calc()` with viewport units).
+ * Always called on the main queue.
+ */
+- (facebook::react::LayoutContext)mountingManager:(RCTMountingManager *)mountingManager
+                        layoutContextForRootTag:(facebook::react::SurfaceId)rootTag;
 
 @end
 

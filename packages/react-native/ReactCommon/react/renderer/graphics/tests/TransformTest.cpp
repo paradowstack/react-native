@@ -34,8 +34,8 @@ TEST(TransformTest, fromTransformOperationPercentage) {
 
   auto operation = TransformOperation{
       TransformOperationType::Translate,
-      ValueUnit{50.0f, UnitType::Percent},
-      ValueUnit{20.0f, UnitType::Percent},
+      UntypedNumericValue::percentage(50.0f),
+      UntypedNumericValue::percentage(20.0f),
       {}};
   auto translatedPoint =
       point * Transform::FromTransformOperation(operation, size);
@@ -44,8 +44,8 @@ TEST(TransformTest, fromTransformOperationPercentage) {
 
   operation = TransformOperation{
       TransformOperationType::Translate,
-      ValueUnit{40.0f, UnitType::Percent},
-      ValueUnit{20.0f, UnitType::Point},
+      UntypedNumericValue::percentage(40.0f),
+      UntypedNumericValue::length(20.0f),
       {}};
   translatedPoint = point * Transform::FromTransformOperation(operation, size);
   EXPECT_EQ(translatedPoint.x, 48);

@@ -116,21 +116,48 @@ inline static CGFloat RCTBaseSizeForDynamicTypeRamp(const DynamicTypeRamp &dynam
   }
 }
 
+inline static bool RCTIsNan(const UntypedNumericValue &value)
+{
+  return value.isNan() || std::isnan(value.asFloat());
+}
+
+inline static CGFloat RCTCGFloatFromNumericValue(const UntypedNumericValue &value)
+{
+  return static_cast<CGFloat>(value.asFloat());
+}
+
+inline static bool RCTIsNan(Float value)
+{
+  return std::isnan(value);
+}
+
+inline static CGFloat RCTCGFloatFromNumericValue(Float value)
+{
+  return static_cast<CGFloat>(value);
+}
+
 inline static CGFloat RCTEffectiveFontSizeMultiplierFromTextAttributes(const TextAttributes &textAttributes)
 {
   if (textAttributes.allowFontScaling.value_or(true)) {
-    CGFloat fontSizeMultiplier = !isnan(textAttributes.fontSizeMultiplier) ? textAttributes.fontSizeMultiplier : 1.0;
+    CGFloat fontSizeMultiplier =
+        !RCTIsNan(textAttributes.fontSizeMultiplier)
+        ? RCTCGFloatFromNumericValue(textAttributes.fontSizeMultiplier)
+        : 1.0;
     if (textAttributes.dynamicTypeRamp.has_value()) {
       DynamicTypeRamp dynamicTypeRamp = textAttributes.dynamicTypeRamp.value();
       UIFontMetrics *fontMetrics =
           [UIFontMetrics metricsForTextStyle:RCTUIFontTextStyleForDynamicTypeRamp(dynamicTypeRamp)];
       // Using a specific font size reduces rounding errors from -scaledValueForValue:
       CGFloat requestedSize =
-          isnan(textAttributes.fontSize) ? RCTBaseSizeForDynamicTypeRamp(dynamicTypeRamp) : textAttributes.fontSize;
+          RCTIsNan(textAttributes.fontSize)
+          ? RCTBaseSizeForDynamicTypeRamp(dynamicTypeRamp)
+          : RCTCGFloatFromNumericValue(textAttributes.fontSize);
       fontSizeMultiplier = [fontMetrics scaledValueForValue:requestedSize] / requestedSize;
     }
     CGFloat maxFontSizeMultiplier =
-        !isnan(textAttributes.maxFontSizeMultiplier) ? textAttributes.maxFontSizeMultiplier : 0.0;
+        !RCTIsNan(textAttributes.maxFontSizeMultiplier)
+        ? RCTCGFloatFromNumericValue(textAttributes.maxFontSizeMultiplier)
+        : 0.0;
     return maxFontSizeMultiplier >= 1.0 ? fminf(maxFontSizeMultiplier, fontSizeMultiplier) : fontSizeMultiplier;
   } else {
     return 1.0;
@@ -143,7 +170,7 @@ inline static UIFont *RCTEffectiveFontFromTextAttributes(const TextAttributes &t
 
   RCTFontProperties fontProperties;
   fontProperties.family = fontFamily;
-  fontProperties.size = textAttributes.fontSize;
+  fontProperties.size = RCTCGFloatFromNumericValue(textAttributes.fontSize);
   fontProperties.style = textAttributes.fontStyle.has_value()
       ? RCTFontStyleFromFontStyle(textAttributes.fontStyle.value())
       : RCTFontStyleUndefined;
@@ -205,9 +232,9 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
   }
 
   // Kerning
-  if (!isnan(textAttributes.letterSpacing)) {
-    attributes[NSKernAttributeName] = @(textAttributes.letterSpacing);
-  }
+	if (!isnan(textAttributes.letterSpacing)) {
+		attributes[NSKernAttributeName] = @((CGFloat)textAttributes.letterSpacing);
+	}
 
   // Paragraph Style
   NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
@@ -238,8 +265,10 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     isParagraphStyleUsed = YES;
   }
 
-  if (!isnan(textAttributes.lineHeight)) {
-    CGFloat lineHeight = textAttributes.lineHeight * RCTEffectiveFontSizeMultiplierFromTextAttributes(textAttributes);
+  if (!RCTIsNan(textAttributes.lineHeight)) {
+    CGFloat lineHeight =
+        RCTCGFloatFromNumericValue(textAttributes.lineHeight) *
+        RCTEffectiveFontSizeMultiplierFromTextAttributes(textAttributes);
     paragraphStyle.minimumLineHeight = lineHeight;
     paragraphStyle.maximumLineHeight = lineHeight;
     isParagraphStyleUsed = YES;
@@ -311,8 +340,8 @@ NSMutableDictionary<NSAttributedStringKey, id> *RCTNSTextAttributesFromTextAttri
     auto textShadowOffset = textAttributes.textShadowOffset.value();
     NSShadow *shadow = [NSShadow new];
     shadow.shadowOffset = CGSize{textShadowOffset.width, textShadowOffset.height};
-    if (!isnan(textAttributes.textShadowRadius)) {
-      shadow.shadowBlurRadius = textAttributes.textShadowRadius;
+    if (!RCTIsNan(textAttributes.textShadowRadius)) {
+      shadow.shadowBlurRadius = RCTCGFloatFromNumericValue(textAttributes.textShadowRadius);
     }
     if (textAttributes.textShadowColor) {
       shadow.shadowColor = RCTUIColorFromSharedColor(textAttributes.textShadowColor);

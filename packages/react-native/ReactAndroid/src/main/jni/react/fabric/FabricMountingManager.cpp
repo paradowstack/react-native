@@ -15,6 +15,8 @@
 #include <react/featureflags/ReactNativeFeatureFlags.h>
 #include <react/jni/ReadableNativeMap.h>
 #include <react/renderer/components/scrollview/ScrollViewProps.h>
+#include <react/renderer/components/view/ViewProps.h>
+#include <react/renderer/components/view/primitives.h>
 #include <react/renderer/core/DynamicPropsUtilities.h>
 #include <react/renderer/core/conversions.h>
 #include <react/renderer/mounting/MountingTransaction.h>
@@ -28,6 +30,8 @@
 #include <cfenv>
 #include <cmath>
 #include <vector>
+
+#include <iostream>
 
 namespace facebook::react {
 
@@ -407,9 +411,14 @@ inline void writeCreateMountItem(
 
   auto componentName = getPlatformComponentName(mountItem.newChildShadowView);
 
-  jni::local_ref<jobject> props =
-      getProps(mountItem.oldChildShadowView, mountItem.newChildShadowView);
-
+  jni::local_ref<jobject> props;
+  if (!mountItem.newChildShadowView.traits.check(
+          ShadowNodeTraits::Trait::CreatedWithResolvableProperties)) {
+    props =
+        getProps(mountItem.oldChildShadowView, mountItem.newChildShadowView);
+  } else {
+    props = ReadableNativeMap::newObjectCxxArgs(folly::dynamic::object());
+  }
   // Do not hold onto Java object from C
   // We DO want to hold onto C object from Java, since we don't know the
   // lifetime of the Java object
@@ -798,6 +807,14 @@ void FabricMountingManager::executeMount(
                   CppMountItem::UpdateEventEmitterMountItem(
                       mutation.newChildShadowView));
 
+          if (newChildShadowView.traits.check(
+                  ShadowNodeTraits::Trait::CreatedWithResolvableProperties)) {
+            (maintainMutationOrder ? cppCommonMountItems
+                                   : cppUpdatePropsMountItems)
+                .push_back(
+                    CppMountItem::UpdatePropsMountItem(
+                        oldChildShadowView, newChildShadowView));
+          }
           break;
         }
         default: {
@@ -1120,7 +1137,13 @@ void FabricMountingManager::preallocateShadowView(
     cStateWrapper->setState(shadowView.state);
   }
 
-  jni::local_ref<jobject> props = getProps({}, shadowView);
+  jni::local_ref<jobject> props;
+  if (!shadowView.traits.check(
+          ShadowNodeTraits::Trait::CreatedWithResolvableProperties)) {
+    props = getProps({}, shadowView);
+  } else {
+    props = ReadableNativeMap::newObjectCxxArgs(folly::dynamic::object());
+  }
 
   auto component = getPlatformComponentName(shadowView);
 

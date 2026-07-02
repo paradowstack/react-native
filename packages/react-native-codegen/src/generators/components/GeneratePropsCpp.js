@@ -227,7 +227,9 @@ ComponentName ${className}::getDiffPropsImplementationTarget() const {
 }
 
 folly::dynamic ${className}::getDiffProps(
-    const Props* prevProps) const {
+    const Props* prevProps,
+    const LayoutMetrics* layoutMetrics,
+    const LayoutContext* layoutContext) const {
   static const auto defaultProps = ${className}();
   const ${className}* oldProps = prevProps == nullptr
       ? &defaultProps
@@ -235,7 +237,8 @@ folly::dynamic ${className}::getDiffProps(
   if (this == oldProps) {
     return folly::dynamic::object();
   }
-  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
+  folly::dynamic result = HostPlatformViewProps::getDiffProps(
+      prevProps, layoutMetrics, layoutContext);
   ${diffProps}
   return result;
 }

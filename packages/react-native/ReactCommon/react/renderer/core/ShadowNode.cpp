@@ -156,7 +156,9 @@ std::shared_ptr<ShadowNode> ShadowNode::clone(
     // apply previously set props via `setNativeProps` API. The parsed
     // result escapes the lock so the rest of the clone work runs
     // unblocked.
-    auto propsParserContext = PropsParserContext{family_->getSurfaceId(), {}};
+    auto context = family_->componentDescriptor_.getContextContainer();
+    auto propsParserContext =
+        PropsParserContext{family_->getSurfaceId(), *context};
     return componentDescriptor.cloneShadowNode(
         *this,
         {.props = componentDescriptor.cloneProps(

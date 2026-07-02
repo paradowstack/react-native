@@ -27,16 +27,16 @@ class ResolveTransformTest : public ::testing::Test {
  protected:
   TransformOrigin createTransformOriginPoints(float x, float y, float z = 0) {
     TransformOrigin origin;
-    origin.xy[0] = ValueUnit(x, UnitType::Point);
-    origin.xy[1] = ValueUnit(y, UnitType::Point);
+    origin.xy[0] = LengthPercentageValue::length(x);
+    origin.xy[1] = LengthPercentageValue::length(y);
     origin.z = z;
     return origin;
   }
 
   TransformOrigin createTransformOriginPercent(float x, float y, float z = 0) {
     TransformOrigin origin;
-    origin.xy[0] = ValueUnit(x, UnitType::Percent);
-    origin.xy[1] = ValueUnit(y, UnitType::Percent);
+    origin.xy[0] = LengthPercentageValue::percentage(x);
+    origin.xy[1] = LengthPercentageValue::percentage(y);
     origin.z = z;
     return origin;
   }
@@ -176,8 +176,8 @@ TEST_F(ResolveTransformTest, TransformOriginWithZComponent) {
   Transform transform = Transform::Scale(1.5, 1.5, 0.);
 
   TransformOrigin transformOrigin;
-  transformOrigin.xy[0] = ValueUnit(50, UnitType::Point);
-  transformOrigin.xy[1] = ValueUnit(100, UnitType::Point);
+  transformOrigin.xy[0] = LengthPercentageValue::length(50);
+  transformOrigin.xy[1] = LengthPercentageValue::length(100);
   transformOrigin.z = 10.0f;
 
   auto result =
@@ -192,9 +192,9 @@ TEST_F(ResolveTransformTest, ArbitraryTransformMatrix) {
   Transform transform;
   transform.operations.push_back({
       .type = TransformOperationType::Arbitrary,
-      .x = ValueUnit(0, UnitType::Point),
-      .y = ValueUnit(0, UnitType::Point),
-      .z = ValueUnit(0, UnitType::Point),
+      .x = UntypedNumericValue::length(0),
+      .y = UntypedNumericValue::length(0),
+      .z = UntypedNumericValue::length(0),
   });
   // Set custom matrix
   transform.matrix = {{2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 10, 20, 0, 1}};
@@ -302,8 +302,9 @@ TEST_F(ResolveTransformTest, RotationMixedTransformOriginUnits) {
   Transform transform = Transform::RotateZ(M_PI); // 180 degrees
 
   TransformOrigin transformOrigin;
-  transformOrigin.xy[0] = ValueUnit(30, UnitType::Point); // 30 points
-  transformOrigin.xy[1] = ValueUnit(25, UnitType::Percent); // 25% of 200 = 50
+  transformOrigin.xy[0] = LengthPercentageValue::length(30); // 30 points
+  transformOrigin.xy[1] =
+      LengthPercentageValue::percentage(25); // 25% of 200 = 50
   transformOrigin.z = 0;
 
   auto result =
@@ -333,8 +334,8 @@ TEST_F(ResolveTransformTest, RotationWithZTransformOrigin) {
   Transform transform = Transform::RotateZ(M_PI / 4.0); // 45 degrees
 
   TransformOrigin transformOrigin;
-  transformOrigin.xy[0] = ValueUnit(50, UnitType::Point);
-  transformOrigin.xy[1] = ValueUnit(100, UnitType::Point);
+  transformOrigin.xy[0] = LengthPercentageValue::length(50);
+  transformOrigin.xy[1] = LengthPercentageValue::length(100);
   transformOrigin.z = 15.0f;
 
   auto result =

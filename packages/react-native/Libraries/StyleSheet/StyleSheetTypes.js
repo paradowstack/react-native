@@ -686,19 +686,19 @@ export type ____ShadowStyle_InternalCore = Readonly<{
    * @platform ios
    */
   shadowOffset?: Readonly<{
-    width?: number,
-    height?: number,
+    width?: number | string,
+    height?: number | string,
   }>,
   /**
    * Sets the drop shadow opacity (multiplied by the color's alpha component)
    * @platform ios
    */
-  shadowOpacity?: number,
+  shadowOpacity?: number | string,
   /**
    * Sets the drop shadow blur radius
    * @platform ios
    */
-  shadowRadius?: number,
+  shadowRadius?: number | string,
 }>;
 
 export type ____ShadowStyle_Internal = Readonly<{
@@ -880,11 +880,11 @@ export type ____ViewStyle_InternalBase = Readonly<{
   borderRightWidth?: number,
   borderStartWidth?: number,
   borderTopWidth?: number,
-  opacity?: number,
+  opacity?: number | string,
   outlineColor?: ____ColorValue_Internal,
   outlineOffset?: number,
   outlineStyle?: 'solid' | 'dotted' | 'dashed',
-  outlineWidth?: number,
+  outlineWidth?: number | string,
   /**
    * Sets the elevation of a view, using Android's underlying
    * [elevation API](https://developer.android.com/training/material/shadows-clipping.html#Elevation).

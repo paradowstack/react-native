@@ -76,8 +76,10 @@ class ConcreteViewShadowNode : public ConcreteShadowNode<
 
   Transform getTransform() const override
   {
-    auto layoutMetrics = BaseShadowNode::getLayoutMetrics();
-    return BaseShadowNode::getConcreteProps().resolveTransform(layoutMetrics);
+    auto metrics = BaseShadowNode::getLayoutMetrics();
+    auto context = BaseShadowNode::getLayoutContext();
+    auto resolver = DynamicResolver(BaseShadowNode::getConcreteProps().calcExpressions, {metrics, context});
+    return BaseShadowNode::getConcreteProps().resolveTransform(resolver);
   }
 
   bool canBeTouchTarget() const override
@@ -116,6 +118,10 @@ class ConcreteViewShadowNode : public ConcreteShadowNode<
       BaseShadowNode::traits_.set(ShadowNodeTraits::Trait::KeyboardFocusable);
     } else {
       BaseShadowNode::traits_.unset(ShadowNodeTraits::Trait::KeyboardFocusable);
+    }
+
+    if (!props.calcExpressions.empty()) {
+      BaseShadowNode::traits_.set(ShadowNodeTraits::Trait::CreatedWithResolvableProperties);
     }
   }
 };

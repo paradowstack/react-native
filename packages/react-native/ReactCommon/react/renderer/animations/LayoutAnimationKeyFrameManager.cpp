@@ -464,7 +464,7 @@ LayoutAnimationKeyFrameManager::pullTransaction(
               if (baselineShadowView.traits.check(
                       ShadowNodeTraits::Trait::ViewKind)) {
                 const auto& viewProps = static_cast<const ViewProps&>(*props);
-                const_cast<ViewProps&>(viewProps).opacity = 0;
+                const_cast<ViewProps&>(viewProps).opacity = 0.0f;
               }
 
               react_native_assert(props != nullptr);
@@ -587,7 +587,7 @@ LayoutAnimationKeyFrameManager::pullTransaction(
                 if (baselineShadowView.traits.check(
                         ShadowNodeTraits::Trait::ViewKind)) {
                   const auto& viewProps = static_cast<const ViewProps&>(*props);
-                  const_cast<ViewProps&>(viewProps).opacity = 0;
+                  const_cast<ViewProps&>(viewProps).opacity = 0.0f;
                 }
 
                 react_native_assert(props != nullptr);

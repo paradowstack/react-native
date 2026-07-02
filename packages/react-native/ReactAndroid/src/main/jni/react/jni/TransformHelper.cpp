@@ -24,9 +24,16 @@ void processTransform(
     float viewWidth,
     float viewHeight,
     NativeArray* jTransformOrigin) {
-  // Assuming parsing transforms doesn't require a real PropsParserContext
+  // The ContextContainer has no relevant content for transform parsing;
+  // it is only needed to satisfy PropsParserContext's constructor.
   static ContextContainer contextContainer;
-  static PropsParserContext context(0, contextContainer);
+
+  // Create a fresh per-call context so concurrent calls are isolated.
+  // calcMap points to a local DynamicPropertiesMap so that any calc()
+  // values parsed inside fromRawValue are stored here, not in shared state.
+  DynamicPropertiesMap calcExpressions;
+  PropsParserContext context(0, contextContainer);
+  context.calcMap = &calcExpressions;
 
   RawValue transformValue(jTransforms->getArray());
   Transform transform;
@@ -38,10 +45,10 @@ void processTransform(
     fromRawValue(context, transformOriginValue, transformOrigin);
   }
 
-  auto result = BaseViewProps::resolveTransform(
-      Size{.width = viewWidth, .height = viewHeight},
-      transform,
-      transformOrigin);
+  auto resolver = DynamicResolver{
+      calcExpressions, {{.frame = {{}, {viewWidth, viewHeight}}}, {}}};
+  auto result =
+      BaseViewProps::resolveTransform(resolver, transform, transformOrigin);
 
   // Convert from matrix of floats to double matrix
   constexpr size_t MatrixSize = std::tuple_size_v<decltype(result.matrix)>;

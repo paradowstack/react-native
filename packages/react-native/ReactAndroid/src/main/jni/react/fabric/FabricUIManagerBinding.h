@@ -16,6 +16,7 @@
 #include <react/jni/JRuntimeExecutor.h>
 #include <react/jni/JRuntimeScheduler.h>
 #include <react/jni/ReadableNativeMap.h>
+#include <react/renderer/core/LayoutContext.h>
 #include <react/renderer/scheduler/SchedulerDelegate.h>
 #include <react/renderer/scheduler/SurfaceHandler.h>
 #include <react/renderer/uimanager/LayoutAnimationStatusDelegate.h>

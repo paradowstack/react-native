@@ -10,7 +10,7 @@
 #include <react/renderer/debug/flags.h>
 #include <react/renderer/graphics/Color.h>
 #include <react/renderer/graphics/Float.h>
-#include <react/renderer/graphics/ValueUnit.h>
+#include <react/renderer/graphics/NumericValue.h>
 #include <optional>
 
 #if RN_DEBUG_STRING_CONVERTIBLE
@@ -20,19 +20,18 @@
 namespace facebook::react {
 
 struct ColorStop {
-  bool operator==(const ColorStop &other) const = default;
+  bool operator==(const ColorStop& other) const = default;
   SharedColor color;
-  ValueUnit position;
+  LengthPercentageValue position{};
 
 #ifdef RN_SERIALIZABLE_STATE
   folly::dynamic toDynamic() const;
 #endif
 
 #if RN_DEBUG_STRING_CONVERTIBLE
-  void toString(std::stringstream &ss) const
-  {
+  void toString(std::stringstream& ss) const {
     ss << color.toString();
-    if (position.unit != UnitType::Undefined) {
+    if (!position.isUndefined()) {
       ss << " ";
       ss << position.toString();
     }
@@ -41,7 +40,7 @@ struct ColorStop {
 };
 
 struct ProcessedColorStop {
-  bool operator==(const ProcessedColorStop &other) const = default;
+  bool operator==(const ProcessedColorStop& other) const = default;
   SharedColor color;
   std::optional<Float> position;
 };
