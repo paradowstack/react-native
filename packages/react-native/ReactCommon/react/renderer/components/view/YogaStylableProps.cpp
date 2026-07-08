@@ -39,8 +39,10 @@ YogaStylableProps::YogaStylableProps(
           ReactNativeFeatureFlags::enableCppPropsIteratorSetter()
               ? sourceProps.yogaStyle
               : convertRawProp(context, rawProps, sourceProps.yogaStyle)) {
-  calcExpressions =
-      buildCalcExpressions(context, rawProps, sourceProps.calcExpressions);
+  if (ReactNativeFeatureFlags::enableCSSCalc()) {
+    calcExpressions =
+        buildCalcExpressions(context, rawProps, sourceProps.calcExpressions);
+  }
   if (!ReactNativeFeatureFlags::enableCppPropsIteratorSetter()) {
     convertRawPropAliases(context, sourceProps, rawProps);
   }

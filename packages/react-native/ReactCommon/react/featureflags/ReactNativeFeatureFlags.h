@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<d7532c66f74b2f5e3b1dcd259089f6cd>>
+ * @generated SignedSource<<204b892e9a4d38942c286fe8a4e3bb88>>
  */
 
 /**
@@ -113,6 +113,11 @@ class ReactNativeFeatureFlags {
    * Feature flag to enable the new bridgeless architecture.
    */
   RN_EXPORT static bool enableBridgelessArchitecture();
+
+  /**
+   * Enables CSS calc() support for layout (Yoga) style props in Fabric.
+   */
+  RN_EXPORT static bool enableCSSCalc();
 
   /**
    * Enable prop iterator setter-style construction of Props in C++ (this flag is not used in Java).

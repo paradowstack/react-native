@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<3428534b48b163a2de69a4ff7568e530>>
+ * @generated SignedSource<<a3e61b49e7015a1e09b924269c465796>>
  */
 
 /**
@@ -117,6 +117,11 @@ bool NativeReactNativeFeatureFlags::enableAndroidTextMeasurementOptimizations(
 bool NativeReactNativeFeatureFlags::enableBridgelessArchitecture(
     jsi::Runtime& /*runtime*/) {
   return ReactNativeFeatureFlags::enableBridgelessArchitecture();
+}
+
+bool NativeReactNativeFeatureFlags::enableCSSCalc(
+    jsi::Runtime& /*runtime*/) {
+  return ReactNativeFeatureFlags::enableCSSCalc();
 }
 
 bool NativeReactNativeFeatureFlags::enableCppPropsIteratorSetter(

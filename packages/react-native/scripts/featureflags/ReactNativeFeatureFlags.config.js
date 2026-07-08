@@ -211,6 +211,17 @@ const definitions: FeatureFlagDefinitions = {
       },
       ossReleaseStage: 'canary',
     },
+    enableCSSCalc: {
+      defaultValue: false,
+      metadata: {
+        dateAdded: '2026-07-07',
+        description:
+          'Enables CSS calc() support for layout (Yoga) style props in Fabric.',
+        expectedReleaseValue: true,
+        purpose: 'experimentation',
+      },
+      ossReleaseStage: 'none',
+    },
     enableCppPropsIteratorSetter: {
       defaultValue: false,
       metadata: {
