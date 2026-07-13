@@ -53,4 +53,10 @@ export default function setUpDefaltReactNativeEnvironment(
   ) {
     require('./setUpMutationObserver').default();
   }
+
+  if (
+    require('../../../src/private/featureflags/ReactNativeFeatureFlags').enableResizeObserverByDefault()
+  ) {
+    require('./setUpResizeObserver').default();
+  }
 }
