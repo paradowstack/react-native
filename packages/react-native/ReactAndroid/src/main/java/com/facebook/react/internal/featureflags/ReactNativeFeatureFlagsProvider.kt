@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<c4f37ab0fc935a27bae3b92e86abc243>>
+ * @generated SignedSource<<f628d3063a286d973e4eeaf6487c484a>>
  */
 
 /**
@@ -104,6 +104,8 @@ public interface ReactNativeFeatureFlagsProvider {
   @DoNotStrip public fun enablePreparedTextLayout(): Boolean
 
   @DoNotStrip public fun enablePropsUpdateReconciliationAndroid(): Boolean
+
+  @DoNotStrip public fun enableResizeObserverByDefault(): Boolean
 
   @DoNotStrip public fun enableRuntimeSchedulerQueueClearingOnError(): Boolean
 
