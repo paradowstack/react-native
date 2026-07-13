@@ -118,6 +118,7 @@ add_react_common_subdir(react/renderer/leakchecker)
 add_react_common_subdir(react/renderer/observers/events)
 add_react_common_subdir(react/renderer/observers/intersection)
 add_react_common_subdir(react/renderer/observers/mutation)
+add_react_common_subdir(react/renderer/observers/resize)
 add_react_common_subdir(react/renderer/textlayoutmanager)
 add_react_common_subdir(react/utils)
 add_react_common_subdir(react/bridging)
@@ -226,6 +227,7 @@ add_library(reactnative
           $<TARGET_OBJECTS:react_renderer_observers_events>
           $<TARGET_OBJECTS:react_renderer_observers_intersection>
           $<TARGET_OBJECTS:react_renderer_observers_mutation>
+          $<TARGET_OBJECTS:react_renderer_observers_resize>
           $<TARGET_OBJECTS:react_renderer_runtimescheduler>
           $<TARGET_OBJECTS:react_renderer_scheduler>
           $<TARGET_OBJECTS:react_renderer_telemetry>
@@ -328,6 +330,7 @@ target_include_directories(reactnative
         $<TARGET_PROPERTY:react_renderer_observers_events,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_observers_intersection,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_observers_mutation,INTERFACE_INCLUDE_DIRECTORIES>
+        $<TARGET_PROPERTY:react_renderer_observers_resize,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_runtimescheduler,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_scheduler,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:react_renderer_telemetry,INTERFACE_INCLUDE_DIRECTORIES>
