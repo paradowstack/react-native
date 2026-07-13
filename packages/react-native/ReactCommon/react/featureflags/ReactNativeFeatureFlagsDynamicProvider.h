@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<a629be7af38470ec0cff8391dad1ee1e>>
+ * @generated SignedSource<<fb5daaf08e80f1474f8fb81b1f3797ff>>
  */
 
 /**
@@ -430,6 +430,15 @@ class ReactNativeFeatureFlagsDynamicProvider : public ReactNativeFeatureFlagsDef
     }
 
     return ReactNativeFeatureFlagsDefaults::enablePropsUpdateReconciliationAndroid();
+  }
+
+  bool enableResizeObserverByDefault() override {
+    auto value = values_["enableResizeObserverByDefault"];
+    if (!value.isNull()) {
+      return value.getBool();
+    }
+
+    return ReactNativeFeatureFlagsDefaults::enableResizeObserverByDefault();
   }
 
   bool enableRuntimeSchedulerQueueClearingOnError() override {

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<196ba25b807fd064ca6150c7d2cd741c>>
+ * @generated SignedSource<<2c96707eeaf5b5c0164a6c5f4fda3cd8>>
  */
 
 /**
@@ -253,6 +253,11 @@ class ReactNativeFeatureFlags {
    * When enabled, Android will receive prop updates based on the differences between the last rendered shadow node and the last committed shadow node.
    */
   RN_EXPORT static bool enablePropsUpdateReconciliationAndroid();
+
+  /**
+   * Enables the ResizeObserver Web API in React Native.
+   */
+  RN_EXPORT static bool enableResizeObserverByDefault();
 
   /**
    * When enabled, RuntimeScheduler_Modern clears pending tasks and rendering updates before handling an error.

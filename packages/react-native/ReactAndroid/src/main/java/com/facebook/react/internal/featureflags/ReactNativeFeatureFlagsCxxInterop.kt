@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<1ef72233f02973021b83bd2e2aa1f69b>>
+ * @generated SignedSource<<c8562e0841fba1429c24e7a648cb08e2>>
  */
 
 /**
@@ -113,6 +113,8 @@ public object ReactNativeFeatureFlagsCxxInterop {
   @DoNotStrip @JvmStatic public external fun enablePreparedTextLayout(): Boolean
 
   @DoNotStrip @JvmStatic public external fun enablePropsUpdateReconciliationAndroid(): Boolean
+
+  @DoNotStrip @JvmStatic public external fun enableResizeObserverByDefault(): Boolean
 
   @DoNotStrip @JvmStatic public external fun enableRuntimeSchedulerQueueClearingOnError(): Boolean
 
