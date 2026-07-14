@@ -16,9 +16,6 @@
  * we register a single notification callback in native, and then we handle
  * how to notify each entry to the right resize observer when we receive all
  * the notifications together.
- *
- * TODO(ResizeObserver): this module is a stub. None of the exported
- * functions communicate with native yet.
  */
 
 import type ReactNativeElement from '../../dom/nodes/ReactNativeElement';
@@ -26,18 +23,49 @@ import type ResizeObserver, {
   ResizeObserverBoxOptions,
   ResizeObserverCallback,
 } from '../ResizeObserver';
+import type ResizeObserverEntry from '../ResizeObserverEntry';
 
-// TODO(ResizeObserver): uncomment once the native module is wired up.
-// import NativeResizeObserver from '../specs/NativeResizeObserver';
+import {trace} from '../../../../../Libraries/Performance/Systrace';
+import {
+  getInstanceHandle,
+  getNativeNodeReference,
+} from '../../dom/nodes/internals/NodeInternals';
+import {createResizeObserverEntry} from '../ResizeObserverEntry';
+import NativeResizeObserver from '../specs/NativeResizeObserver';
 
 export type ResizeObserverId = number;
 
 let nextResizeObserverId: ResizeObserverId = 1;
+let isConnected: boolean = false;
 
 const registeredResizeObservers: Map<
   ResizeObserverId,
   {observer: ResizeObserver, callback: ResizeObserverCallback},
 > = new Map();
+
+// We need to keep the mapping from instance handles to targets because when
+// targets are detached (their components are unmounted), React resets the
+// instance handle to prevent memory leaks and it cuts the connection between
+// the instance handle and the target.
+const instanceHandleToTargetMap: WeakMap<interface {}, ReactNativeElement> =
+  new WeakMap();
+
+function getTargetFromInstanceHandle(
+  instanceHandle: unknown,
+): ?ReactNativeElement {
+  // $FlowExpectedError[incompatible-type] instanceHandle is typed as mixed but we know it's an object and we need it to be to use it as a key in a WeakMap.
+  const key: interface {} = instanceHandle;
+  return instanceHandleToTargetMap.get(key);
+}
+
+function setTargetForInstanceHandle(
+  instanceHandle: unknown,
+  target: ReactNativeElement,
+): void {
+  // $FlowExpectedError[incompatible-type] instanceHandle is typed as mixed but we know it's an object and we need it to be to use it as a key in a WeakMap.
+  const key: interface {} = instanceHandle;
+  instanceHandleToTargetMap.set(key, target);
+}
 
 /**
  * Registers the given resize observer and returns a unique ID for it, which
@@ -62,15 +90,16 @@ export function registerObserver(
  * targets.
  */
 export function unregisterObserver(resizeObserverId: ResizeObserverId): void {
-  // TODO(ResizeObserver): implement. Once there are no observers left, this
-  // should disconnect the native module (mirroring
-  // `IntersectionObserverManager.unregisterObserver`).
-  registeredResizeObservers.delete(resizeObserverId);
+  const deleted = registeredResizeObservers.delete(resizeObserverId);
+  if (deleted && registeredResizeObservers.size === 0) {
+    NativeResizeObserver?.disconnect();
+    isConnected = false;
+  }
 }
 
 /**
  * Starts observing a target on a specific resize observer.
- * If this is the first target being observed, this should also set up the
+ * If this is the first target being observed, this also sets up the
  * centralized notification callback in native.
  */
 export function observe({
@@ -82,7 +111,47 @@ export function observe({
   target: ReactNativeElement,
   box: ResizeObserverBoxOptions,
 }): void {
-  // TODO(ResizeObserver): implement.
+  if (NativeResizeObserver == null) {
+    throwIfNoNativeResizeObserver();
+    return;
+  }
+
+  const registeredObserver = registeredResizeObservers.get(resizeObserverId);
+  if (registeredObserver == null) {
+    console.error(
+      `ResizeObserverManager: could not start observing target because ResizeObserver with ID ${resizeObserverId} was not registered.`,
+    );
+    return;
+  }
+
+  const targetNativeNodeReference = getNativeNodeReference(target);
+  if (targetNativeNodeReference == null) {
+    // The target is disconnected. We can't observe it anymore.
+    return;
+  }
+
+  const instanceHandle = getInstanceHandle(target);
+  if (instanceHandle == null) {
+    console.error(
+      'ResizeObserverManager: could not find reference to instance handle from target',
+    );
+    return;
+  }
+
+  // Store the mapping between the instance handle and the target so we can
+  // access it even after the instance handle has been unmounted.
+  setTargetForInstanceHandle(instanceHandle, target);
+
+  if (!isConnected) {
+    NativeResizeObserver.connect(notifyResizeObservers);
+    isConnected = true;
+  }
+
+  NativeResizeObserver.observe({
+    resizeObserverId,
+    targetShadowNode: targetNativeNodeReference,
+    box,
+  });
 }
 
 /**
@@ -93,13 +162,85 @@ export function unobserve(
   resizeObserverId: ResizeObserverId,
   target: ReactNativeElement,
 ): void {
-  // TODO(ResizeObserver): implement.
+  if (NativeResizeObserver == null) {
+    throwIfNoNativeResizeObserver();
+    return;
+  }
+
+  const registeredObserver = registeredResizeObservers.get(resizeObserverId);
+  if (registeredObserver == null) {
+    console.error(
+      `ResizeObserverManager: could not stop observing target because ResizeObserver with ID ${resizeObserverId} was not registered.`,
+    );
+    return;
+  }
+
+  const targetNativeNodeReference = getNativeNodeReference(target);
+  if (targetNativeNodeReference == null) {
+    // The target is already disconnected, so native doesn't have anything
+    // to unobserve.
+    return;
+  }
+
+  NativeResizeObserver.unobserve(resizeObserverId, targetNativeNodeReference);
 }
 
-// TODO(ResizeObserver): implement a `notifyResizeObservers` function that
-// will be called from native when there are `ResizeObserver` entries to
-// dispatch. It should read the pending entries from
-// `NativeResizeObserver.takeRecords()`, group them by observer, and invoke
-// each observer's callback (mirroring
-// `IntersectionObserverManager.notifyIntersectionObservers` /
-// `doNotifyIntersectionObservers`).
+/**
+ * This function is called from native when there are `ResizeObserver`
+ * entries to dispatch.
+ */
+function notifyResizeObservers(): void {
+  trace('ResizeObserverManager.notifyResizeObservers', doNotifyResizeObservers);
+}
+
+function doNotifyResizeObservers(): void {
+  if (NativeResizeObserver == null) {
+    throwIfNoNativeResizeObserver();
+    return;
+  }
+
+  const nativeEntries = NativeResizeObserver.takeRecords();
+
+  const entriesByObserver: Map<
+    ResizeObserverId,
+    Array<ResizeObserverEntry>,
+  > = new Map();
+
+  for (const nativeEntry of nativeEntries) {
+    let list = entriesByObserver.get(nativeEntry.resizeObserverId);
+    if (list == null) {
+      list = [];
+      entriesByObserver.set(nativeEntry.resizeObserverId, list);
+    }
+
+    const target = getTargetFromInstanceHandle(
+      nativeEntry.targetInstanceHandle,
+    );
+    if (target == null) {
+      console.warn('Could not find target to create ResizeObserverEntry');
+      continue;
+    }
+
+    list.push(createResizeObserverEntry(nativeEntry, target));
+  }
+
+  for (const [resizeObserverId, entriesForObserver] of entriesByObserver) {
+    const registeredObserver = registeredResizeObservers.get(resizeObserverId);
+    if (!registeredObserver) {
+      // This could happen if the observer is disconnected between commit
+      // and mount. In this case, we can just ignore the entries.
+      continue;
+    }
+
+    const {observer, callback} = registeredObserver;
+    try {
+      callback.call(observer, entriesForObserver, observer);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
+function throwIfNoNativeResizeObserver() {
+  throw new Error('Missing native implementation of ResizeObserver');
+}

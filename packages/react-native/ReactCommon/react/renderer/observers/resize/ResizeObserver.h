@@ -60,6 +60,13 @@ class ResizeObserver {
     return boxOptions_;
   }
 
+  // Whether this observer has ever produced an entry (i.e. reported a size
+  // at least once since being created or since the target was last removed
+  // from the tree).
+  bool hasReported() const {
+    return lastReportedSize_.has_value();
+  }
+
  private:
   ResizeObserverObserverId resizeObserverId_;
   ShadowNodeFamily::Shared targetShadowNodeFamily_;
