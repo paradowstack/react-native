@@ -22,8 +22,6 @@ import ResizeObserverSize from './ResizeObserverSize';
  * interface of the Resize Observer API represents the object passed to the
  * `ResizeObserver()` callback function, which allows access to the new
  * dimensions of the observed target element after its size has changed.
- *
- * Note: `devicePixelContentBoxSize` is not supported in React Native.
  */
 export default class ResizeObserverEntry {
   // We lazily compute all the properties from the raw entry provided by the
@@ -86,6 +84,23 @@ export default class ResizeObserverEntry {
   get contentBoxSize(): ReadonlyArray<ResizeObserverSize> {
     const contentBoxSize = this._nativeEntry.contentBoxSize;
     return [new ResizeObserverSize(contentBoxSize[0], contentBoxSize[1])];
+  }
+
+  /**
+   * An array containing the new device pixel content box size of the observed element.
+   *
+   * Note: React Native does not support fragments, so this array will
+   * always contain a single value.
+   */
+  get devicePixelContentBoxSize(): ReadonlyArray<ResizeObserverSize> {
+    const devicePixelContentBoxSize =
+      this._nativeEntry.devicePixelContentBoxSize;
+    return [
+      new ResizeObserverSize(
+        devicePixelContentBoxSize[0],
+        devicePixelContentBoxSize[1],
+      ),
+    ];
   }
 }
 

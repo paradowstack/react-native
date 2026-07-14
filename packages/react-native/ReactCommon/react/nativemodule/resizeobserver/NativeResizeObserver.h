@@ -49,6 +49,8 @@ using NativeResizeObserverEntry = NativeResizeObserverNativeResizeObserverEntry<
     // borderBoxSize
     SizeAsTuple,
     // contentBoxSize
+    SizeAsTuple,
+    // devicePixelContentBoxSize
     SizeAsTuple>;
 
 template <>
