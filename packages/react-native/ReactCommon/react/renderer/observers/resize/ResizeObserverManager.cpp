@@ -35,42 +35,24 @@ void ResizeObserverManager::observe(
     ResizeObserverObserverId resizeObserverId,
     const ShadowNodeFamily::Shared& shadowNodeFamily,
     ResizeObserverBoxOptions boxOptions,
-    UIManager& uiManager) {
+    UIManager& /*uiManager*/) {
   TraceSection s("ResizeObserverManager::observe");
 
   auto surfaceId = shadowNodeFamily->getSurfaceId();
 
-  // Per spec, `observe` must perform an initial observation synchronously,
-  // using the shadow tree that is current at the time `observe` is called
-  // (i.e., independent of the commit hook, which only runs for subsequent
-  // commits).
-  RootShadowNode::Shared rootShadowNode =
-      getRootShadowNode(surfaceId, uiManager.getShadowTreeRegistry());
+  // Per spec, newly observed targets are only processed on the next "update
+  // the rendering" step (i.e. the `runResizeObservations` event-loop step
+  // below), not synchronously here. Since `observe` always runs as part of a
+  // JS task, and every task is followed by an "update the rendering" step
+  // regardless of whether there are pending rendering (mounting) updates,
+  // the initial observation is still guaranteed to be delivered promptly, at
+  // the end of the current tick.
+  std::unique_lock lock(observersMutex_);
 
-  std::optional<ResizeObserverEntry> entry;
+  auto& observers = observersBySurfaceId_[surfaceId];
 
-  {
-    std::unique_lock lock(observersMutex_);
-
-    auto& observers = observersBySurfaceId_[surfaceId];
-
-    observers.emplace_back(std::make_unique<ResizeObserver>(
-        resizeObserverId, shadowNodeFamily, boxOptions));
-
-    auto* observer = observers.back().get();
-
-    if (rootShadowNode != nullptr) {
-      entry = observer->updateStateIfNeeded(*rootShadowNode);
-    }
-  }
-
-  if (entry) {
-    {
-      std::unique_lock lock(pendingEntriesMutex_);
-      pendingEntries_.push_back(std::move(entry).value());
-    }
-    notifyObserversIfNecessary();
-  }
+  observers.emplace_back(std::make_unique<ResizeObserver>(
+      resizeObserverId, shadowNodeFamily, boxOptions));
 }
 
 void ResizeObserverManager::unobserve(
@@ -105,6 +87,7 @@ void ResizeObserverManager::unobserve(
 }
 
 void ResizeObserverManager::connect(
+    RuntimeScheduler& runtimeScheduler,
     UIManager& uiManager,
     std::function<void()> notifyResizeObserversFunction) {
   TraceSection s("ResizeObserverManager::connect");
@@ -116,11 +99,15 @@ void ResizeObserverManager::connect(
 
   notifyResizeObserversFunction_ = std::move(notifyResizeObserversFunction);
 
+  runtimeScheduler.setResizeObserverDelegate(this);
   uiManager.registerCommitHook(*this);
+  shadowTreeRegistry_ = &uiManager.getShadowTreeRegistry();
   commitHookRegistered_ = true;
 }
 
-void ResizeObserverManager::disconnect(UIManager& uiManager) {
+void ResizeObserverManager::disconnect(
+    RuntimeScheduler& runtimeScheduler,
+    UIManager& uiManager) {
   TraceSection s("ResizeObserverManager::disconnect");
 
   // Fail-safe in case the caller doesn't guarantee consistency.
@@ -128,7 +115,9 @@ void ResizeObserverManager::disconnect(UIManager& uiManager) {
     return;
   }
 
+  runtimeScheduler.setResizeObserverDelegate(nullptr);
   uiManager.unregisterCommitHook(*this);
+  shadowTreeRegistry_ = nullptr;
 
   notifyResizeObserversFunction_ = nullptr;
   commitHookRegistered_ = false;
@@ -153,57 +142,132 @@ void ResizeObserverManager::commitHookWasUnregistered(
 
 void ResizeObserverManager::shadowTreeDidCommit(
     const ShadowTree& shadowTree,
-    const RootShadowNode::Shared& rootShadowNode,
+    const RootShadowNode::Shared& /*rootShadowNode*/,
     const std::vector<const LayoutableShadowNode*>&
         affectedLayoutableNodes) noexcept {
-  runResizeObservations(shadowTree, *rootShadowNode, affectedLayoutableNodes);
-}
+  TraceSection s("ResizeObserverManager::shadowTreeDidCommit");
 
-#pragma mark - Private methods
-
-void ResizeObserverManager::runResizeObservations(
-    const ShadowTree& shadowTree,
-    const RootShadowNode& rootShadowNode,
-    const std::vector<const LayoutableShadowNode*>& affectedLayoutableNodes) {
-  TraceSection s("ResizeObserverManager::runResizeObservations");
-
+  // This runs on the commit hook, which may execute on any thread. It must
+  // not compute observations or notify JS: it only collects which observed
+  // targets went dirty, so that `runResizeObservations` (invoked from the
+  // event-loop step, always on the JS thread) can compute their new sizes
+  // exactly once against the latest committed tree.
   auto surfaceId = shadowTree.getSurfaceId();
 
-  // Build a set of the families whose layout actually changed in this
-  // commit, so we only recompute observers that could possibly have a new
-  // size.
-  std::unordered_set<const ShadowNodeFamily*> affectedFamilies;
-  affectedFamilies.reserve(affectedLayoutableNodes.size());
-  for (const auto* node : affectedLayoutableNodes) {
-    affectedFamilies.insert(&node->getFamily());
-  }
-
-  std::vector<ResizeObserverEntry> entries;
-
+  std::unordered_set<const ShadowNodeFamily*> observedFamilies;
   {
     std::unique_lock lock(observersMutex_);
 
     auto observersIt = observersBySurfaceId_.find(surfaceId);
     if (observersIt == observersBySurfaceId_.end()) {
+      // No observers registered for this surface: nothing to collect.
       return;
     }
 
-    auto& observers = observersIt->second;
-    for (auto& observer : observers) {
-      // Only recompute observers whose target was affected by this commit,
-      // or that have never reported yet (e.g. an initial observation that
-      // raced with a commit before it could run).
-      bool wasAffected = affectedFamilies.contains(
-          observer->getTargetShadowNodeFamily().get());
+    observedFamilies.reserve(observersIt->second.size());
+    for (auto& observer : observersIt->second) {
+      observedFamilies.insert(observer->getTargetShadowNodeFamily().get());
+    }
+  }
+
+  std::unordered_set<const ShadowNodeFamily*> newlyDirtyFamilies;
+  for (const auto* node : affectedLayoutableNodes) {
+    const auto* family = &node->getFamily();
+    if (observedFamilies.contains(family)) {
+      newlyDirtyFamilies.insert(family);
+    }
+  }
+
+  if (newlyDirtyFamilies.empty()) {
+    return;
+  }
+
+  std::unique_lock lock(dirtyFamiliesMutex_);
+  auto& dirtyFamilies = dirtyFamiliesBySurfaceId_[surfaceId];
+  dirtyFamilies.insert(newlyDirtyFamilies.begin(), newlyDirtyFamilies.end());
+}
+
+#pragma mark - RuntimeSchedulerResizeObserverDelegate
+
+void ResizeObserverManager::runResizeObservations(
+    const std::unordered_set<
+        SurfaceId>& /*surfaceIdsWithPendingRenderingUpdates*/) {
+  TraceSection s("ResizeObserverManager::runResizeObservations");
+
+  // Drain the dirty families collected by the commit hook since the last
+  // time this step ran.
+  std::unordered_map<SurfaceId, std::unordered_set<const ShadowNodeFamily*>>
+      dirtyFamiliesBySurfaceId;
+  {
+    std::unique_lock lock(dirtyFamiliesMutex_);
+    dirtyFamiliesBySurfaceId.swap(dirtyFamiliesBySurfaceId_);
+  }
+
+  // A surface is relevant to this step if either (a) it has dirty families
+  // collected from a commit, or (b) it has observers that have never
+  // reported yet (e.g. observers just registered via `observe`, which no
+  // longer perform a synchronous initial observation).
+  std::unordered_set<SurfaceId> candidateSurfaceIds;
+  for (const auto& [surfaceId, families] : dirtyFamiliesBySurfaceId) {
+    candidateSurfaceIds.insert(surfaceId);
+  }
+
+  {
+    std::unique_lock lock(observersMutex_);
+    for (const auto& [surfaceId, observers] : observersBySurfaceId_) {
+      for (const auto& observer : observers) {
+        if (!observer->hasReported()) {
+          candidateSurfaceIds.insert(surfaceId);
+          break;
+        }
+      }
+    }
+  }
+
+  if (candidateSurfaceIds.empty()) {
+    return;
+  }
+
+  std::vector<ResizeObserverEntry> entries;
+
+  for (auto surfaceId : candidateSurfaceIds) {
+    RootShadowNode::Shared rootShadowNode =
+        getRootShadowNode(surfaceId, *shadowTreeRegistry_);
+    if (rootShadowNode == nullptr) {
+      continue;
+    }
+
+    auto dirtyFamiliesIt = dirtyFamiliesBySurfaceId.find(surfaceId);
+    const std::unordered_set<const ShadowNodeFamily*>* dirtyFamilies =
+        dirtyFamiliesIt != dirtyFamiliesBySurfaceId.end()
+        ? &dirtyFamiliesIt->second
+        : nullptr;
+
+    std::unique_lock lock(observersMutex_);
+
+    auto observersIt = observersBySurfaceId_.find(surfaceId);
+    if (observersIt == observersBySurfaceId_.end()) {
+      continue;
+    }
+
+    for (auto& observer : observersIt->second) {
+      // Only recompute observers whose target was affected by a commit
+      // since the last pass, or that have never reported yet.
+      bool wasAffected = dirtyFamilies != nullptr &&
+          dirtyFamilies->contains(observer->getTargetShadowNodeFamily().get());
       if (!wasAffected && observer->hasReported()) {
         continue;
       }
 
-      auto entry = observer->updateStateIfNeeded(rootShadowNode);
+      auto entry = observer->updateStateIfNeeded(*rootShadowNode);
       if (entry) {
         entries.push_back(std::move(entry).value());
       }
     }
+  }
+
+  if (entries.empty()) {
+    return;
   }
 
   {
@@ -214,6 +278,8 @@ void ResizeObserverManager::runResizeObservations(
 
   notifyObserversIfNecessary();
 }
+
+#pragma mark - Private methods
 
 void ResizeObserverManager::notifyObserversIfNecessary() {
   bool dispatchNotification = false;

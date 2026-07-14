@@ -9,18 +9,24 @@
 
 #include <react/renderer/core/ShadowNodeFamily.h>
 #include <react/renderer/mounting/ShadowTree.h>
+#include <react/renderer/mounting/ShadowTreeRegistry.h>
+#include <react/renderer/runtimescheduler/RuntimeScheduler.h>
+#include <react/renderer/runtimescheduler/RuntimeSchedulerResizeObserverDelegate.h>
 #include <react/renderer/uimanager/UIManager.h>
 #include <react/renderer/uimanager/UIManagerCommitHook.h>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "ResizeObserver.h"
 
 namespace facebook::react {
 
-class ResizeObserverManager final : public UIManagerCommitHook {
+class ResizeObserverManager final
+    : public UIManagerCommitHook,
+      public RuntimeSchedulerResizeObserverDelegate {
  public:
   ResizeObserverManager();
 
@@ -35,12 +41,19 @@ class ResizeObserverManager final : public UIManagerCommitHook {
       const ShadowNodeFamily::Shared& shadowNodeFamily);
 
   void connect(
+      RuntimeScheduler& runtimeScheduler,
       UIManager& uiManager,
       std::function<void()> notifyResizeObserversFunction);
 
-  void disconnect(UIManager& uiManager);
+  void disconnect(RuntimeScheduler& runtimeScheduler, UIManager& uiManager);
 
   std::vector<ResizeObserverEntry> takeRecords();
+
+#pragma mark - RuntimeSchedulerResizeObserverDelegate
+
+  void runResizeObservations(
+      const std::unordered_set<SurfaceId>&
+          surfaceIdsWithPendingRenderingUpdates) override;
 
 #pragma mark - UIManagerCommitHook
 
@@ -59,17 +72,26 @@ class ResizeObserverManager final : public UIManagerCommitHook {
           observersBySurfaceId_;
   mutable std::mutex observersMutex_;
 
+  // Families that went dirty (i.e. were part of `affectedLayoutableNodes`)
+  // since the last time `runResizeObservations` drained this map. Populated
+  // by the commit hook (potentially off the JS thread) and drained by the
+  // event-loop step (always on the JS thread).
+  std::unordered_map<SurfaceId, std::unordered_set<const ShadowNodeFamily*>>
+      dirtyFamiliesBySurfaceId_;
+  std::mutex dirtyFamiliesMutex_;
+
   std::function<void()> notifyResizeObserversFunction_;
   bool commitHookRegistered_{};
+
+  // This is only accessed from the JS thread at the end of the event loop
+  // tick, so it is safe to retain it as a raw pointer.
+  // We need to retain it here because the RuntimeScheduler does not provide
+  // it when calling `runResizeObservations`.
+  const ShadowTreeRegistry* shadowTreeRegistry_{nullptr};
 
   mutable std::vector<ResizeObserverEntry> pendingEntries_;
   mutable std::mutex pendingEntriesMutex_;
   mutable bool notifiedResizeObservers_{};
-
-  void runResizeObservations(
-      const ShadowTree& shadowTree,
-      const RootShadowNode& rootShadowNode,
-      const std::vector<const LayoutableShadowNode*>& affectedLayoutableNodes);
 
   void notifyObserversIfNecessary();
   void notifyObservers();
