@@ -19,6 +19,7 @@ target_link_libraries(react_renderer_observers_resize
       react_renderer_core
       react_renderer_graphics
       react_renderer_mounting
+      react_renderer_runtimescheduler
       react_renderer_uimanager
 )
 target_compile_reactnative_options(react_renderer_observers_resize PRIVATE)

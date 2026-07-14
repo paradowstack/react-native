@@ -7,6 +7,7 @@
 
 #include "NativeResizeObserver.h"
 #include <react/renderer/core/ShadowNode.h>
+#include <react/renderer/runtimescheduler/RuntimeSchedulerBinding.h>
 #include <react/renderer/uimanager/UIManagerBinding.h>
 #include <react/renderer/uimanager/primitives.h>
 
@@ -53,12 +54,16 @@ void NativeResizeObserver::connect(
     AsyncCallback<> notifyResizeObserversFunction) {
   auto& uiManager = getUIManagerFromRuntime(runtime);
   resizeObserverManager_.connect(
-      uiManager, std::move(notifyResizeObserversFunction));
+      *RuntimeSchedulerBinding::getBinding(runtime)->getRuntimeScheduler(),
+      uiManager,
+      std::move(notifyResizeObserversFunction));
 }
 
 void NativeResizeObserver::disconnect(jsi::Runtime& runtime) {
   auto& uiManager = getUIManagerFromRuntime(runtime);
-  resizeObserverManager_.disconnect(uiManager);
+  resizeObserverManager_.disconnect(
+      *RuntimeSchedulerBinding::getBinding(runtime)->getRuntimeScheduler(),
+      uiManager);
 }
 
 std::vector<NativeResizeObserverEntry> NativeResizeObserver::takeRecords(

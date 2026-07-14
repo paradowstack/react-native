@@ -151,6 +151,9 @@ class RuntimeScheduler_Modern final : public RuntimeSchedulerBase {
   void setIntersectionObserverDelegate(
       RuntimeSchedulerIntersectionObserverDelegate *intersectionObserverDelegate) override;
 
+  void setResizeObserverDelegate(
+      RuntimeSchedulerResizeObserverDelegate* resizeObserverDelegate) override;
+
  private:
   /// Monotonic counter handing out IDs for IEventLoopControl task queue
   /// sources.
@@ -225,6 +228,7 @@ class RuntimeScheduler_Modern final : public RuntimeSchedulerBase {
 
   PerformanceEntryReporter *performanceEntryReporter_{nullptr};
   RuntimeSchedulerIntersectionObserverDelegate *intersectionObserverDelegate_{nullptr};
+  RuntimeSchedulerResizeObserverDelegate* resizeObserverDelegate_{nullptr};
 
   RuntimeSchedulerTaskErrorHandler onTaskError_;
 };

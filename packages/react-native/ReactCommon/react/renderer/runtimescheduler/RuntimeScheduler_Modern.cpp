@@ -232,6 +232,11 @@ void RuntimeScheduler_Modern::setIntersectionObserverDelegate(
   intersectionObserverDelegate_ = intersectionObserverDelegate;
 }
 
+void RuntimeScheduler_Modern::setResizeObserverDelegate(
+    RuntimeSchedulerResizeObserverDelegate* resizeObserverDelegate) {
+  resizeObserverDelegate_ = resizeObserverDelegate;
+}
+
 #pragma mark - Private
 
 void RuntimeScheduler_Modern::scheduleTask(std::shared_ptr<Task> task) {
@@ -355,6 +360,14 @@ void RuntimeScheduler_Modern::updateRendering(HighResTimeStamp taskEndTime) {
   if (eventTimingDelegate != nullptr) {
     eventTimingDelegate->dispatchPendingEventTimingEntries(
         taskEndTime, surfaceIdsWithPendingRenderingUpdates_);
+  }
+
+  // This is the integration of the Resize Observer API in the Event Loop.
+  // See
+  // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-resize-notifications-h
+  if (resizeObserverDelegate_ != nullptr) {
+    resizeObserverDelegate_->runResizeObservations(
+        surfaceIdsWithPendingRenderingUpdates_);
   }
 
   // This is the integration of the Intersection Observer API in the Event Loop.
