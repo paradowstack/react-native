@@ -7,11 +7,27 @@
 
 #include "ResizeObserverManager.h"
 #include <cxxreact/TraceSection.h>
+#include <react/renderer/core/LayoutableShadowNode.h>
 #include <algorithm>
+#include <unordered_set>
 #include <utility>
 #include "ResizeObserver.h"
 
 namespace facebook::react {
+
+namespace {
+RootShadowNode::Shared getRootShadowNode(
+    SurfaceId surfaceId,
+    const ShadowTreeRegistry& shadowTreeRegistry) {
+  RootShadowNode::Shared rootShadowNode = nullptr;
+
+  shadowTreeRegistry.visit(surfaceId, [&](const ShadowTree& shadowTree) {
+    rootShadowNode = shadowTree.getCurrentRevision().rootShadowNode;
+  });
+
+  return rootShadowNode;
+}
+} // namespace
 
 ResizeObserverManager::ResizeObserverManager() = default;
 
@@ -19,18 +35,42 @@ void ResizeObserverManager::observe(
     ResizeObserverObserverId resizeObserverId,
     const ShadowNodeFamily::Shared& shadowNodeFamily,
     ResizeObserverBoxOptions boxOptions,
-    UIManager& /*uiManager*/) {
+    UIManager& uiManager) {
   TraceSection s("ResizeObserverManager::observe");
 
   auto surfaceId = shadowNodeFamily->getSurfaceId();
 
-  std::unique_lock lock(observersMutex_);
+  // Per spec, `observe` must perform an initial observation synchronously,
+  // using the shadow tree that is current at the time `observe` is called
+  // (i.e., independent of the commit hook, which only runs for subsequent
+  // commits).
+  RootShadowNode::Shared rootShadowNode =
+      getRootShadowNode(surfaceId, uiManager.getShadowTreeRegistry());
 
-  auto& observers = observersBySurfaceId_[surfaceId];
+  std::optional<ResizeObserverEntry> entry;
 
-  observers.emplace_back(
-      std::make_unique<ResizeObserver>(
-          resizeObserverId, shadowNodeFamily, boxOptions));
+  {
+    std::unique_lock lock(observersMutex_);
+
+    auto& observers = observersBySurfaceId_[surfaceId];
+
+    observers.emplace_back(std::make_unique<ResizeObserver>(
+        resizeObserverId, shadowNodeFamily, boxOptions));
+
+    auto* observer = observers.back().get();
+
+    if (rootShadowNode != nullptr) {
+      entry = observer->updateStateIfNeeded(*rootShadowNode);
+    }
+  }
+
+  if (entry) {
+    {
+      std::unique_lock lock(pendingEntriesMutex_);
+      pendingEntries_.push_back(std::move(entry).value());
+    }
+    notifyObserversIfNecessary();
+  }
 }
 
 void ResizeObserverManager::unobserve(
@@ -111,26 +151,32 @@ void ResizeObserverManager::commitHookWasRegistered(
 void ResizeObserverManager::commitHookWasUnregistered(
     const UIManager& uiManager) noexcept {}
 
-RootShadowNode::Unshared ResizeObserverManager::shadowTreeWillCommit(
+void ResizeObserverManager::shadowTreeDidCommit(
     const ShadowTree& shadowTree,
-    const RootShadowNode::Shared& oldRootShadowNode,
-    const RootShadowNode::Unshared& newRootShadowNode,
-    const ShadowTree::CommitOptions& commitOptions) noexcept {
-  if (commitOptions.source == ShadowTree::CommitSource::React) {
-    runResizeObservations(shadowTree, *oldRootShadowNode, *newRootShadowNode);
-  }
-  return newRootShadowNode;
+    const RootShadowNode::Shared& rootShadowNode,
+    const std::vector<const LayoutableShadowNode*>&
+        affectedLayoutableNodes) noexcept {
+  runResizeObservations(shadowTree, *rootShadowNode, affectedLayoutableNodes);
 }
 
 #pragma mark - Private methods
 
 void ResizeObserverManager::runResizeObservations(
     const ShadowTree& shadowTree,
-    const RootShadowNode& /*oldRootShadowNode*/,
-    const RootShadowNode& newRootShadowNode) {
+    const RootShadowNode& rootShadowNode,
+    const std::vector<const LayoutableShadowNode*>& affectedLayoutableNodes) {
   TraceSection s("ResizeObserverManager::runResizeObservations");
 
   auto surfaceId = shadowTree.getSurfaceId();
+
+  // Build a set of the families whose layout actually changed in this
+  // commit, so we only recompute observers that could possibly have a new
+  // size.
+  std::unordered_set<const ShadowNodeFamily*> affectedFamilies;
+  affectedFamilies.reserve(affectedLayoutableNodes.size());
+  for (const auto* node : affectedLayoutableNodes) {
+    affectedFamilies.insert(&node->getFamily());
+  }
 
   std::vector<ResizeObserverEntry> entries;
 
@@ -144,8 +190,16 @@ void ResizeObserverManager::runResizeObservations(
 
     auto& observers = observersIt->second;
     for (auto& observer : observers) {
-      // TODO(ResizeObserver): implement
-      auto entry = observer->updateStateIfNeeded(newRootShadowNode);
+      // Only recompute observers whose target was affected by this commit,
+      // or that have never reported yet (e.g. an initial observation that
+      // raced with a commit before it could run).
+      bool wasAffected = affectedFamilies.contains(
+          observer->getTargetShadowNodeFamily().get());
+      if (!wasAffected && observer->hasReported()) {
+        continue;
+      }
+
+      auto entry = observer->updateStateIfNeeded(rootShadowNode);
       if (entry) {
         entries.push_back(std::move(entry).value());
       }
@@ -180,7 +234,9 @@ void ResizeObserverManager::notifyObserversIfNecessary() {
 
 void ResizeObserverManager::notifyObservers() {
   TraceSection s("ResizeObserverManager::notifyObservers");
-  notifyResizeObserversFunction_();
+  if (notifyResizeObserversFunction_) {
+    notifyResizeObserversFunction_();
+  }
 }
 
 } // namespace facebook::react

@@ -47,11 +47,11 @@ class ResizeObserverManager final : public UIManagerCommitHook {
   void commitHookWasRegistered(const UIManager& uiManager) noexcept override;
   void commitHookWasUnregistered(const UIManager& uiManager) noexcept override;
 
-  RootShadowNode::Unshared shadowTreeWillCommit(
+  void shadowTreeDidCommit(
       const ShadowTree& shadowTree,
-      const RootShadowNode::Shared& oldRootShadowNode,
-      const RootShadowNode::Unshared& newRootShadowNode,
-      const ShadowTree::CommitOptions& commitOptions) noexcept override;
+      const RootShadowNode::Shared& rootShadowNode,
+      const std::vector<const LayoutableShadowNode*>&
+          affectedLayoutableNodes) noexcept override;
 
  private:
   mutable std::
@@ -68,8 +68,8 @@ class ResizeObserverManager final : public UIManagerCommitHook {
 
   void runResizeObservations(
       const ShadowTree& shadowTree,
-      const RootShadowNode& oldRootShadowNode,
-      const RootShadowNode& newRootShadowNode);
+      const RootShadowNode& rootShadowNode,
+      const std::vector<const LayoutableShadowNode*>& affectedLayoutableNodes);
 
   void notifyObserversIfNecessary();
   void notifyObservers();
