@@ -63,8 +63,6 @@ void NativeResizeObserver::disconnect(jsi::Runtime& runtime) {
 
 std::vector<NativeResizeObserverEntry> NativeResizeObserver::takeRecords(
     jsi::Runtime& runtime) {
-  // TODO(ResizeObserver): this will always return an empty vector until
-  // ResizeObserver::updateStateIfNeeded is implemented.
   auto entries = resizeObserverManager_.takeRecords();
 
   std::vector<NativeResizeObserverEntry> nativeModuleEntries;
@@ -90,14 +88,16 @@ NativeResizeObserverEntry NativeResizeObserver::convertToNativeModuleEntry(
       entry.borderBoxSize.width, entry.borderBoxSize.height};
   SizeAsTuple contentBoxSize = {
       entry.contentBoxSize.width, entry.contentBoxSize.height};
-
+  SizeAsTuple devicePixelContentBoxSize = {
+      entry.devicePixelContentBoxSize.width,
+      entry.devicePixelContentBoxSize.height};
   NativeResizeObserverEntry nativeModuleEntry = {
       entry.resizeObserverId,
       (*entry.shadowNodeFamily).getInstanceHandle(runtime),
       contentRect,
       borderBoxSize,
       contentBoxSize,
-  };
+      devicePixelContentBoxSize};
 
   return nativeModuleEntry;
 }
@@ -109,8 +109,13 @@ UIManager& NativeResizeObserver::getUIManagerFromRuntime(
 
 ResizeObserverBoxOptions NativeResizeObserver::boxOptionsFromOptionalString(
     const std::optional<std::string>& box) {
-  if (box.has_value() && box.value() == "border-box") {
-    return ResizeObserverBoxOptions::BorderBox;
+  if (box.has_value()) {
+    if (box.value() == "border-box") {
+      return ResizeObserverBoxOptions::BorderBox;
+    }
+    if (box.value() == "device-pixel-content-box") {
+      return ResizeObserverBoxOptions::DevicePixelContentBox;
+    }
   }
 
   // "content-box" is the default value.

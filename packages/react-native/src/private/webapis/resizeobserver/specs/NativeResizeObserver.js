@@ -18,6 +18,7 @@ export type NativeResizeObserverEntry = {
   contentRect: ReadonlyArray<number>, // It's actually a tuple with x, y, width and height
   borderBoxSize: ReadonlyArray<number>, // It's actually a tuple with inlineSize and blockSize
   contentBoxSize: ReadonlyArray<number>, // It's actually a tuple with inlineSize and blockSize
+  devicePixelContentBoxSize: ReadonlyArray<number>, // It's actually a tuple with inlineSize and blockSize
 };
 
 export type NativeResizeObserverObserveOptions = {

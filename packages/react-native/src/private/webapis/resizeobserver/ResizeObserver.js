@@ -26,7 +26,10 @@ export type ResizeObserverCallback = (
  * Corresponds to the `box` option of `ResizeObserver#observe`.
  * https://drafts.csswg.org/resize-observer/#resize-observer-box-options
  */
-export type ResizeObserverBoxOptions = 'content-box' | 'border-box';
+export type ResizeObserverBoxOptions =
+  | 'content-box'
+  | 'border-box'
+  | 'device-pixel-content-box';
 
 export interface ResizeObserverOptions {
   box?: ResizeObserverBoxOptions;
@@ -44,9 +47,6 @@ export interface ResizeObserverOptions {
  *
  * You can add/remove multiple target elements to/from a single
  * `ResizeObserver` instance.
- *
- * TODO(ResizeObserver): this is a stub implementation. `observe`,
- * `unobserve` and `disconnect` do not yet notify any callback.
  */
 export default class ResizeObserver {
   _callback: ResizeObserverCallback;
@@ -176,7 +176,11 @@ function normalizeBoxOption(
     return 'content-box';
   }
 
-  if (box !== 'content-box' && box !== 'border-box') {
+  if (
+    box !== 'content-box' &&
+    box !== 'border-box' &&
+    box !== 'device-pixel-content-box'
+  ) {
     throw new TypeError(
       `Failed to execute 'observe' on 'ResizeObserver': Failed to read the 'box' property from 'ResizeObserverOptions': The provided value '${String(
         box,

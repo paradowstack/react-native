@@ -20,7 +20,11 @@ using ResizeObserverObserverId = int32_t;
 
 // Corresponds to the `box` option of `ResizeObserver#observe`.
 // https://w3c.github.io/csswg-drafts/resize-observer/#resize-observer-box-options
-enum class ResizeObserverBoxOptions { ContentBox, BorderBox };
+enum class ResizeObserverBoxOptions {
+  ContentBox,
+  BorderBox,
+  DevicePixelContentBox
+};
 
 struct ResizeObserverEntry {
   ResizeObserverObserverId resizeObserverId;
@@ -28,6 +32,7 @@ struct ResizeObserverEntry {
   Rect contentRect;
   Size borderBoxSize;
   Size contentBoxSize;
+  Size devicePixelContentBoxSize;
 
   bool sameShadowNodeFamily(
       const ShadowNodeFamily& otherShadowNodeFamily) const {

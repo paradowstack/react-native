@@ -64,8 +64,14 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
                layoutMetrics.borderWidth.top},
       .size = contentBoxSize};
 
+  auto devicePixelContentBoxSize = Size{
+      contentBoxSize.width * layoutMetrics.pointScaleFactor,
+      contentBoxSize.height * layoutMetrics.pointScaleFactor};
+
   auto observedSize = boxOptions_ == ResizeObserverBoxOptions::ContentBox
       ? contentBoxSize
+      : boxOptions_ == ResizeObserverBoxOptions::DevicePixelContentBox
+      ? devicePixelContentBoxSize
       : borderBoxSize;
 
   if (lastReportedSize_.has_value() &&
@@ -80,7 +86,8 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
       targetShadowNodeFamily_,
       contentRect,
       borderBoxSize,
-      contentBoxSize};
+      contentBoxSize,
+      devicePixelContentBoxSize};
 }
 
 } // namespace facebook::react
