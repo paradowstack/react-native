@@ -65,11 +65,10 @@ class ResizeObserver {
     return boxOptions_;
   }
 
-  // Whether this observer has ever produced an entry (i.e. reported a size
-  // at least once since being created or since the target was last removed
-  // from the tree).
-  bool hasReported() const {
-    return lastReportedSize_.has_value();
+  // Whether this observation still needs its first delivery at the next
+  // `runResizeObservations` step (just registered, or target was removed).
+  bool needsInitialDeliveryCheck() const {
+    return !lastReportedSize_.has_value();
   }
 
  private:
@@ -77,9 +76,8 @@ class ResizeObserver {
   ShadowNodeFamily::Shared targetShadowNodeFamily_;
   ResizeObserverBoxOptions boxOptions_;
 
-  // Tracks the "last reported size" for this observation, per the
-  // ResizeObserver spec.
-  // https://w3c.github.io/csswg-drafts/resize-observer/#resize-observer-last-reported-size-slot
+  // Last delivered observed-box size. Empty until the first entry is produced.
+  // Reset when the target leaves the tree so a reinsert is a new observation.
   std::optional<Size> lastReportedSize_;
 };
 

@@ -204,9 +204,8 @@ void ResizeObserverManager::runResizeObservations(
   }
 
   // A surface is relevant to this step if either (a) it has dirty families
-  // collected from a commit, or (b) it has observers that have never
-  // reported yet (e.g. observers just registered via `observe`, which no
-  // longer perform a synchronous initial observation).
+  // collected from a commit, or (b) it has observers awaiting their first
+  // delivery check (e.g. observers just registered via `observe()`).
   std::unordered_set<SurfaceId> candidateSurfaceIds;
   for (const auto& [surfaceId, families] : dirtyFamiliesBySurfaceId) {
     candidateSurfaceIds.insert(surfaceId);
@@ -216,7 +215,7 @@ void ResizeObserverManager::runResizeObservations(
     std::unique_lock lock(observersMutex_);
     for (const auto& [surfaceId, observers] : observersBySurfaceId_) {
       for (const auto& observer : observers) {
-        if (!observer->hasReported()) {
+        if (observer->needsInitialDeliveryCheck()) {
           candidateSurfaceIds.insert(surfaceId);
           break;
         }
@@ -252,10 +251,10 @@ void ResizeObserverManager::runResizeObservations(
 
     for (auto& observer : observersIt->second) {
       // Only recompute observers whose target was affected by a commit
-      // since the last pass, or that have never reported yet.
+      // since the last pass, or that still need their first delivery check.
       bool wasAffected = dirtyFamilies != nullptr &&
           dirtyFamilies->contains(observer->getTargetShadowNodeFamily().get());
-      if (!wasAffected && observer->hasReported()) {
+      if (!wasAffected && !observer->needsInitialDeliveryCheck()) {
         continue;
       }
 

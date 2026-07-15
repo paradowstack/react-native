@@ -7,10 +7,75 @@
 
 #include "ResizeObserver.h"
 #include <react/renderer/core/LayoutableShadowNode.h>
+#include <react/renderer/core/ShadowNode.h>
+#include <react/renderer/core/ShadowNodeTraits.h>
 #include <algorithm>
 #include <utility>
 
 namespace facebook::react {
+
+namespace {
+
+const ShadowNode* getTargetShadowNode(
+    const ShadowNodeFamily::AncestorList& ancestors) {
+  if (ancestors.empty()) {
+    return nullptr;
+  }
+
+  const auto& parentChildPair = ancestors.back();
+  return parentChildPair.first.get()
+      .getChildren()
+      .at(parentChildPair.second)
+      .get();
+}
+
+bool isTargetHidden(const ShadowNode& targetShadowNode) {
+  // `display: 'none'` sets the Hidden trait on View nodes when props are
+  // committed, which can be ahead of the last laid-out `displayType` / frame.
+  if (targetShadowNode.getTraits().check(ShadowNodeTraits::Trait::Hidden)) {
+    return true;
+  }
+
+  if (const auto* layoutableShadowNode =
+          dynamic_cast<const LayoutableShadowNode*>(&targetShadowNode)) {
+    return layoutableShadowNode->getLayoutMetrics().displayType ==
+        DisplayType::None;
+  }
+
+  return false;
+}
+
+Size getObservedSize(
+    ResizeObserverBoxOptions boxOptions,
+    Size borderBoxSize,
+    Size contentBoxSize,
+    Size devicePixelContentBoxSize) {
+  if (boxOptions == ResizeObserverBoxOptions::ContentBox) {
+    return contentBoxSize;
+  }
+  if (boxOptions == ResizeObserverBoxOptions::DevicePixelContentBox) {
+    return devicePixelContentBoxSize;
+  }
+  return borderBoxSize;
+}
+
+ResizeObserverEntry makeResizeObserverEntry(
+    ResizeObserverObserverId resizeObserverId,
+    const ShadowNodeFamily::Shared& targetShadowNodeFamily,
+    Size borderBoxSize,
+    Size contentBoxSize,
+    Size devicePixelContentBoxSize,
+    Rect contentRect) {
+  return ResizeObserverEntry{
+      resizeObserverId,
+      targetShadowNodeFamily,
+      contentRect,
+      borderBoxSize,
+      contentBoxSize,
+      devicePixelContentBoxSize};
+}
+
+} // namespace
 
 ResizeObserver::ResizeObserver(
     ResizeObserverObserverId resizeObserverId,
@@ -26,17 +91,50 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
     const RootShadowNode& rootShadowNode) {
   auto ancestors = targetShadowNodeFamily_->getAncestors(rootShadowNode);
 
-  auto layoutMetrics = ancestors.empty()
-      ? EmptyLayoutMetrics
-      : LayoutableShadowNode::computeRelativeLayoutMetrics(
-            ancestors,
-            {.includeTransform = false, .includeViewportOffset = true});
+  if (ancestors.empty()) {
+    // The target is not part of the tree. If it is later reinserted, treat it
+    // as a brand new observation.
+    lastReportedSize_.reset();
+    return std::nullopt;
+  }
+
+  const auto* targetShadowNode = getTargetShadowNode(ancestors);
+  if (targetShadowNode == nullptr) {
+    lastReportedSize_.reset();
+    return std::nullopt;
+  }
+
+  const bool isInitialDelivery = !lastReportedSize_.has_value();
+
+  // Per spec (and browser behavior), `display: none` triggers a notification
+  // with zero-sized boxes. Use the Hidden trait so we do not rely on possibly
+  // stale layout metrics from before the hide commit was laid out.
+  if (isTargetHidden(*targetShadowNode)) {
+    Size zeroSize{0, 0};
+    Rect zeroContentRect{.origin = {0, 0}, .size = zeroSize};
+    auto observedSize = getObservedSize(
+        boxOptions_, zeroSize, zeroSize, zeroSize);
+
+    if (!isInitialDelivery && lastReportedSize_.value() == observedSize) {
+      return std::nullopt;
+    }
+
+    lastReportedSize_ = observedSize;
+
+    return makeResizeObserverEntry(
+        resizeObserverId_,
+        targetShadowNodeFamily_,
+        zeroSize,
+        zeroSize,
+        zeroSize,
+        zeroContentRect);
+  }
+
+  auto layoutMetrics = LayoutableShadowNode::computeRelativeLayoutMetrics(
+      ancestors,
+      {.includeTransform = false, .includeViewportOffset = true});
 
   if (layoutMetrics == EmptyLayoutMetrics) {
-    // The target is not (or no longer) part of the tree rooted at
-    // `rootShadowNode`. Per spec, if the element is later reinserted into the
-    // tree it must be treated as a brand new observation, so we reset the
-    // last reported size.
     lastReportedSize_.reset();
     return std::nullopt;
   }
@@ -68,26 +166,24 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
       contentBoxSize.width * layoutMetrics.pointScaleFactor,
       contentBoxSize.height * layoutMetrics.pointScaleFactor};
 
-  auto observedSize = boxOptions_ == ResizeObserverBoxOptions::ContentBox
-      ? contentBoxSize
-      : boxOptions_ == ResizeObserverBoxOptions::DevicePixelContentBox
-      ? devicePixelContentBoxSize
-      : borderBoxSize;
+  auto observedSize = getObservedSize(
+      boxOptions_, borderBoxSize, contentBoxSize, devicePixelContentBoxSize);
 
-  if (lastReportedSize_.has_value() &&
-      lastReportedSize_.value() == observedSize) {
+  // Skip when the observed box is unchanged. The first delivery always runs
+  // (including 0x0 content-box), matching browser behavior on `observe()`.
+  if (!isInitialDelivery && lastReportedSize_.value() == observedSize) {
     return std::nullopt;
   }
 
   lastReportedSize_ = observedSize;
 
-  return ResizeObserverEntry{
+  return makeResizeObserverEntry(
       resizeObserverId_,
       targetShadowNodeFamily_,
-      contentRect,
       borderBoxSize,
       contentBoxSize,
-      devicePixelContentBoxSize};
+      devicePixelContentBoxSize,
+      contentRect);
 }
 
 } // namespace facebook::react
