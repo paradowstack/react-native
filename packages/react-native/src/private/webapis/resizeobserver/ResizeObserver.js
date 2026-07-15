@@ -93,8 +93,20 @@ export default class ResizeObserver {
     const box = normalizeBoxOption(options?.box);
 
     if (this._observationTargets.has(target)) {
-      // Re-observing an already observed target just updates its `box`
-      // option (per spec, this is equivalent to calling `unobserve` first).
+      // Per spec, re-observing replaces the previous observation (equivalent
+      // to unobserve + observe) and must update native state.
+      const previousBox = this._observationTargets.get(target);
+      if (previousBox === box) {
+        return;
+      }
+
+      const resizeObserverId = this._getOrCreateResizeObserverId();
+      ResizeObserverManager.unobserve(resizeObserverId, target);
+      ResizeObserverManager.observe({
+        resizeObserverId,
+        target,
+        box,
+      });
       this._observationTargets.set(target, box);
       return;
     }
