@@ -24,11 +24,32 @@ NativeResizeObserverModuleProvider(
 
 namespace facebook::react {
 
+namespace {
+
+jsi::Object tokenFromShadowNodeFamily(
+    jsi::Runtime& runtime,
+    ShadowNodeFamily::Shared shadowNodeFamily) {
+  jsi::Object obj(runtime);
+  // Need to const_cast since JSI only allows non-const pointees
+  obj.setNativeState(
+      runtime,
+      std::const_pointer_cast<ShadowNodeFamily>(std::move(shadowNodeFamily)));
+  return obj;
+}
+
+ShadowNodeFamily::Shared shadowNodeFamilyFromToken(
+    jsi::Runtime& runtime,
+    jsi::Object token) {
+  return token.getNativeState<ShadowNodeFamily>(runtime);
+}
+
+} // namespace
+
 NativeResizeObserver::NativeResizeObserver(
     std::shared_ptr<CallInvoker> jsInvoker)
     : NativeResizeObserverCxxSpec(std::move(jsInvoker)) {}
 
-void NativeResizeObserver::observe(
+jsi::Object NativeResizeObserver::observe(
     jsi::Runtime& runtime,
     NativeResizeObserverObserveOptions options) {
   auto resizeObserverId = options.resizeObserverId;
@@ -39,13 +60,16 @@ void NativeResizeObserver::observe(
 
   resizeObserverManager_.observe(
       resizeObserverId, shadowNodeFamily, boxOptions, uiManager);
+
+  return tokenFromShadowNodeFamily(runtime, shadowNodeFamily);
 }
 
 void NativeResizeObserver::unobserve(
-    jsi::Runtime& /*runtime*/,
+    jsi::Runtime& runtime,
     NativeResizeObserverResizeObserverId resizeObserverId,
-    std::shared_ptr<const ShadowNode> targetShadowNode) {
-  auto shadowNodeFamily = targetShadowNode->getFamilyShared();
+    jsi::Object targetToken) {
+  auto shadowNodeFamily =
+      shadowNodeFamilyFromToken(runtime, std::move(targetToken));
   resizeObserverManager_.unobserve(resizeObserverId, shadowNodeFamily);
 }
 
