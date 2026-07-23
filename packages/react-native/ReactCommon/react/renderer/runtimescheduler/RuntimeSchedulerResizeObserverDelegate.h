@@ -7,18 +7,13 @@
 
 #pragma once
 
-#include <unordered_set>
-
 namespace facebook::react {
-
-using SurfaceId = int32_t;
 
 class RuntimeSchedulerResizeObserverDelegate {
  public:
   virtual ~RuntimeSchedulerResizeObserverDelegate() = default;
 
-  virtual void runResizeObservations(
-      const std::unordered_set<SurfaceId> &surfaceIdsWithPendingRenderingUpdates) = 0;
+  virtual void runResizeObservations() = 0;
 };
 
 } // namespace facebook::react

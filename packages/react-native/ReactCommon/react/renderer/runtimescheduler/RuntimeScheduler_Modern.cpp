@@ -366,8 +366,7 @@ void RuntimeScheduler_Modern::updateRendering(HighResTimeStamp taskEndTime) {
   // See
   // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-resize-notifications-h
   if (resizeObserverDelegate_ != nullptr) {
-    resizeObserverDelegate_->runResizeObservations(
-        surfaceIdsWithPendingRenderingUpdates_);
+    resizeObserverDelegate_->runResizeObservations();
   }
 
   // This is the integration of the Intersection Observer API in the Event Loop.

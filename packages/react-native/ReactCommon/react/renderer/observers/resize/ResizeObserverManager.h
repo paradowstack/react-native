@@ -51,9 +51,7 @@ class ResizeObserverManager final
 
 #pragma mark - RuntimeSchedulerResizeObserverDelegate
 
-  void runResizeObservations(
-      const std::unordered_set<SurfaceId>&
-          surfaceIdsWithPendingRenderingUpdates) override;
+  void runResizeObservations() override;
 
 #pragma mark - UIManagerCommitHook
 
