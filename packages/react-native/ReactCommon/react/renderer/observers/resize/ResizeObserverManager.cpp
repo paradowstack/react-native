@@ -230,9 +230,7 @@ void ResizeObserverManager::shadowTreeDidCommit(
 
 #pragma mark - RuntimeSchedulerResizeObserverDelegate
 
-void ResizeObserverManager::runResizeObservations(
-    const std::unordered_set<
-        SurfaceId>& /*surfaceIdsWithPendingRenderingUpdates*/) {
+void ResizeObserverManager::runResizeObservations() {
   TraceSection s("ResizeObserverManager::runResizeObservations");
 
   // Drain the dirty families collected by the commit hook since the last
