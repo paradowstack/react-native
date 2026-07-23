@@ -10,6 +10,7 @@
 #include <react/renderer/core/ShadowNode.h>
 #include <react/renderer/core/ShadowNodeTraits.h>
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace facebook::react {
@@ -162,9 +163,15 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
                layoutMetrics.borderWidth.top},
       .size = contentBoxSize};
 
+  // Per spec, the device-pixel-content-box must contain integer values.
+  // Round each axis independently: unlike Yoga's edge-snapping, we don't have
+  // a pixel-snapped content-box origin to tile against (insets come out of
+  // Yoga unsnapped and the origin is an accumulated sum of rounded relative
+  // offsets), and a single observed element has no sibling to align with, so
+  // rounding the dimension is the correct best-effort here.
   auto devicePixelContentBoxSize = Size{
-      contentBoxSize.width * layoutMetrics.pointScaleFactor,
-      contentBoxSize.height * layoutMetrics.pointScaleFactor};
+      std::round(contentBoxSize.width * layoutMetrics.pointScaleFactor),
+      std::round(contentBoxSize.height * layoutMetrics.pointScaleFactor)};
 
   auto observedSize = getObservedSize(
       boxOptions_, borderBoxSize, contentBoxSize, devicePixelContentBoxSize);
