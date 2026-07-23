@@ -31,6 +31,10 @@ export default class ResizeObserverEntry {
   // handle in the native entry (when the target is detached), so we need to
   // keep a reference to it directly.
   _target: ReactNativeElement;
+  _contentRect: ?DOMRectReadOnly;
+  _borderBoxSize: ?ReadonlyArray<ResizeObserverSize>;
+  _contentBoxSize: ?ReadonlyArray<ResizeObserverSize>;
+  _devicePixelContentBoxSize: ?ReadonlyArray<ResizeObserverSize>;
 
   constructor(
     nativeEntry: NativeResizeObserverEntry,
@@ -55,13 +59,16 @@ export default class ResizeObserverEntry {
    * bounds of its content box).
    */
   get contentRect(): DOMRectReadOnly {
-    const contentRect = this._nativeEntry.contentRect;
-    return new DOMRectReadOnly(
-      contentRect[0],
-      contentRect[1],
-      contentRect[2],
-      contentRect[3],
-    );
+    if (this._contentRect == null) {
+      const contentRect = this._nativeEntry.contentRect;
+      this._contentRect = new DOMRectReadOnly(
+        contentRect[0],
+        contentRect[1],
+        contentRect[2],
+        contentRect[3],
+      );
+    }
+    return this._contentRect;
   }
 
   /**
@@ -71,8 +78,13 @@ export default class ResizeObserverEntry {
    * always contain a single value.
    */
   get borderBoxSize(): ReadonlyArray<ResizeObserverSize> {
-    const borderBoxSize = this._nativeEntry.borderBoxSize;
-    return [new ResizeObserverSize(borderBoxSize[0], borderBoxSize[1])];
+    if (this._borderBoxSize == null) {
+      const borderBoxSize = this._nativeEntry.borderBoxSize;
+      this._borderBoxSize = Object.freeze([
+        new ResizeObserverSize(borderBoxSize[0], borderBoxSize[1]),
+      ]);
+    }
+    return this._borderBoxSize;
   }
 
   /**
@@ -82,8 +94,13 @@ export default class ResizeObserverEntry {
    * always contain a single value.
    */
   get contentBoxSize(): ReadonlyArray<ResizeObserverSize> {
-    const contentBoxSize = this._nativeEntry.contentBoxSize;
-    return [new ResizeObserverSize(contentBoxSize[0], contentBoxSize[1])];
+    if (this._contentBoxSize == null) {
+      const contentBoxSize = this._nativeEntry.contentBoxSize;
+      this._contentBoxSize = Object.freeze([
+        new ResizeObserverSize(contentBoxSize[0], contentBoxSize[1]),
+      ]);
+    }
+    return this._contentBoxSize;
   }
 
   /**
@@ -93,14 +110,17 @@ export default class ResizeObserverEntry {
    * always contain a single value.
    */
   get devicePixelContentBoxSize(): ReadonlyArray<ResizeObserverSize> {
-    const devicePixelContentBoxSize =
-      this._nativeEntry.devicePixelContentBoxSize;
-    return [
-      new ResizeObserverSize(
-        devicePixelContentBoxSize[0],
-        devicePixelContentBoxSize[1],
-      ),
-    ];
+    if (this._devicePixelContentBoxSize == null) {
+      const devicePixelContentBoxSize =
+        this._nativeEntry.devicePixelContentBoxSize;
+      this._devicePixelContentBoxSize = Object.freeze([
+        new ResizeObserverSize(
+          devicePixelContentBoxSize[0],
+          devicePixelContentBoxSize[1],
+        ),
+      ]);
+    }
+    return this._devicePixelContentBoxSize;
   }
 }
 
