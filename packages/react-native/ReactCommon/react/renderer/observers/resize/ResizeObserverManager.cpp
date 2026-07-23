@@ -60,29 +60,70 @@ void ResizeObserverManager::unobserve(
     const ShadowNodeFamily::Shared& shadowNodeFamily) {
   TraceSection s("ResizeObserverManager::unobserve");
 
-  std::unique_lock lock(observersMutex_);
-
   auto surfaceId = shadowNodeFamily->getSurfaceId();
 
-  auto observersIt = observersBySurfaceId_.find(surfaceId);
-  if (observersIt == observersBySurfaceId_.end()) {
-    return;
+  // Whether another observer still targets the same family after this
+  // removal. If so, we must not drop the family's pending dirty state.
+  bool familyStillObserved = false;
+  {
+    std::unique_lock lock(observersMutex_);
+
+    auto observersIt = observersBySurfaceId_.find(surfaceId);
+    if (observersIt == observersBySurfaceId_.end()) {
+      return;
+    }
+
+    auto& observers = observersIt->second;
+
+    observers.erase(
+        std::remove_if(
+            observers.begin(),
+            observers.end(),
+            [resizeObserverId, &shadowNodeFamily](const auto& observer) {
+              return observer->getResizeObserverId() == resizeObserverId &&
+                  observer->getTargetShadowNodeFamily() == shadowNodeFamily;
+            }),
+        observers.end());
+
+    for (const auto& observer : observers) {
+      if (observer->getTargetShadowNodeFamily() == shadowNodeFamily) {
+        familyStillObserved = true;
+        break;
+      }
+    }
+
+    if (observers.empty()) {
+      observersBySurfaceId_.erase(surfaceId);
+    }
   }
 
-  auto& observers = observersIt->second;
+  // Drop bookkeeping for the removed observation so we don't run a wasted
+  // observation pass for it, deliver a stale entry after `unobserve`, or
+  // retain a dangling pointer to its (now potentially freed) family. Only
+  // clear the dirty family if no remaining observer still targets it.
+  if (!familyStillObserved) {
+    std::unique_lock lock(dirtyFamiliesMutex_);
+    auto dirtyFamiliesIt = dirtyFamiliesBySurfaceId_.find(surfaceId);
+    if (dirtyFamiliesIt != dirtyFamiliesBySurfaceId_.end()) {
+      dirtyFamiliesIt->second.erase(shadowNodeFamily.get());
+      if (dirtyFamiliesIt->second.empty()) {
+        dirtyFamiliesBySurfaceId_.erase(dirtyFamiliesIt);
+      }
+    }
+  }
 
-  observers.erase(
-      std::remove_if(
-          observers.begin(),
-          observers.end(),
-          [resizeObserverId, &shadowNodeFamily](const auto& observer) {
-            return observer->getResizeObserverId() == resizeObserverId &&
-                observer->getTargetShadowNodeFamily() == shadowNodeFamily;
-          }),
-      observers.end());
-
-  if (observers.empty()) {
-    observersBySurfaceId_.erase(surfaceId);
+  {
+    std::unique_lock lock(pendingEntriesMutex_);
+    pendingEntries_.erase(
+        std::remove_if(
+            pendingEntries_.begin(),
+            pendingEntries_.end(),
+            [resizeObserverId, &shadowNodeFamily](const ResizeObserverEntry&
+                                                      entry) {
+              return entry.resizeObserverId == resizeObserverId &&
+                  entry.shadowNodeFamily == shadowNodeFamily;
+            }),
+        pendingEntries_.end());
   }
 }
 
