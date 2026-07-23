@@ -100,24 +100,29 @@ export default class ResizeObserver {
         return;
       }
 
-      const resizeObserverId = this._getOrCreateResizeObserverId();
-      ResizeObserverManager.unobserve(resizeObserverId, target);
-      ResizeObserverManager.observe({
-        resizeObserverId,
+      ResizeObserverManager.unobserve(
+        this._getOrCreateResizeObserverId(),
         target,
-        box,
-      });
-      this._observationTargets.set(target, box);
-      return;
+      );
+      this._observationTargets.delete(target);
     }
 
-    ResizeObserverManager.observe({
-      resizeObserverId: this._getOrCreateResizeObserverId(),
+    const resizeObserverId = this._getOrCreateResizeObserverId();
+    const didObserve = ResizeObserverManager.observe({
+      resizeObserverId,
       target,
       box,
     });
 
-    this._observationTargets.set(target, box);
+    if (didObserve) {
+      this._observationTargets.set(target, box);
+    } else if (this._observationTargets.size === 0) {
+      // The target could not be observed (e.g. it is disconnected). Do not
+      // record the observation, so a later `observe` call can retry, and
+      // release the observer registration if it is not observing anything.
+      ResizeObserverManager.unregisterObserver(resizeObserverId);
+      this._resizeObserverId = null;
+    }
   }
 
   /**

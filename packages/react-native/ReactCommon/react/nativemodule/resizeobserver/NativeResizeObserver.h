@@ -63,14 +63,14 @@ class NativeResizeObserver
  public:
   NativeResizeObserver(std::shared_ptr<CallInvoker> jsInvoker);
 
-  void observe(
+  jsi::Object observe(
       jsi::Runtime& runtime,
       NativeResizeObserverObserveOptions options);
 
   void unobserve(
       jsi::Runtime& runtime,
       NativeResizeObserverResizeObserverId resizeObserverId,
-      std::shared_ptr<const ShadowNode> targetShadowNode);
+      jsi::Object targetToken);
 
   void connect(
       jsi::Runtime& runtime,

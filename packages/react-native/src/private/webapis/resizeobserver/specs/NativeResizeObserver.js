@@ -28,11 +28,15 @@ export type NativeResizeObserverObserveOptions = {
   box?: ?string,
 };
 
+export opaque type NativeResizeObserverToken = unknown;
+
 export interface Spec extends TurboModule {
-  readonly observe: (options: NativeResizeObserverObserveOptions) => void;
+  readonly observe: (
+    options: NativeResizeObserverObserveOptions,
+  ) => NativeResizeObserverToken;
   readonly unobserve: (
     resizeObserverId: number,
-    targetShadowNode: unknown,
+    targetToken: NativeResizeObserverToken,
   ) => void;
   readonly connect: (notifyResizeObserversFunction: () => void) => void;
   readonly disconnect: () => void;

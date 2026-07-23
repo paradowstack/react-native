@@ -24,6 +24,7 @@ import type ResizeObserver, {
   ResizeObserverCallback,
 } from '../ResizeObserver';
 import type ResizeObserverEntry from '../ResizeObserverEntry';
+import type {NativeResizeObserverToken} from '../specs/NativeResizeObserver';
 
 import {trace} from '../../../../../Libraries/Performance/Systrace';
 import {
@@ -67,6 +68,13 @@ function setTargetForInstanceHandle(
   instanceHandleToTargetMap.set(key, target);
 }
 
+// We need to keep the token returned by native when starting an observation
+// because targets lose their reference to the shadow node when they are
+// unmounted, and without it we could not clean up the native observation
+// after that point.
+const targetToTokenMap: WeakMap<ReactNativeElement, NativeResizeObserverToken> =
+  new WeakMap();
+
 /**
  * Registers the given resize observer and returns a unique ID for it, which
  * is required to start observing targets.
@@ -101,6 +109,8 @@ export function unregisterObserver(resizeObserverId: ResizeObserverId): void {
  * Starts observing a target on a specific resize observer.
  * If this is the first target being observed, this also sets up the
  * centralized notification callback in native.
+ * Returns `true` if the native observation was actually set up, or `false`
+ * if the target could not be observed (e.g. because it is disconnected).
  */
 export function observe({
   resizeObserverId,
@@ -110,10 +120,10 @@ export function observe({
   resizeObserverId: ResizeObserverId,
   target: ReactNativeElement,
   box: ResizeObserverBoxOptions,
-}): void {
+}): boolean {
   if (NativeResizeObserver == null) {
     throwIfNoNativeResizeObserver();
-    return;
+    return false;
   }
 
   const registeredObserver = registeredResizeObservers.get(resizeObserverId);
@@ -121,13 +131,13 @@ export function observe({
     console.error(
       `ResizeObserverManager: could not start observing target because ResizeObserver with ID ${resizeObserverId} was not registered.`,
     );
-    return;
+    return false;
   }
 
   const targetNativeNodeReference = getNativeNodeReference(target);
   if (targetNativeNodeReference == null) {
     // The target is disconnected. We can't observe it anymore.
-    return;
+    return false;
   }
 
   const instanceHandle = getInstanceHandle(target);
@@ -135,7 +145,7 @@ export function observe({
     console.error(
       'ResizeObserverManager: could not find reference to instance handle from target',
     );
-    return;
+    return false;
   }
 
   // Store the mapping between the instance handle and the target so we can
@@ -147,11 +157,14 @@ export function observe({
     isConnected = true;
   }
 
-  NativeResizeObserver.observe({
+  const token = NativeResizeObserver.observe({
     resizeObserverId,
     targetShadowNode: targetNativeNodeReference,
     box,
   });
+  targetToTokenMap.set(target, token);
+
+  return true;
 }
 
 /**
@@ -175,14 +188,15 @@ export function unobserve(
     return;
   }
 
-  const targetNativeNodeReference = getNativeNodeReference(target);
-  if (targetNativeNodeReference == null) {
-    // The target is already disconnected, so native doesn't have anything
-    // to unobserve.
+  const targetToken = targetToTokenMap.get(target);
+  if (targetToken == null) {
+    console.error(
+      'ResizeObserverManager: could not find registration data for target',
+    );
     return;
   }
 
-  NativeResizeObserver.unobserve(resizeObserverId, targetNativeNodeReference);
+  NativeResizeObserver.unobserve(resizeObserverId, targetToken);
 }
 
 /**
