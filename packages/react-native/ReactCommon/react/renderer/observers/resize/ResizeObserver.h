@@ -11,6 +11,7 @@
 #include <react/renderer/core/ShadowNodeFamily.h>
 #include <react/renderer/graphics/Rect.h>
 #include <react/renderer/graphics/Size.h>
+#include <cstdint>
 #include <memory>
 #include <optional>
 
@@ -46,7 +47,8 @@ class ResizeObserver {
   ResizeObserver(
       ResizeObserverObserverId resizeObserverId,
       ShadowNodeFamily::Shared targetShadowNodeFamily,
-      ResizeObserverBoxOptions boxOptions);
+      ResizeObserverBoxOptions boxOptions,
+      uint64_t observationSequence);
 
   // Partially equivalent to
   // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-active-resize-observations
@@ -65,6 +67,11 @@ class ResizeObserver {
     return boxOptions_;
   }
 
+  // Monotonic order of `observe()` registration for this observation.
+  uint64_t getObservationSequence() const {
+    return observationSequence_;
+  }
+
   // Whether this observation still needs its first delivery at the next
   // `runResizeObservations` step (just registered, or target was removed).
   bool needsInitialDeliveryCheck() const {
@@ -75,6 +82,7 @@ class ResizeObserver {
   ResizeObserverObserverId resizeObserverId_;
   ShadowNodeFamily::Shared targetShadowNodeFamily_;
   ResizeObserverBoxOptions boxOptions_;
+  uint64_t observationSequence_;
 
   // Last delivered observed-box size. Empty until the first entry is produced.
   // Reset when the target leaves the tree so a reinsert is a new observation.

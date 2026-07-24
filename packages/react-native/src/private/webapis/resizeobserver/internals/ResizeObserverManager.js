@@ -238,7 +238,18 @@ function doNotifyResizeObservers(): void {
     list.push(createResizeObserverEntry(nativeEntry, target));
   }
 
-  for (const [resizeObserverId, entriesForObserver] of entriesByObserver) {
+  // Native delivers entries sorted by observer registration order; keep that
+  // when invoking callbacks (Map insertion order alone is not enough if
+  // batches were merged out of order).
+  const observerIds = Array.from(entriesByObserver.keys()).sort(
+    (a, b) => a - b,
+  );
+  for (const resizeObserverId of observerIds) {
+    const entriesForObserver = entriesByObserver.get(resizeObserverId);
+    if (entriesForObserver == null) {
+      continue;
+    }
+
     const registeredObserver = registeredResizeObservers.get(resizeObserverId);
     if (!registeredObserver) {
       // This could happen if the observer is disconnected between commit

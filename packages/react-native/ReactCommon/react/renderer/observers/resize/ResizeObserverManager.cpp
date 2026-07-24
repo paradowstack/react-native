@@ -27,6 +27,12 @@ RootShadowNode::Shared getRootShadowNode(
 
   return rootShadowNode;
 }
+
+struct PendingObservation {
+  ResizeObserverEntry entry;
+  ResizeObserverObserverId resizeObserverId;
+  uint64_t observationSequence;
+};
 } // namespace
 
 ResizeObserverManager::ResizeObserverManager() = default;
@@ -52,7 +58,10 @@ void ResizeObserverManager::observe(
   auto& observers = observersBySurfaceId_[surfaceId];
 
   observers.emplace_back(std::make_unique<ResizeObserver>(
-      resizeObserverId, shadowNodeFamily, boxOptions));
+      resizeObserverId,
+      shadowNodeFamily,
+      boxOptions,
+      nextObservationSequence_++));
 }
 
 void ResizeObserverManager::unobserve(
@@ -266,7 +275,7 @@ void ResizeObserverManager::runResizeObservations() {
     return;
   }
 
-  std::vector<ResizeObserverEntry> entries;
+  std::vector<PendingObservation> pendingObservations;
 
   for (auto surfaceId : candidateSurfaceIds) {
     RootShadowNode::Shared rootShadowNode =
@@ -299,19 +308,42 @@ void ResizeObserverManager::runResizeObservations() {
 
       auto entry = observer->updateStateIfNeeded(*rootShadowNode);
       if (entry) {
-        entries.push_back(std::move(entry).value());
+        pendingObservations.push_back(PendingObservation{
+            .entry = std::move(entry).value(),
+            .resizeObserverId = observer->getResizeObserverId(),
+            .observationSequence = observer->getObservationSequence(),
+        });
       }
     }
   }
 
-  if (entries.empty()) {
+  if (pendingObservations.empty()) {
     return;
   }
 
+  // Deliver in the order the spec's algorithms imply by iterating their
+  // ordered lists: observers in registration order (`[[resizeObservers]]`),
+  // and within an observer its targets in `observe()` order
+  // (`[[observationTargets]]`). Depth is deliberately not a factor: in the
+  // spec it only gates the rounds of the (re-layout) broadcast loop, which
+  // RN does not run, and never reorders entries within a callback.
+  std::sort(
+      pendingObservations.begin(),
+      pendingObservations.end(),
+      [](const PendingObservation& a, const PendingObservation& b) {
+        if (a.resizeObserverId != b.resizeObserverId) {
+          return a.resizeObserverId < b.resizeObserverId;
+        }
+        return a.observationSequence < b.observationSequence;
+      });
+
   {
     std::unique_lock lock(pendingEntriesMutex_);
-    pendingEntries_.insert(
-        pendingEntries_.end(), entries.begin(), entries.end());
+    pendingEntries_.reserve(
+        pendingEntries_.size() + pendingObservations.size());
+    for (auto& observation : pendingObservations) {
+      pendingEntries_.push_back(std::move(observation.entry));
+    }
   }
 
   notifyObserversIfNecessary();
