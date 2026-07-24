@@ -14,6 +14,7 @@
 #include <react/renderer/runtimescheduler/RuntimeSchedulerResizeObserverDelegate.h>
 #include <react/renderer/uimanager/UIManager.h>
 #include <react/renderer/uimanager/UIManagerCommitHook.h>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -69,6 +70,10 @@ class ResizeObserverManager final
       unordered_map<SurfaceId, std::vector<std::unique_ptr<ResizeObserver>>>
           observersBySurfaceId_;
   mutable std::mutex observersMutex_;
+
+  // Monotonic counter assigned at `observe()` so deliveries can preserve
+  // observation registration order.
+  uint64_t nextObservationSequence_{0};
 
   // Families that went dirty (i.e. were part of `affectedLayoutableNodes`)
   // since the last time `runResizeObservations` drained this map. Populated

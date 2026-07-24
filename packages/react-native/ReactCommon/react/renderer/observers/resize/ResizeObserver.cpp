@@ -81,10 +81,12 @@ ResizeObserverEntry makeResizeObserverEntry(
 ResizeObserver::ResizeObserver(
     ResizeObserverObserverId resizeObserverId,
     ShadowNodeFamily::Shared targetShadowNodeFamily,
-    ResizeObserverBoxOptions boxOptions)
+    ResizeObserverBoxOptions boxOptions,
+    uint64_t observationSequence)
     : resizeObserverId_(resizeObserverId),
       targetShadowNodeFamily_(std::move(targetShadowNodeFamily)),
-      boxOptions_(boxOptions) {}
+      boxOptions_(boxOptions),
+      observationSequence_(observationSequence) {}
 
 // Partially equivalent to
 // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-active-resize-observations
