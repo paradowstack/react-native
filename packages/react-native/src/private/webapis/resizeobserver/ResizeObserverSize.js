@@ -17,8 +17,8 @@ import {setPlatformObject} from '../webidl/PlatformObjects';
  * interface of the Resize Observer API is used to store the block and inline
  * sizes of a box as separate properties.
  *
- * It is returned by the `contentBoxSize` and `borderBoxSize` properties of
- * `ResizeObserverEntry`.
+ * It is returned by the `borderBoxSize`, `contentBoxSize` and
+ * `devicePixelContentBoxSize` properties of `ResizeObserverEntry`.
  */
 export default class ResizeObserverSize {
   _inlineSize: number;
@@ -30,20 +30,22 @@ export default class ResizeObserverSize {
   }
 
   /**
-   * The length of the observed element's border box, in the inline
-   * dimension. For boxes with a horizontal writing-mode, this is the vertical
-   * dimension, or height; if the writing-mode is vertical, this is the
-   * horizontal dimension, or width.
+   * The length of the observed box in the inline dimension. For boxes with a
+   * horizontal writing-mode, this is the horizontal dimension, or width; if
+   * the writing-mode is vertical, this is the vertical dimension, or height.
+   *
+   * React Native assumes a horizontal writing-mode, so this is the width.
    */
   get inlineSize(): number {
     return this._inlineSize;
   }
 
   /**
-   * The length of the observed element's border box, in the block dimension.
-   * For boxes with a horizontal writing-mode, this is the vertical
-   * dimension, or height; if the writing-mode is vertical, this is the
-   * horizontal dimension, or width.
+   * The length of the observed box in the block dimension. For boxes with a
+   * horizontal writing-mode, this is the vertical dimension, or height; if the
+   * writing-mode is vertical, this is the horizontal dimension, or width.
+   *
+   * React Native assumes a horizontal writing-mode, so this is the height.
    */
   get blockSize(): number {
     return this._blockSize;
@@ -58,3 +60,18 @@ export function createResizeObserverSize(
 ): ResizeObserverSize {
   return new ResizeObserverSize(inlineSize, blockSize);
 }
+
+// `ResizeObserverSize` is not constructible from user code on the Web (its IDL
+// declares no constructor). We expose this wrapper as the global instead of the
+// class above, which we still use internally to build entries.
+export const ResizeObserverSize_public: typeof ResizeObserverSize =
+  /* eslint-disable no-shadow */
+  // $FlowExpectedError[incompatible-type]
+  function ResizeObserverSize() {
+    throw new TypeError(
+      "Failed to construct 'ResizeObserverSize': Illegal constructor",
+    );
+  };
+
+// $FlowExpectedError[prop-missing]
+ResizeObserverSize_public.prototype = ResizeObserverSize.prototype;
