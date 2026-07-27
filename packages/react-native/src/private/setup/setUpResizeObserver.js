@@ -33,6 +33,8 @@ export default function setUpResizeObserver() {
 
   polyfillGlobal(
     'ResizeObserverSize',
-    () => require('../webapis/resizeobserver/ResizeObserverSize').default,
+    () =>
+      require('../webapis/resizeobserver/ResizeObserverSize')
+        .ResizeObserverSize_public,
   );
 }
