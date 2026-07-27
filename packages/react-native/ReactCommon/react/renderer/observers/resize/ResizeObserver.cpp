@@ -93,19 +93,40 @@ ResizeObserver::ResizeObserver(
 std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
     const RootShadowNode& rootShadowNode) {
   auto ancestors = targetShadowNodeFamily_->getAncestors(rootShadowNode);
+  const auto* targetShadowNode =
+      ancestors.empty() ? nullptr : getTargetShadowNode(ancestors);
 
-  if (ancestors.empty()) {
-    // The target is not part of the tree. If it is later reinserted, treat it
-    // as a brand new observation.
-    lastReportedSize_.reset();
-    return std::nullopt;
-  }
-
-  const auto* targetShadowNode = getTargetShadowNode(ancestors);
   if (targetShadowNode == nullptr) {
-    lastReportedSize_.reset();
-    return std::nullopt;
+    // The target left the tree (its component was unmounted or removed). Per
+    // spec and browser behavior, removal from the tree fires one final
+    // notification with a zero-sized box (like `display: none`). We keep
+    // `lastReportedSize_` set to that 0x0 so we don't re-deliver it, and mark
+    // the observation as detached so it is not re-checked every commit; a
+    // later reinsertion arrives via the "dirty family" path and clears this.
+    Size zeroSize{0, 0};
+    auto observedSize =
+        getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
+
+    const bool alreadyDelivered =
+        lastReportedSize_.has_value() && lastReportedSize_.value() == observedSize;
+    detached_ = true;
+    if (alreadyDelivered) {
+      return std::nullopt;
+    }
+
+    lastReportedSize_ = observedSize;
+
+    return makeResizeObserverEntry(
+        resizeObserverId_,
+        targetShadowNodeFamily_,
+        zeroSize,
+        zeroSize,
+        zeroSize,
+        Rect{.origin = {0, 0}, .size = zeroSize});
   }
+
+  // The target is attached; any previous detached state no longer applies.
+  detached_ = false;
 
   const bool isInitialDelivery = !lastReportedSize_.has_value();
 

@@ -228,13 +228,15 @@ void ResizeObserverManager::shadowTreeDidCommit(
     }
   }
 
-  if (newlyDirtyFamilies.empty()) {
-    return;
-  }
-
   std::unique_lock lock(dirtyFamiliesMutex_);
-  auto& dirtyFamilies = dirtyFamiliesBySurfaceId_[surfaceId];
-  dirtyFamilies.insert(newlyDirtyFamilies.begin(), newlyDirtyFamilies.end());
+  // Always record the commit, even when no observed family changed layout, so
+  // `runResizeObservations` re-checks this surface's observers for targets that
+  // left the tree (removals are not reported in `affectedLayoutableNodes`).
+  committedSurfaceIds_.insert(surfaceId);
+  if (!newlyDirtyFamilies.empty()) {
+    auto& dirtyFamilies = dirtyFamiliesBySurfaceId_[surfaceId];
+    dirtyFamilies.insert(newlyDirtyFamilies.begin(), newlyDirtyFamilies.end());
+  }
 }
 
 #pragma mark - RuntimeSchedulerResizeObserverDelegate
@@ -246,16 +248,19 @@ void ResizeObserverManager::runResizeObservations() {
   // time this step ran.
   std::unordered_map<SurfaceId, std::unordered_set<const ShadowNodeFamily*>>
       dirtyFamiliesBySurfaceId;
+  std::unordered_set<SurfaceId> committedSurfaceIds;
   {
     std::unique_lock lock(dirtyFamiliesMutex_);
     dirtyFamiliesBySurfaceId.swap(dirtyFamiliesBySurfaceId_);
+    committedSurfaceIds.swap(committedSurfaceIds_);
   }
 
-  // A surface is relevant to this step if either (a) it has dirty families
-  // collected from a commit, or (b) it has observers awaiting their first
-  // delivery check (e.g. observers just registered via `observe()`).
+  // A surface is relevant to this step if either (a) it committed since the
+  // last pass (which covers both layout changes and target removals), or
+  // (b) it has observers awaiting their first delivery check (e.g. observers
+  // just registered via `observe()`).
   std::unordered_set<SurfaceId> candidateSurfaceIds;
-  for (const auto& [surfaceId, families] : dirtyFamiliesBySurfaceId) {
+  for (auto surfaceId : committedSurfaceIds) {
     candidateSurfaceIds.insert(surfaceId);
   }
 
@@ -290,6 +295,8 @@ void ResizeObserverManager::runResizeObservations() {
         ? &dirtyFamiliesIt->second
         : nullptr;
 
+    bool surfaceCommitted = committedSurfaceIds.contains(surfaceId);
+
     std::unique_lock lock(observersMutex_);
 
     auto observersIt = observersBySurfaceId_.find(surfaceId);
@@ -298,11 +305,22 @@ void ResizeObserverManager::runResizeObservations() {
     }
 
     for (auto& observer : observersIt->second) {
-      // Only recompute observers whose target was affected by a commit
-      // since the last pass, or that still need their first delivery check.
       bool wasAffected = dirtyFamilies != nullptr &&
           dirtyFamilies->contains(observer->getTargetShadowNodeFamily().get());
-      if (!wasAffected && !observer->needsInitialDeliveryCheck()) {
+
+      // Re-check a delivered observation whenever its surface committed, to
+      // catch a target that left the tree (removals don't show up as dirty
+      // families) and deliver its final 0x0 entry. Skip observations already
+      // settled as detached: their reinsertion arrives via the dirty path.
+      bool maybeDetached = surfaceCommitted &&
+          !observer->needsInitialDeliveryCheck() &&
+          !observer->hasDeliveredDetachedState();
+
+      // Only recompute observers whose target was affected by a commit since
+      // the last pass, that still need their first delivery check, or that
+      // may have just detached.
+      if (!wasAffected && !observer->needsInitialDeliveryCheck() &&
+          !maybeDetached) {
         continue;
       }
 

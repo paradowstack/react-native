@@ -81,6 +81,12 @@ class ResizeObserverManager final
   // event-loop step (always on the JS thread).
   std::unordered_map<SurfaceId, std::unordered_set<const ShadowNodeFamily*>>
       dirtyFamiliesBySurfaceId_;
+  // Surfaces that committed since the last `runResizeObservations` and have at
+  // least one observer. Used to re-check already-delivered observers for
+  // targets that left the tree: removals never appear in
+  // `affectedLayoutableNodes`, so they can't be detected via dirty families.
+  // Guarded by the same mutex as `dirtyFamiliesBySurfaceId_`.
+  std::unordered_set<SurfaceId> committedSurfaceIds_;
   std::mutex dirtyFamiliesMutex_;
 
   std::function<void()> notifyResizeObserversFunction_;
