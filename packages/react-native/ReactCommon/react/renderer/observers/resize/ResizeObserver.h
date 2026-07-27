@@ -78,6 +78,13 @@ class ResizeObserver {
     return !lastReportedSize_.has_value();
   }
 
+  // Whether the target left the tree and its final 0x0 entry has already been
+  // delivered. Such observations stay quiet (no re-checks) until the target is
+  // reinserted, which is picked up via the normal "dirty family" commit path.
+  bool hasDeliveredDetachedState() const {
+    return detached_ && lastReportedSize_.has_value();
+  }
+
  private:
   ResizeObserverObserverId resizeObserverId_;
   ShadowNodeFamily::Shared targetShadowNodeFamily_;
@@ -85,8 +92,12 @@ class ResizeObserver {
   uint64_t observationSequence_;
 
   // Last delivered observed-box size. Empty until the first entry is produced.
-  // Reset when the target leaves the tree so a reinsert is a new observation.
   std::optional<Size> lastReportedSize_;
+
+  // True once the target has been observed detached from the tree and its
+  // final 0x0 entry delivered. Cleared as soon as the target is found attached
+  // again.
+  bool detached_{false};
 };
 
 } // namespace facebook::react
