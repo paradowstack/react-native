@@ -418,6 +418,38 @@ declare class IntersectionObserver {
   unobserve(target: Element): void;
 }
 
+declare type ResizeObserverSize = {
+  readonly blockSize: number,
+  readonly inlineSize: number,
+  ...
+};
+
+declare type ResizeObserverEntry = {
+  readonly borderBoxSize: ReadonlyArray<ResizeObserverSize>,
+  readonly contentBoxSize: ReadonlyArray<ResizeObserverSize>,
+  readonly devicePixelContentBoxSize: ReadonlyArray<ResizeObserverSize>,
+  readonly contentRect: DOMRectReadOnly,
+  readonly target: Element,
+  ...
+};
+
+declare type ResizeObserverCallback = (
+  entries: Array<ResizeObserverEntry>,
+  observer: ResizeObserver,
+) => unknown;
+
+declare type ResizeObserverOptions = {
+  box?: 'content-box' | 'border-box' | 'device-pixel-content-box',
+  ...
+};
+
+declare class ResizeObserver {
+  constructor(callback: ResizeObserverCallback): void;
+  disconnect(): void;
+  observe(target: Element, options?: ResizeObserverOptions): void;
+  unobserve(target: Element): void;
+}
+
 declare class CloseEvent extends Event {
   code: number;
   reason: string;
