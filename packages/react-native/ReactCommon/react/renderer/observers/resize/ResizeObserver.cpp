@@ -31,8 +31,8 @@ const ShadowNode* getTargetShadowNode(
 }
 
 bool isTargetHidden(const ShadowNode& targetShadowNode) {
-  // `display: 'none'` sets the Hidden trait on View nodes when props are
-  // committed, which can be ahead of the last laid-out `displayType` / frame.
+  // `display: 'none'` sets the Hidden trait when props commit, possibly before
+  // layout updates `displayType`.
   if (targetShadowNode.getTraits().check(ShadowNodeTraits::Trait::Hidden)) {
     return true;
   }
@@ -83,10 +83,10 @@ ResizeObserver::ResizeObserver(
     ShadowNodeFamily::Shared targetShadowNodeFamily,
     ResizeObserverBoxOptions boxOptions,
     uint64_t observationSequence)
-    : resizeObserverId_(resizeObserverId),
-      targetShadowNodeFamily_(std::move(targetShadowNodeFamily)),
-      boxOptions_(boxOptions),
-      observationSequence_(observationSequence) {}
+    : resizeObserverId_{resizeObserverId},
+      targetShadowNodeFamily_{std::move(targetShadowNodeFamily)},
+      boxOptions_{boxOptions},
+      observationSequence_{observationSequence} {}
 
 // Partially equivalent to
 // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-active-resize-observations
@@ -97,17 +97,14 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
       ancestors.empty() ? nullptr : getTargetShadowNode(ancestors);
 
   if (targetShadowNode == nullptr) {
-    // The target left the tree (its component was unmounted or removed). Per
-    // spec and browser behavior, removal from the tree fires one final
-    // notification with a zero-sized box (like `display: none`). We keep
-    // `lastReportedSize_` set to that 0x0 so we don't re-deliver it, and mark
-    // the observation as detached so it is not re-checked every commit; a
-    // later reinsertion arrives via the "dirty family" path and clears this.
-    Size zeroSize{0, 0};
+    // Target left the tree. Per spec, removal fires one final 0x0 entry. Keep
+    // `lastReportedSize_` at 0x0 so we don't re-deliver, and mark detached to
+    // stop re-checking until it's reinserted (via the dirty-family path).
+    auto zeroSize = Size{0, 0};
     auto observedSize =
         getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
 
-    const bool alreadyDelivered = lastReportedSize_.has_value() &&
+    const auto alreadyDelivered = lastReportedSize_.has_value() &&
         lastReportedSize_.value() == observedSize;
     detached_ = true;
     if (alreadyDelivered) {
@@ -125,17 +122,16 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
         Rect{.origin = {0, 0}, .size = zeroSize});
   }
 
-  // The target is attached; any previous detached state no longer applies.
+  // Attached: clear any detached state.
   detached_ = false;
 
-  const bool isInitialDelivery = !lastReportedSize_.has_value();
+  const auto isInitialDelivery = !lastReportedSize_.has_value();
 
-  // Per spec (and browser behavior), `display: none` triggers a notification
-  // with zero-sized boxes. Use the Hidden trait so we do not rely on possibly
-  // stale layout metrics from before the hide commit was laid out.
+  // Per spec, `display: none` reports zero-sized boxes. Use the Hidden trait
+  // instead of possibly-stale layout metrics.
   if (isTargetHidden(*targetShadowNode)) {
-    Size zeroSize{0, 0};
-    Rect zeroContentRect{.origin = {0, 0}, .size = zeroSize};
+    auto zeroSize = Size{0, 0};
+    auto zeroContentRect = Rect{.origin = {0, 0}, .size = zeroSize};
     auto observedSize =
         getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
 
@@ -157,12 +153,9 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   auto layoutMetrics = LayoutableShadowNode::computeRelativeLayoutMetrics(
       ancestors, {.includeTransform = false, .includeViewportOffset = true});
 
-  // Relative layout could not be computed (e.g. a display:none ancestor in the
-  // chain, or a non-layoutable node in the path). Unlike the
-  // detached/hidden paths above, we do not emit a 0x0 entry here — there is no
-  // reliable box to report. Reset lastReportedSize_ so the next successful
-  // layout read is treated as a fresh delivery when the target becomes
-  // measurable again.
+  // No relative layout (e.g. a display:none ancestor). Emit nothing (no
+  // reliable box) and reset `lastReportedSize_` so the next successful read
+  // delivers fresh.
   if (layoutMetrics == EmptyLayoutMetrics) {
     lastReportedSize_.reset();
     return std::nullopt;
@@ -170,20 +163,18 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
 
   auto borderBoxSize = layoutMetrics.frame.size;
 
-  // In RN's `LayoutMetrics`, `contentInsets` represents the combined width of
-  // border and padding in each direction, which matches the Web's definition
-  // of the content-box. The size is clamped to zero because a frame can be
-  // smaller than its insets (e.g. `width` smaller than the sum of the
-  // horizontal borders), but a content box can never have a negative size.
+  // RN's `contentInsets` is border + padding per side, matching the Web
+  // content-box. Clamp to zero: a frame can be smaller than its insets, but a
+  // content box is never negative.
   auto contentFrame = layoutMetrics.getContentFrame();
-  Size contentBoxSize{
+  auto contentBoxSize = Size{
       .width = std::max(Float{0}, contentFrame.size.width),
       .height = std::max(Float{0}, contentFrame.size.height)};
 
   // Per spec, `contentRect`'s origin is the offset of the content box from
   // the padding box (i.e. the paddings only, excluding borders).
   // https://w3c.github.io/csswg-drafts/resize-observer/#dom-resizeobserverentry-contentrect
-  Rect contentRect{
+  auto contentRect = Rect{
       .origin =
           {.x = layoutMetrics.contentInsets.left -
                layoutMetrics.borderWidth.left,
@@ -191,12 +182,8 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
                layoutMetrics.contentInsets.top - layoutMetrics.borderWidth.top},
       .size = contentBoxSize};
 
-  // Per spec, the device-pixel-content-box must contain integer values.
-  // Round each axis independently: unlike Yoga's edge-snapping, we don't have
-  // a pixel-snapped content-box origin to tile against (insets come out of
-  // Yoga unsnapped and the origin is an accumulated sum of rounded relative
-  // offsets), and a single observed element has no sibling to align with, so
-  // rounding the dimension is the correct best-effort here.
+  // Per spec the device-pixel-content-box holds integers. Round each axis
+  // (best-effort: we have no pixel-snapped origin or sibling to align to).
   auto devicePixelContentBoxSize = Size{
       std::round(contentBoxSize.width * layoutMetrics.pointScaleFactor),
       std::round(contentBoxSize.height * layoutMetrics.pointScaleFactor)};

@@ -29,7 +29,7 @@ namespace {
 jsi::Object tokenFromShadowNodeFamily(
     jsi::Runtime& runtime,
     ShadowNodeFamily::Shared shadowNodeFamily) {
-  jsi::Object obj(runtime);
+  jsi::Object obj{runtime};
   // Need to const_cast since JSI only allows non-const pointees
   obj.setNativeState(
       runtime,
@@ -108,19 +108,19 @@ std::vector<NativeResizeObserverEntry> NativeResizeObserver::takeRecords(
 NativeResizeObserverEntry NativeResizeObserver::convertToNativeModuleEntry(
     const ResizeObserverEntry& entry,
     jsi::Runtime& runtime) {
-  RectAsTuple contentRect = {
+  auto contentRect = RectAsTuple{
       entry.contentRect.origin.x,
       entry.contentRect.origin.y,
       entry.contentRect.size.width,
       entry.contentRect.size.height};
-  SizeAsTuple borderBoxSize = {
-      entry.borderBoxSize.width, entry.borderBoxSize.height};
-  SizeAsTuple contentBoxSize = {
-      entry.contentBoxSize.width, entry.contentBoxSize.height};
-  SizeAsTuple devicePixelContentBoxSize = {
+  auto borderBoxSize =
+      SizeAsTuple{entry.borderBoxSize.width, entry.borderBoxSize.height};
+  auto contentBoxSize =
+      SizeAsTuple{entry.contentBoxSize.width, entry.contentBoxSize.height};
+  auto devicePixelContentBoxSize = SizeAsTuple{
       entry.devicePixelContentBoxSize.width,
       entry.devicePixelContentBoxSize.height};
-  NativeResizeObserverEntry nativeModuleEntry = {
+  auto nativeModuleEntry = NativeResizeObserverEntry{
       entry.resizeObserverId,
       (*entry.shadowNodeFamily).getInstanceHandle(runtime),
       contentRect,

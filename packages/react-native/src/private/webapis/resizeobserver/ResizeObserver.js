@@ -94,7 +94,7 @@ export default class ResizeObserver {
 
     if (this._observationTargets.has(target)) {
       // Re-observing a target already observed with the SAME box is a no-op
-      // and does not re-deliver.
+      // and does not re-deliver. This matches observed browser behavior.
       const previousBox = this._observationTargets.get(target);
       if (previousBox === box) {
         return;
@@ -117,9 +117,9 @@ export default class ResizeObserver {
     if (didObserve) {
       this._observationTargets.set(target, box);
     } else if (this._observationTargets.size === 0) {
-      // The target could not be observed (e.g. it is disconnected). Do not
-      // record the observation, so a later `observe` call can retry, and
-      // release the observer registration if it is not observing anything.
+      // Target couldn't be observed (e.g. disconnected). Don't record it so a
+      // later `observe` can retry, and release the registration since nothing
+      // is observed.
       ResizeObserverManager.unregisterObserver(resizeObserverId);
       this._resizeObserverId = null;
     }
