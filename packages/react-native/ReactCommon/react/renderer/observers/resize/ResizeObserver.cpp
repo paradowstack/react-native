@@ -107,8 +107,8 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
     auto observedSize =
         getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
 
-    const bool alreadyDelivered =
-        lastReportedSize_.has_value() && lastReportedSize_.value() == observedSize;
+    const bool alreadyDelivered = lastReportedSize_.has_value() &&
+        lastReportedSize_.value() == observedSize;
     detached_ = true;
     if (alreadyDelivered) {
       return std::nullopt;
@@ -136,8 +136,8 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   if (isTargetHidden(*targetShadowNode)) {
     Size zeroSize{0, 0};
     Rect zeroContentRect{.origin = {0, 0}, .size = zeroSize};
-    auto observedSize = getObservedSize(
-        boxOptions_, zeroSize, zeroSize, zeroSize);
+    auto observedSize =
+        getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
 
     if (!isInitialDelivery && lastReportedSize_.value() == observedSize) {
       return std::nullopt;
@@ -155,9 +155,14 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   }
 
   auto layoutMetrics = LayoutableShadowNode::computeRelativeLayoutMetrics(
-      ancestors,
-      {.includeTransform = false, .includeViewportOffset = true});
+      ancestors, {.includeTransform = false, .includeViewportOffset = true});
 
+  // Relative layout could not be computed (e.g. a display:none ancestor in the
+  // chain, or a non-layoutable node in the path). Unlike the
+  // detached/hidden paths above, we do not emit a 0x0 entry here — there is no
+  // reliable box to report. Reset lastReportedSize_ so the next successful
+  // layout read is treated as a fresh delivery when the target becomes
+  // measurable again.
   if (layoutMetrics == EmptyLayoutMetrics) {
     lastReportedSize_.reset();
     return std::nullopt;
@@ -182,8 +187,8 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
       .origin =
           {.x = layoutMetrics.contentInsets.left -
                layoutMetrics.borderWidth.left,
-           .y = layoutMetrics.contentInsets.top -
-               layoutMetrics.borderWidth.top},
+           .y =
+               layoutMetrics.contentInsets.top - layoutMetrics.borderWidth.top},
       .size = contentBoxSize};
 
   // Per spec, the device-pixel-content-box must contain integer values.

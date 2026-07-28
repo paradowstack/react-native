@@ -673,6 +673,50 @@ describe('ResizeObserver', () => {
       });
     });
 
+    // Covers the EmptyLayoutMetrics path: a mounted child under a
+    // display:none ancestor has no reliable relative box, so we must not
+    // deliver (including no 0x0). When the ancestor is shown, lastReportedSize_
+    // was reset and the next successful read is treated as an initial delivery.
+    it('should not deliver while an ancestor is display:none, then deliver when ancestor is shown', () => {
+      const childRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="parent" style={{display: 'none'}}>
+            <View key="child" style={{width: 100, height: 50}} ref={childRef} />
+          </View>,
+        );
+      });
+
+      const child = ensureReactNativeElement(childRef.current);
+      const callback = jest.fn();
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callback);
+        observer.observe(child);
+      });
+
+      // EmptyLayoutMetrics path: no reliable box — no callback (including no 0x0).
+      expect(callback).not.toHaveBeenCalled();
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="parent">
+            <View key="child" style={{width: 100, height: 50}} ref={childRef} />
+          </View>,
+        );
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expectEntrySizes(callback.mock.lastCall[0][0], {
+        contentWidth: 100,
+        contentHeight: 50,
+        borderWidth: 100,
+        borderHeight: 50,
+      });
+    });
+
     it('should deliver to multiple observers watching the same target', () => {
       const nodeRef = createRef<HostInstance>();
       let observer1: ResizeObserver;
@@ -758,6 +802,143 @@ describe('ResizeObserver', () => {
         root.render(<View key="other" style={{width: 10, height: 10}} />);
       });
       expect(callback).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not re-deliver on the original observation when a removed target is remounted as a new host instance', () => {
+      const nodeRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="target" style={{width: 100, height: 50}} ref={nodeRef} />,
+        );
+      });
+
+      const node = ensureReactNativeElement(nodeRef.current);
+      const callback = jest.fn();
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callback);
+        observer.observe(node);
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      Fantom.runTask(() => {
+        root.render(<></>);
+      });
+      expect(callback).toHaveBeenCalledTimes(2);
+      expectEntrySizes(callback.mock.lastCall[0][0], {
+        contentWidth: 0,
+        contentHeight: 0,
+        borderWidth: 0,
+        borderHeight: 0,
+      });
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="target" style={{width: 120, height: 60}} ref={nodeRef} />,
+        );
+      });
+
+      // React remount allocates a new ShadowNodeFamily. Observations are keyed
+      // by family, so the original observation stays detached — unlike
+      // `display: 'none'`, which keeps the same family and re-delivers when
+      // shown again. Web-style reinsertion of the *same* Element is not
+      // expressible via React remount.
+      expect(callback).toHaveBeenCalledTimes(2);
+      const remountedNode = ensureReactNativeElement(nodeRef.current);
+      expect(remountedNode).not.toBe(node);
+
+      Fantom.runTask(() => {
+        observer.observe(remountedNode);
+      });
+      expect(callback).toHaveBeenCalledTimes(3);
+      const [entries] = callback.mock.lastCall;
+      expect(entries).toHaveLength(1);
+      expect(entries[0].target).toBe(remountedNode);
+      expectEntrySizes(entries[0], {
+        contentWidth: 120,
+        contentHeight: 60,
+        borderWidth: 120,
+        borderHeight: 60,
+      });
+    });
+
+    it('should not notify when only an ancestor layout changes but the observed box is unchanged', () => {
+      const childRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="parent" style={{width: 200, height: 200}}>
+            <View key="child" style={{width: 50, height: 50}} ref={childRef} />
+          </View>,
+        );
+      });
+
+      const child = ensureReactNativeElement(childRef.current);
+      const callback = jest.fn();
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callback);
+        observer.observe(child, {box: 'border-box'});
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="parent" style={{width: 300, height: 200}}>
+            <View key="child" style={{width: 50, height: 50}} ref={childRef} />
+          </View>,
+        );
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('should deliver initial observation for a target observed inside another observer callback on a later event-loop step', () => {
+      const nodeARef = createRef<HostInstance>();
+      const nodeBRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <>
+            <View key="a" style={{width: 100, height: 50}} ref={nodeARef} />
+            <View key="b" style={{width: 80, height: 40}} ref={nodeBRef} />
+          </>,
+        );
+      });
+
+      const nodeA = ensureReactNativeElement(nodeARef.current);
+      const nodeB = ensureReactNativeElement(nodeBRef.current);
+      const callbackB = jest.fn();
+      let observerB: ResizeObserver;
+
+      const callbackA = jest.fn(() => {
+        expect(callbackB).not.toHaveBeenCalled();
+        observerB = new ResizeObserver(callbackB);
+        observerB.observe(nodeB);
+        expect(callbackB).not.toHaveBeenCalled();
+      });
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callbackA);
+        observer.observe(nodeA);
+      });
+
+      expect(callbackA).toHaveBeenCalledTimes(1);
+      expect(callbackB).toHaveBeenCalledTimes(1);
+      expectEntrySizes(callbackB.mock.lastCall[0][0], {
+        contentWidth: 80,
+        contentHeight: 40,
+        borderWidth: 80,
+        borderHeight: 40,
+      });
+
+      Fantom.runTask(() => {
+        observerB.disconnect();
+      });
     });
 
     it('should report updates to the right observers', () => {
@@ -937,6 +1118,50 @@ describe('ResizeObserver', () => {
 
         expect(getReferenceCount()).toBe(0);
       });
+    });
+  });
+
+  describe('callback error handling', () => {
+    it('should not prevent other observers from receiving entries when a callback throws', () => {
+      const nodeRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(<View style={{width: 100, height: 50}} ref={nodeRef} />);
+      });
+
+      const node = ensureReactNativeElement(nodeRef.current);
+      const callback1 = jest.fn(() => {
+        throw new Error('observer 1 failed');
+      });
+      const callback2 = jest.fn();
+      let observer1: ResizeObserver;
+      let observer2: ResizeObserver;
+
+      const originalConsoleError = console.error;
+      const errorSpy = jest.fn();
+      // $FlowExpectedError[cannot-write]
+      console.error = errorSpy;
+
+      try {
+        Fantom.runTask(() => {
+          observer1 = new ResizeObserver(callback1);
+          observer2 = new ResizeObserver(callback2);
+          observer1.observe(node);
+          observer2.observe(node);
+        });
+
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalled();
+      } finally {
+        // $FlowExpectedError[cannot-write]
+        console.error = originalConsoleError;
+        Fantom.runTask(() => {
+          observer1.disconnect();
+          observer2.disconnect();
+        });
+      }
     });
   });
 
