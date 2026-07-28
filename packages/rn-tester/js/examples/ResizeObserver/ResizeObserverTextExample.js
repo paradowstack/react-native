@@ -49,13 +49,14 @@ const BOX_PADDING = 20;
 const BOX_BORDER = 4;
 const BOX_HORIZONTAL_CHROME = (BOX_PADDING + BOX_BORDER) * 2;
 
-// MDN uses Helvetica Neue. iOS San Francisco is optically sized, so glyph
-// advances do not scale linearly with fontSize and wrap points drift even
-// when font ∝ width.
+// MDN uses Helvetica Neue. System UI fonts (SF on iOS, Roboto on Android) are
+// optically sized, so glyph advances do not scale linearly with fontSize and
+// wrap points drift even when font ∝ width. Prefer fonts without an optical
+// size axis: Helvetica Neue on iOS, monospace on Android.
 const FONT_FAMILY = Platform.select({
   ios: 'Helvetica Neue',
-  android: 'sans-serif',
-  default: 'sans-serif',
+  android: 'monospace',
+  default: 'monospace',
 });
 
 function fontSizesForInlineSize(inlineSize: number): {
@@ -76,7 +77,7 @@ function ResizeObserverTextExample(): React.Node {
   const theme = useContext(RNTesterThemeContext);
   const boxRef = useRef<?ElementRef<typeof View>>(null);
   const observerRef = useRef<?ResizeObserver>(null);
-  const scrollRef = useRef<?ScrollView>(null);
+  const scrollRef = useRef<?ElementRef<typeof ScrollView>>(null);
   const widthRef = useRef(INITIAL_WIDTH);
   const observerEnabledRef = useRef(true);
   const viewportWidthRef = useRef(0);
@@ -334,10 +335,13 @@ const styles = StyleSheet.create({
     margin: 0,
     fontWeight: 'bold',
     fontFamily: FONT_FAMILY,
+    // Extra Android font padding does not scale with fontSize and skews wrap.
+    ...Platform.select({android: {includeFontPadding: false}, default: {}}),
   },
   paragraph: {
     marginTop: 8,
     fontFamily: FONT_FAMILY,
+    ...Platform.select({android: {includeFontPadding: false}, default: {}}),
   },
   controls: {
     rowGap: 8,
