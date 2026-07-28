@@ -465,6 +465,74 @@ describe('ResizeObserver', () => {
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
+    it('should treat the default (no `box` option) observation as content-box, not border-box', () => {
+      const nodeRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <View
+            key="target"
+            style={{width: 100, height: 80, padding: 10, borderWidth: 5}}
+            ref={nodeRef}
+          />,
+        );
+      });
+
+      const node = ensureReactNativeElement(nodeRef.current);
+      const callback = jest.fn();
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callback);
+        observer.observe(node);
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+      expectEntrySizes(callback.mock.lastCall[0][0], {
+        contentWidth: 70,
+        contentHeight: 50,
+        borderWidth: 100,
+        borderHeight: 80,
+        contentX: 10,
+        contentY: 10,
+      });
+
+      // Grow the border-box while growing the border by the same amount
+      // (padding unchanged), so the content box stays exactly the same:
+      // border-box goes 100x80 -> 110x90, but content-box stays 70x50. If
+      // the default box were border-box, this would fire.
+      Fantom.runTask(() => {
+        root.render(
+          <View
+            key="target"
+            style={{width: 110, height: 90, padding: 10, borderWidth: 10}}
+            ref={nodeRef}
+          />,
+        );
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      // A genuine content-box change still fires, confirming the observer
+      // is live and this isn't merely stuck.
+      Fantom.runTask(() => {
+        root.render(
+          <View
+            key="target"
+            style={{width: 130, height: 90, padding: 10, borderWidth: 10}}
+            ref={nodeRef}
+          />,
+        );
+      });
+      expect(callback).toHaveBeenCalledTimes(2);
+      expectEntrySizes(callback.mock.lastCall[0][0], {
+        contentWidth: 90,
+        contentHeight: 50,
+        borderWidth: 130,
+        borderHeight: 90,
+        contentX: 10,
+        contentY: 10,
+      });
+    });
+
     it('should report zero sizes when the target becomes hidden', () => {
       const nodeRef = createRef<HostInstance>();
       const root = Fantom.createRoot();
@@ -941,6 +1009,185 @@ describe('ResizeObserver', () => {
       });
     });
 
+    describe('multiple surfaces', () => {
+      it('should deliver resize observations independently per surface', () => {
+        const node1Ref = createRef<HostInstance>();
+        const node2Ref = createRef<HostInstance>();
+        const root1 = Fantom.createRoot();
+        const root2 = Fantom.createRoot();
+        const callback1 = jest.fn();
+        const callback2 = jest.fn();
+        let observer1: ResizeObserver;
+        let observer2: ResizeObserver;
+
+        Fantom.runTask(() => {
+          root1.render(
+            <View style={{width: 100, height: 50}} ref={node1Ref} />,
+          );
+          root2.render(
+            <View style={{width: 200, height: 80}} ref={node2Ref} />,
+          );
+        });
+
+        const node1 = ensureReactNativeElement(node1Ref.current);
+        const node2 = ensureReactNativeElement(node2Ref.current);
+
+        Fantom.runTask(() => {
+          observer1 = new ResizeObserver(callback1);
+          observer2 = new ResizeObserver(callback2);
+          observer1.observe(node1);
+          observer2.observe(node2);
+        });
+
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expectEntrySizes(callback1.mock.lastCall[0][0], {
+          contentWidth: 100,
+          contentHeight: 50,
+          borderWidth: 100,
+          borderHeight: 50,
+        });
+        expectEntrySizes(callback2.mock.lastCall[0][0], {
+          contentWidth: 200,
+          contentHeight: 80,
+          borderWidth: 200,
+          borderHeight: 80,
+        });
+
+        Fantom.runTask(() => {
+          root1.render(
+            <View style={{width: 150, height: 50}} ref={node1Ref} />,
+          );
+          root2.render(
+            <View style={{width: 200, height: 120}} ref={node2Ref} />,
+          );
+        });
+
+        expect(callback1).toHaveBeenCalledTimes(2);
+        expect(callback2).toHaveBeenCalledTimes(2);
+        expect(callback1.mock.lastCall[0][0].contentRect.width).toBe(150);
+        expect(callback2.mock.lastCall[0][0].contentRect.height).toBe(120);
+
+        Fantom.runTask(() => {
+          observer1.disconnect();
+          observer2.disconnect();
+        });
+      });
+    });
+
+    describe('multiple commits within a single tick', () => {
+      it('should coalesce multiple commits to the same target into a single callback reporting the final size', () => {
+        const nodeRef = createRef<HostInstance>();
+        const root = Fantom.createRoot();
+
+        Fantom.runTask(() => {
+          root.render(<View style={{width: 100, height: 50}} ref={nodeRef} />);
+        });
+
+        const node = ensureReactNativeElement(nodeRef.current);
+        const callback = jest.fn();
+
+        Fantom.runTask(() => {
+          observer = new ResizeObserver(callback);
+          observer.observe(node);
+        });
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // Two commits land in this single tick, before the resize-observer
+        // step runs (which happens once per tick, not once per commit).
+        Fantom.runTask(() => {
+          root.render(<View style={{width: 150, height: 60}} ref={nodeRef} />);
+          root.render(<View style={{width: 200, height: 80}} ref={nodeRef} />);
+        });
+
+        expect(callback).toHaveBeenCalledTimes(2);
+        const [entries] = callback.mock.lastCall;
+        expect(entries).toHaveLength(1);
+        expectEntrySizes(entries[0], {
+          contentWidth: 200,
+          contentHeight: 80,
+          borderWidth: 200,
+          borderHeight: 80,
+        });
+      });
+
+      it('should coalesce commits to two different observed targets into a single callback carrying both entries in observation order', () => {
+        const node1Ref = createRef<HostInstance>();
+        const node2Ref = createRef<HostInstance>();
+        const root = Fantom.createRoot();
+
+        Fantom.runTask(() => {
+          root.render(
+            <>
+              <View
+                key="node1"
+                style={{width: 40, height: 40}}
+                ref={node1Ref}
+              />
+              <View
+                key="node2"
+                style={{width: 80, height: 80}}
+                ref={node2Ref}
+              />
+            </>,
+          );
+        });
+
+        const node1 = ensureReactNativeElement(node1Ref.current);
+        const node2 = ensureReactNativeElement(node2Ref.current);
+        const callback = jest.fn();
+
+        Fantom.runTask(() => {
+          observer = new ResizeObserver(callback);
+          observer.observe(node1);
+          observer.observe(node2);
+        });
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // First commit resizes node1, second (separate) commit resizes
+        // node2, both within the same tick.
+        Fantom.runTask(() => {
+          root.render(
+            <>
+              <View
+                key="node1"
+                style={{width: 60, height: 40}}
+                ref={node1Ref}
+              />
+              <View
+                key="node2"
+                style={{width: 80, height: 80}}
+                ref={node2Ref}
+              />
+            </>,
+          );
+          root.render(
+            <>
+              <View
+                key="node1"
+                style={{width: 60, height: 40}}
+                ref={node1Ref}
+              />
+              <View
+                key="node2"
+                style={{width: 100, height: 80}}
+                ref={node2Ref}
+              />
+            </>,
+          );
+        });
+
+        expect(callback).toHaveBeenCalledTimes(2);
+        const [entries] = callback.mock.lastCall;
+        expect(entries).toHaveLength(2);
+        // Observation order (node1 observed before node2), not commit order.
+        expect(entries[0].target).toBe(node1);
+        expect(entries[0].contentRect.width).toBe(60);
+        expect(entries[1].target).toBe(node2);
+        expect(entries[1].contentRect.width).toBe(100);
+      });
+    });
+
     it('should report updates to the right observers', () => {
       const node1Ref = createRef<HostInstance>();
       const node2Ref = createRef<HostInstance>();
@@ -1077,6 +1324,125 @@ describe('ResizeObserver', () => {
       });
     });
 
+    describe('cross-observer callback ordering', () => {
+      it('should invoke callbacks in observe() order across different observers', () => {
+        const node1Ref = createRef<HostInstance>();
+        const node2Ref = createRef<HostInstance>();
+        const root = Fantom.createRoot();
+
+        Fantom.runTask(() => {
+          root.render(
+            <>
+              <View
+                key="node1"
+                style={{width: 40, height: 40}}
+                ref={node1Ref}
+              />
+              <View
+                key="node2"
+                style={{width: 80, height: 80}}
+                ref={node2Ref}
+              />
+            </>,
+          );
+        });
+
+        const node1 = ensureReactNativeElement(node1Ref.current);
+        const node2 = ensureReactNativeElement(node2Ref.current);
+
+        const callOrder: Array<string> = [];
+        const callbackA = jest.fn(() => callOrder.push('A'));
+        const callbackB = jest.fn(() => callOrder.push('B'));
+        let observerA: ResizeObserver;
+        let observerB: ResizeObserver;
+
+        Fantom.runTask(() => {
+          observerA = new ResizeObserver(callbackA);
+          observerB = new ResizeObserver(callbackB);
+          observerA.observe(node1);
+          observerB.observe(node2);
+        });
+
+        expect(callOrder).toEqual(['A', 'B']);
+        callOrder.length = 0;
+
+        Fantom.runTask(() => {
+          root.render(
+            <>
+              <View
+                key="node1"
+                style={{width: 50, height: 40}}
+                ref={node1Ref}
+              />
+              <View
+                key="node2"
+                style={{width: 90, height: 80}}
+                ref={node2Ref}
+              />
+            </>,
+          );
+        });
+
+        expect(callOrder).toEqual(['A', 'B']);
+
+        Fantom.runTask(() => {
+          observerA.disconnect();
+          observerB.disconnect();
+        });
+      });
+
+      it('should order callbacks by first-observe() order, not construction order', () => {
+        const node1Ref = createRef<HostInstance>();
+        const node2Ref = createRef<HostInstance>();
+        const root = Fantom.createRoot();
+
+        Fantom.runTask(() => {
+          root.render(
+            <>
+              <View
+                key="node1"
+                style={{width: 40, height: 40}}
+                ref={node1Ref}
+              />
+              <View
+                key="node2"
+                style={{width: 80, height: 80}}
+                ref={node2Ref}
+              />
+            </>,
+          );
+        });
+
+        const node1 = ensureReactNativeElement(node1Ref.current);
+        const node2 = ensureReactNativeElement(node2Ref.current);
+
+        const callOrder: Array<string> = [];
+        const callbackA = jest.fn(() => callOrder.push('A'));
+        const callbackB = jest.fn(() => callOrder.push('B'));
+        let observerA: ResizeObserver;
+        let observerB: ResizeObserver;
+
+        Fantom.runTask(() => {
+          // `observerA` is constructed first, but `observerB` calls
+          // `observe()` (and so registers with the manager) first.
+          // Cross-observer ordering is keyed off registration order, which
+          // happens lazily at the first `observe()` call, not at
+          // construction time — so B is expected to run before A.
+          observerA = new ResizeObserver(callbackA);
+          observerB = new ResizeObserver(callbackB);
+          observerB.observe(node2);
+          observerA.observe(node1);
+        });
+
+        expect(callOrder).toEqual(['B', 'A']);
+
+        Fantom.runTask(() => {
+          observerA.disconnect();
+          observerB.disconnect();
+        });
+      });
+    });
+
     describe('memory handling', () => {
       it('should not retain initial children of observed targets', () => {
         const root = Fantom.createRoot();
@@ -1162,6 +1528,132 @@ describe('ResizeObserver', () => {
           observer2.disconnect();
         });
       }
+    });
+  });
+
+  describe('callback re-entrancy', () => {
+    it('should allow an observer to disconnect itself from within its own callback without throwing, and not be re-notified afterwards', () => {
+      const nodeRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(<View style={{width: 100, height: 50}} ref={nodeRef} />);
+      });
+
+      const node = ensureReactNativeElement(nodeRef.current);
+      let selfObserver: ResizeObserver;
+      const callback = jest.fn(() => {
+        selfObserver.disconnect();
+      });
+
+      Fantom.runTask(() => {
+        selfObserver = new ResizeObserver(callback);
+        selfObserver.observe(node);
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      expect(() => {
+        Fantom.runTask(() => {
+          root.render(<View style={{width: 200, height: 60}} ref={nodeRef} />);
+        });
+      }).not.toThrow();
+
+      // The observer disconnected itself during the initial delivery, so the
+      // subsequent resize is never reported.
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should drop a not-yet-invoked observer's entries without error when an earlier callback disconnects it in the same batch", () => {
+      const node1Ref = createRef<HostInstance>();
+      const node2Ref = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <>
+            <View key="node1" style={{width: 40, height: 40}} ref={node1Ref} />
+            <View key="node2" style={{width: 80, height: 80}} ref={node2Ref} />
+          </>,
+        );
+      });
+
+      const node1 = ensureReactNativeElement(node1Ref.current);
+      const node2 = ensureReactNativeElement(node2Ref.current);
+
+      let observerA: ResizeObserver;
+      let observerB: ResizeObserver;
+      const callbackB = jest.fn();
+      const callbackA = jest.fn(() => {
+        // A is invoked before B (per observe() order); disconnect B before
+        // its own turn in this same delivery batch.
+        observerB.disconnect();
+      });
+
+      expect(() => {
+        Fantom.runTask(() => {
+          observerA = new ResizeObserver(callbackA);
+          observerB = new ResizeObserver(callbackB);
+          observerA.observe(node1);
+          observerB.observe(node2);
+        });
+      }).not.toThrow();
+
+      expect(callbackA).toHaveBeenCalledTimes(1);
+      // B's entries were already computed for this batch, but its
+      // registration was removed before its turn — doNotifyResizeObservers
+      // must skip it silently rather than throw or invoke a stale callback.
+      expect(callbackB).not.toHaveBeenCalled();
+
+      Fantom.runTask(() => {
+        observerA.disconnect();
+      });
+    });
+  });
+
+  describe('resize-loop guardrail', () => {
+    it('should not hang when a callback resizes its own observed target, and should deliver the follow-up resize on a later tick', () => {
+      const nodeRef = createRef<HostInstance>();
+      const setWidthRef: {current: ?(number) => void} = {current: null};
+      const root = Fantom.createRoot();
+
+      function SelfResizingBox() {
+        const [width, setWidth] = React.useState(100);
+        setWidthRef.current = setWidth;
+        return <View style={{width, height: 50}} ref={nodeRef} />;
+      }
+
+      Fantom.runTask(() => {
+        root.render(<SelfResizingBox />);
+      });
+
+      const node = ensureReactNativeElement(nodeRef.current);
+
+      // Per finding H2, RN does not run the spec's synchronous re-layout /
+      // re-broadcast loop (and never emits "ResizeObserver loop completed
+      // with undelivered notifications."). Resizing the very target we're
+      // observing, from inside our own callback, must not hang, and the
+      // resulting resize must land on a subsequent tick, not this one.
+      const callback = jest.fn(() => {
+        const setWidth = setWidthRef.current;
+        if (setWidth != null) {
+          setWidth(200);
+        }
+      });
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callback);
+        observer.observe(node);
+      });
+
+      // The state update scheduled from inside the callback is processed as
+      // its own follow-up task (a later pass of the resize-observation step,
+      // not merged into the same delivery as the commit that triggered it).
+      // Setting the same width again is then a no-op for React, so this
+      // settles after exactly one follow-up round instead of looping
+      // indefinitely.
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback.mock.calls[0][0][0].contentRect.width).toBe(100);
+      expect(callback.mock.calls[1][0][0].contentRect.width).toBe(200);
     });
   });
 
@@ -1277,6 +1769,40 @@ describe('ResizeObserver', () => {
       });
 
       expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('should not deliver a stale entry when the target is unobserved after being dirtied but before delivery', () => {
+      const nodeRef = createRef<HostInstance>();
+      const root = Fantom.createRoot();
+
+      Fantom.runTask(() => {
+        root.render(
+          <View key="target" style={{width: 100, height: 50}} ref={nodeRef} />,
+        );
+      });
+
+      const node = ensureReactNativeElement(nodeRef.current);
+      const callback = jest.fn();
+
+      Fantom.runTask(() => {
+        observer = new ResizeObserver(callback);
+        observer.observe(node);
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      // The commit inside this task dirties the target's family (recorded
+      // as a raw pointer in `dirtyFamiliesBySurfaceId_`), and `unobserve`
+      // runs before `runResizeObservations` drains that map at the end of
+      // the event-loop tick. This must not crash and must not deliver a
+      // second (stale) entry.
+      Fantom.runTask(() => {
+        root.render(
+          <View key="target" style={{width: 200, height: 75}} ref={nodeRef} />,
+        );
+        observer.unobserve(node);
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it('should work with multiple resize observer instances', () => {

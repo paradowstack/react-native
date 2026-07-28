@@ -30,9 +30,11 @@ dispatches them to the right observers.
 
 Unlike layout events (`onLayout`), `ResizeObserver` lets callers choose which
 box to observe (`content-box`, `border-box`, or `device-pixel-content-box`) and
-delivers sizes for those boxes in the notification. It also integrates with
-the Event Loop so resize-driven updates can be processed in the same UI update
-as the resize itself.
+delivers sizes for those boxes in the notification. Notifications are
+delivered from the «update the rendering» step of the Event Loop (via
+`RuntimeSchedulerResizeObserverDelegate`) — after the task that committed the
+layout change and that task's microtask checkpoint, not synchronously when
+layout is computed.
 
 ## 🔗 Relationship with other systems
 
