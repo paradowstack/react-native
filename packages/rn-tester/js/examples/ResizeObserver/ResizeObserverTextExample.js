@@ -20,6 +20,8 @@ import {
   useState,
 } from 'react';
 import {
+  type ColorValue,
+  type LayoutChangeEvent,
   PanResponder,
   Platform,
   ScrollView,
@@ -27,8 +29,6 @@ import {
   Switch,
   Text,
   View,
-  type ColorValue,
-  type LayoutChangeEvent,
 } from 'react-native';
 
 export const name = 'ResizeObserverText';
