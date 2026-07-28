@@ -79,8 +79,24 @@ class ResizeObserverManager final
   // since the last time `runResizeObservations` drained this map. Populated
   // by the commit hook (potentially off the JS thread) and drained by the
   // event-loop step (always on the JS thread).
+  //
+  // Raw pointers used for identity comparison only, never dereferenced: safe
+  // because a family is only ever inserted here while a live observer holds
+  // its `ShadowNodeFamily::Shared`, and `unobserve` erases it from this set
+  // once no observer targets it anymore.
   std::unordered_map<SurfaceId, std::unordered_set<const ShadowNodeFamily*>>
       dirtyFamiliesBySurfaceId_;
+
+  // Surfaces that have at least one observer awaiting its first delivery
+  // check (`ResizeObserver::needsInitialDeliveryCheck`), e.g. just registered
+  // via `observe()`, or reset back to needing a check (an `EmptyLayoutMetrics`
+  // result). Lets `runResizeObservations` find these surfaces without a full
+  // scan of `observersBySurfaceId_` on every tick. Only touched on the JS
+  // thread (`observe`, `unobserve`, `runResizeObservations`), so no separate
+  // mutex is required; kept in sync as observers are created, removed, and as
+  // their initial delivery settles.
+  std::unordered_set<SurfaceId> surfaceIdsWithPendingInitialDelivery_;
+
   // Surfaces that committed since the last `runResizeObservations` and have at
   // least one observer. Used to re-check already-delivered observers for
   // targets that left the tree: removals never appear in
