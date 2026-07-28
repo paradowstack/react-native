@@ -170,8 +170,7 @@ currently:
    observations via
    `RuntimeSchedulerResizeObserverDelegate::runResizeObservations()`. See the
    [ResizeObserver API](../../../../../src/private/webapis/resizeobserver/__docs__/README.md).
-3. Updates
-   [Intersection Observer](https://www.w3.org/TR/intersection-observer/)
+3. Updates [Intersection Observer](https://www.w3.org/TR/intersection-observer/)
    observations via `RuntimeSchedulerIntersectionObserverDelegate`.
 4. Drains pending rendering updates (commits, view commands) so the host
    platform can apply mutations.

@@ -154,9 +154,7 @@ function ResizeObserverVisibilityExample(): React.Node {
           hint="paint-only — no notification"
           value={faded}
           disabled={!mounted || hidden}
-          onValueChange={value =>
-            withTrigger('opacity', () => setFaded(value))
-          }
+          onValueChange={value => withTrigger('opacity', () => setFaded(value))}
         />
       </View>
 

@@ -214,9 +214,7 @@ function ReadoutRow(props: {
 }): React.Node {
   const theme = useContext(RNTesterThemeContext);
   const color =
-    props.secondary === true
-      ? theme.SecondaryLabelColor
-      : theme.LabelColor;
+    props.secondary === true ? theme.SecondaryLabelColor : theme.LabelColor;
   return (
     <View style={styles.readoutRow}>
       <Text style={[styles.mono, styles.readoutLabel, {color}]}>

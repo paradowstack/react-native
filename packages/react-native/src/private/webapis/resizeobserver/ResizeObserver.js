@@ -27,9 +27,7 @@ export type ResizeObserverCallback = (
  * https://drafts.csswg.org/resize-observer/#resize-observer-box-options
  */
 export type ResizeObserverBoxOptions =
-  | 'content-box'
-  | 'border-box'
-  | 'device-pixel-content-box';
+  'content-box' | 'border-box' | 'device-pixel-content-box';
 
 export interface ResizeObserverOptions {
   box?: ResizeObserverBoxOptions;
