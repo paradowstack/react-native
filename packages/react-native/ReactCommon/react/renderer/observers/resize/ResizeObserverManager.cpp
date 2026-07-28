@@ -53,15 +53,20 @@ void ResizeObserverManager::observe(
   // regardless of whether there are pending rendering (mounting) updates,
   // the initial observation is still guaranteed to be delivered promptly, at
   // the end of the current tick.
-  std::unique_lock lock(observersMutex_);
+  {
+    std::unique_lock lock(observersMutex_);
 
-  auto& observers = observersBySurfaceId_[surfaceId];
+    auto& observers = observersBySurfaceId_[surfaceId];
 
-  observers.emplace_back(std::make_unique<ResizeObserver>(
-      resizeObserverId,
-      shadowNodeFamily,
-      boxOptions,
-      nextObservationSequence_++));
+    observers.emplace_back(
+        std::make_unique<ResizeObserver>(
+            resizeObserverId,
+            shadowNodeFamily,
+            boxOptions,
+            nextObservationSequence_++));
+  }
+
+  surfaceIdsWithPendingInitialDelivery_.insert(surfaceId);
 }
 
 void ResizeObserverManager::unobserve(
@@ -103,6 +108,7 @@ void ResizeObserverManager::unobserve(
 
     if (observers.empty()) {
       observersBySurfaceId_.erase(surfaceId);
+      surfaceIdsWithPendingInitialDelivery_.erase(surfaceId);
     }
   }
 
@@ -258,23 +264,15 @@ void ResizeObserverManager::runResizeObservations() {
   // A surface is relevant to this step if either (a) it committed since the
   // last pass (which covers both layout changes and target removals), or
   // (b) it has observers awaiting their first delivery check (e.g. observers
-  // just registered via `observe()`).
-  std::unordered_set<SurfaceId> candidateSurfaceIds;
-  for (auto surfaceId : committedSurfaceIds) {
-    candidateSurfaceIds.insert(surfaceId);
-  }
-
-  {
-    std::unique_lock lock(observersMutex_);
-    for (const auto& [surfaceId, observers] : observersBySurfaceId_) {
-      for (const auto& observer : observers) {
-        if (observer->needsInitialDeliveryCheck()) {
-          candidateSurfaceIds.insert(surfaceId);
-          break;
-        }
-      }
-    }
-  }
+  // just registered via `observe()`). (b) comes straight from
+  // `surfaceIdsWithPendingInitialDelivery_` rather than a scan of
+  // `observersBySurfaceId_`, so a steady-state tick with nothing dirty and
+  // every observer already delivered does not need to lock `observersMutex_`
+  // at all.
+  std::unordered_set<SurfaceId> candidateSurfaceIds(committedSurfaceIds);
+  candidateSurfaceIds.insert(
+      surfaceIdsWithPendingInitialDelivery_.begin(),
+      surfaceIdsWithPendingInitialDelivery_.end());
 
   if (candidateSurfaceIds.empty()) {
     return;
@@ -304,7 +302,16 @@ void ResizeObserverManager::runResizeObservations() {
       continue;
     }
 
+    // Whether, after this pass, this surface still has an observer awaiting
+    // its first delivery — e.g. it just registered mid-pass and has yet to
+    // resolve, or `updateStateIfNeeded` reset it back to pending (an
+    // `EmptyLayoutMetrics` result). Determines whether the surface stays in
+    // `surfaceIdsWithPendingInitialDelivery_` for the next tick.
+    bool stillNeedsInitialDelivery = false;
+
     for (auto& observer : observersIt->second) {
+      // See `dirtyFamiliesBySurfaceId_`: identity comparison only, never
+      // dereferenced.
       bool wasAffected = dirtyFamilies != nullptr &&
           dirtyFamilies->contains(observer->getTargetShadowNodeFamily().get());
 
@@ -332,6 +339,15 @@ void ResizeObserverManager::runResizeObservations() {
             .observationSequence = observer->getObservationSequence(),
         });
       }
+
+      stillNeedsInitialDelivery =
+          stillNeedsInitialDelivery || observer->needsInitialDeliveryCheck();
+    }
+
+    if (stillNeedsInitialDelivery) {
+      surfaceIdsWithPendingInitialDelivery_.insert(surfaceId);
+    } else {
+      surfaceIdsWithPendingInitialDelivery_.erase(surfaceId);
     }
   }
 
