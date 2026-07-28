@@ -47,7 +47,7 @@ function ResizeObserverVisibilityExample(): React.Node {
   const [mounted, setMounted] = useState(true);
   const [faded, setFaded] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [log, setLog] = useState<$ReadOnlyArray<LogEntry>>([]);
+  const [log, setLog] = useState<ReadonlyArray<LogEntry>>([]);
 
   useLayoutEffect(() => {
     const observer = new ResizeObserver(entries => {

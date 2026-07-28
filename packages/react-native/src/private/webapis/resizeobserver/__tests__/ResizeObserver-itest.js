@@ -30,6 +30,11 @@ declare const ResizeObserver: Class<ResizeObserverType>;
 declare const ResizeObserverEntry: Class<ResizeObserverEntryType>;
 declare const ResizeObserverSize: Class<ResizeObserverSizeType>;
 
+type ResizeObserverMockCallback = JestMockFn<
+  [ReadonlyArray<ResizeObserverEntry>, ResizeObserver],
+  unknown,
+>;
+
 setUpResizeObserver();
 
 function ensureReactNativeElement(value: unknown): ReactNativeElement {
@@ -983,7 +988,7 @@ describe('ResizeObserver', () => {
       const callbackB = jest.fn();
       let observerB: ResizeObserver;
 
-      const callbackA = jest.fn(() => {
+      const callbackA: ResizeObserverMockCallback = jest.fn(() => {
         expect(callbackB).not.toHaveBeenCalled();
         observerB = new ResizeObserver(callbackB);
         observerB.observe(nodeB);
@@ -1351,8 +1356,12 @@ describe('ResizeObserver', () => {
         const node2 = ensureReactNativeElement(node2Ref.current);
 
         const callOrder: Array<string> = [];
-        const callbackA = jest.fn(() => callOrder.push('A'));
-        const callbackB = jest.fn(() => callOrder.push('B'));
+        const callbackA: ResizeObserverMockCallback = jest.fn(() =>
+          callOrder.push('A'),
+        );
+        const callbackB: ResizeObserverMockCallback = jest.fn(() =>
+          callOrder.push('B'),
+        );
         let observerA: ResizeObserver;
         let observerB: ResizeObserver;
 
@@ -1417,8 +1426,12 @@ describe('ResizeObserver', () => {
         const node2 = ensureReactNativeElement(node2Ref.current);
 
         const callOrder: Array<string> = [];
-        const callbackA = jest.fn(() => callOrder.push('A'));
-        const callbackB = jest.fn(() => callOrder.push('B'));
+        const callbackA: ResizeObserverMockCallback = jest.fn(() =>
+          callOrder.push('A'),
+        );
+        const callbackB: ResizeObserverMockCallback = jest.fn(() =>
+          callOrder.push('B'),
+        );
         let observerA: ResizeObserver;
         let observerB: ResizeObserver;
 
@@ -1497,7 +1510,7 @@ describe('ResizeObserver', () => {
       });
 
       const node = ensureReactNativeElement(nodeRef.current);
-      const callback1 = jest.fn(() => {
+      const callback1: ResizeObserverMockCallback = jest.fn(() => {
         throw new Error('observer 1 failed');
       });
       const callback2 = jest.fn();
@@ -1542,7 +1555,7 @@ describe('ResizeObserver', () => {
 
       const node = ensureReactNativeElement(nodeRef.current);
       let selfObserver: ResizeObserver;
-      const callback = jest.fn(() => {
+      const callback: ResizeObserverMockCallback = jest.fn(() => {
         selfObserver.disconnect();
       });
 
@@ -1583,7 +1596,7 @@ describe('ResizeObserver', () => {
       let observerA: ResizeObserver;
       let observerB: ResizeObserver;
       const callbackB = jest.fn();
-      const callbackA = jest.fn(() => {
+      const callbackA: ResizeObserverMockCallback = jest.fn(() => {
         // A is invoked before B (per observe() order); disconnect B before
         // its own turn in this same delivery batch.
         observerB.disconnect();
@@ -1633,7 +1646,7 @@ describe('ResizeObserver', () => {
       // with undelivered notifications."). Resizing the very target we're
       // observing, from inside our own callback, must not hang, and the
       // resulting resize must land on a subsequent tick, not this one.
-      const callback = jest.fn(() => {
+      const callback: ResizeObserverMockCallback = jest.fn(() => {
         const setWidth = setWidthRef.current;
         if (setWidth != null) {
           setWidth(200);
