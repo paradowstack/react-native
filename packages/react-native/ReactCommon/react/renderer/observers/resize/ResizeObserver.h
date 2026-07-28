@@ -72,15 +72,13 @@ class ResizeObserver {
     return observationSequence_;
   }
 
-  // Whether this observation still needs its first delivery at the next
-  // `runResizeObservations` step (just registered, or target was removed).
+  // Still awaiting its first delivery (just registered, or target removed).
   bool needsInitialDeliveryCheck() const {
     return !lastReportedSize_.has_value();
   }
 
-  // Whether the target left the tree and its final 0x0 entry has already been
-  // delivered. Such observations stay quiet (no re-checks) until the target is
-  // reinserted, which is picked up via the normal "dirty family" commit path.
+  // Whether the target left the tree and its final 0x0 entry was already
+  // delivered; such observations stay quiet until reinserted (dirty path).
   bool hasDeliveredDetachedState() const {
     return detached_ && lastReportedSize_.has_value();
   }
@@ -91,12 +89,11 @@ class ResizeObserver {
   ResizeObserverBoxOptions boxOptions_;
   uint64_t observationSequence_;
 
-  // Last delivered observed-box size. Empty until the first entry is produced.
+  // Last delivered observed-box size; empty until the first entry.
   std::optional<Size> lastReportedSize_;
 
-  // True once the target has been observed detached from the tree and its
-  // final 0x0 entry delivered. Cleared as soon as the target is found attached
-  // again.
+  // True once the detached target's final 0x0 entry was delivered; cleared as
+  // soon as the target is found attached again.
   bool detached_{false};
 };
 

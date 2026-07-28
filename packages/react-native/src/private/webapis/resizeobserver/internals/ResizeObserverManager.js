@@ -44,10 +44,8 @@ const registeredResizeObservers: Map<
   {observer: ResizeObserver, callback: ResizeObserverCallback},
 > = new Map();
 
-// We need to keep the mapping from instance handles to targets because when
-// targets are detached (their components are unmounted), React resets the
-// instance handle to prevent memory leaks and it cuts the connection between
-// the instance handle and the target.
+// Keep our own instanceHandle->target map: when a target unmounts, React
+// resets its instance handle (to avoid leaks), cutting the built-in link.
 const instanceHandleToTargetMap: WeakMap<interface {}, ReactNativeElement> =
   new WeakMap();
 
@@ -68,10 +66,8 @@ function setTargetForInstanceHandle(
   instanceHandleToTargetMap.set(key, target);
 }
 
-// We need to keep the token returned by native when starting an observation
-// because targets lose their reference to the shadow node when they are
-// unmounted, and without it we could not clean up the native observation
-// after that point.
+// Keep the native token per target: on unmount a target loses its shadow node
+// reference, and without the token we couldn't clean up the observation.
 const targetToTokenMap: WeakMap<ReactNativeElement, NativeResizeObserverToken> =
   new WeakMap();
 
@@ -238,9 +234,8 @@ function doNotifyResizeObservers(): void {
     list.push(createResizeObserverEntry(nativeEntry, target));
   }
 
-  // Native delivers entries sorted by observer registration order; keep that
-  // when invoking callbacks (Map insertion order alone is not enough if
-  // batches were merged out of order).
+  // Native delivers entries in observer registration order; preserve it (Map
+  // insertion order isn't enough if batches merged out of order).
   const observerIds = Array.from(entriesByObserver.keys()).sort(
     (a, b) => a - b,
   );
