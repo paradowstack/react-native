@@ -277,7 +277,8 @@ void ResizeObserverManager::runResizeObservations() {
     }
 
     // Whether an observer here still awaits first delivery after this pass
-    // (e.g. reset by `EmptyLayoutMetrics`), so the surface stays pending.
+    // (e.g. reset because it has no reportable size), so the surface stays
+    // pending.
     auto stillNeedsInitialDelivery = false;
 
     for (auto& observer : observersIt->second) {

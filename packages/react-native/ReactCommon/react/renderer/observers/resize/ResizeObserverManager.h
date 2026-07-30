@@ -84,7 +84,7 @@ class ResizeObserverManager final
       dirtyFamiliesBySurfaceId_;
 
   // Surfaces with an observer awaiting its first delivery (just observed, or
-  // reset by an `EmptyLayoutMetrics` result). Lets `runResizeObservations`
+  // reset because it has no reportable size). Lets `runResizeObservations`
   // find them without scanning all observers each tick. JS-thread-only, so no
   // mutex.
   std::unordered_set<SurfaceId> surfaceIdsWithPendingInitialDelivery_;

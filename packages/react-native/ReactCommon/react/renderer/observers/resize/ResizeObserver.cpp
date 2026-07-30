@@ -30,20 +30,29 @@ const ShadowNode* getTargetShadowNode(
       .get();
 }
 
-bool isTargetHidden(const ShadowNode& targetShadowNode) {
+bool isHidden(const ShadowNode& shadowNode) {
   // `display: 'none'` sets the Hidden trait when props commit, possibly before
   // layout updates `displayType`.
-  if (targetShadowNode.getTraits().check(ShadowNodeTraits::Trait::Hidden)) {
+  if (shadowNode.getTraits().check(ShadowNodeTraits::Trait::Hidden)) {
     return true;
   }
 
   if (const auto* layoutableShadowNode =
-          dynamic_cast<const LayoutableShadowNode*>(&targetShadowNode)) {
+          dynamic_cast<const LayoutableShadowNode*>(&shadowNode)) {
     return layoutableShadowNode->getLayoutMetrics().displayType ==
         DisplayType::None;
   }
 
   return false;
+}
+
+// Descendants of a `display: none` node are not laid out, so their own layout
+// metrics are not a size we can report.
+bool hasHiddenAncestor(const ShadowNodeFamily::AncestorList& ancestors) {
+  return std::any_of(
+      ancestors.begin(), ancestors.end(), [](const auto& parentChildPair) {
+        return isHidden(parentChildPair.first.get());
+      });
 }
 
 Size getObservedSize(
@@ -128,8 +137,8 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   const auto isInitialDelivery = !lastReportedSize_.has_value();
 
   // Per spec, `display: none` reports zero-sized boxes. Use the Hidden trait
-  // instead of possibly-stale layout metrics.
-  if (isTargetHidden(*targetShadowNode)) {
+  // instead of possibly-stale layout metrics and check ancestors.
+  if (isHidden(*targetShadowNode) || hasHiddenAncestor(ancestors)) {
     auto zeroSize = Size{0, 0};
     auto zeroContentRect = Rect{.origin = {0, 0}, .size = zeroSize};
     auto observedSize =
@@ -150,17 +159,19 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
         zeroContentRect);
   }
 
-  auto layoutMetrics = LayoutableShadowNode::computeRelativeLayoutMetrics(
-      ancestors, {.includeTransform = false, .includeViewportOffset = true});
+  // Only the target's size matters here, never its position, so we read its own
+  // layout metrics instead of computing viewport-relative ones.
+  const auto* layoutableShadowNode =
+      dynamic_cast<const LayoutableShadowNode*>(targetShadowNode);
 
-  // No relative layout (e.g. a display:none ancestor). Emit nothing (no
-  // reliable box) and reset `lastReportedSize_` so the next successful read
-  // delivers fresh.
-  if (layoutMetrics == EmptyLayoutMetrics) {
+  // No size we can report. Emit nothing and reset `lastReportedSize_` so the
+  // next successful read delivers fresh.
+  if (layoutableShadowNode == nullptr) {
     lastReportedSize_.reset();
     return std::nullopt;
   }
 
+  auto layoutMetrics = layoutableShadowNode->getLayoutMetrics();
   auto borderBoxSize = layoutMetrics.frame.size;
 
   // RN's `contentInsets` is border + padding per side, matching the Web
