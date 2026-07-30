@@ -418,20 +418,18 @@ declare class IntersectionObserver {
   unobserve(target: Element): void;
 }
 
-declare type ResizeObserverSize = {
-  readonly blockSize: number,
-  readonly inlineSize: number,
-  ...
-};
+declare class ResizeObserverSize {
+  readonly blockSize: number;
+  readonly inlineSize: number;
+}
 
-declare type ResizeObserverEntry = {
-  readonly borderBoxSize: ReadonlyArray<ResizeObserverSize>,
-  readonly contentBoxSize: ReadonlyArray<ResizeObserverSize>,
-  readonly devicePixelContentBoxSize: ReadonlyArray<ResizeObserverSize>,
-  readonly contentRect: DOMRectReadOnly,
-  readonly target: Element,
-  ...
-};
+declare class ResizeObserverEntry {
+  readonly borderBoxSize: ReadonlyArray<ResizeObserverSize>;
+  readonly contentBoxSize: ReadonlyArray<ResizeObserverSize>;
+  readonly contentRect: DOMRectReadOnly;
+  readonly devicePixelContentBoxSize: ReadonlyArray<ResizeObserverSize>;
+  readonly target: Element;
+}
 
 declare type ResizeObserverCallback = (
   entries: Array<ResizeObserverEntry>,
