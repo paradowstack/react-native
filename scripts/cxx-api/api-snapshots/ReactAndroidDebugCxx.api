@@ -4332,11 +4332,11 @@ class facebook::react::ResizeObserver {
   public ResizeObserver(facebook::react::ResizeObserverObserverId resizeObserverId, facebook::react::ShadowNodeFamily::Shared targetShadowNodeFamily, facebook::react::ResizeObserverBoxOptions boxOptions, uint64_t observationSequence);
   public bool hasDeliveredDetachedState() const;
   public bool needsInitialDeliveryCheck() const;
-  public facebook::react::ResizeObservationResult evaluateObservation(const facebook::react::RootShadowNode& rootShadowNode) const;
+  public facebook::react::ResizeObservationResult computeActiveObservation(const facebook::react::RootShadowNode& rootShadowNode) const;
   public facebook::react::ResizeObserverObserverId getResizeObserverId() const;
   public facebook::react::ShadowNodeFamily::Shared getTargetShadowNodeFamily() const;
   public uint64_t getObservationSequence() const;
-  public void commitObservation(const facebook::react::ResizeObservationResult& result);
+  public void markAsReported(const facebook::react::ResizeObservationResult& result);
 }
 
 class facebook::react::ResizeObserverManager : public facebook::react::UIManagerCommitHook, public facebook::react::RuntimeSchedulerResizeObserverDelegate {
