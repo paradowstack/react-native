@@ -1975,7 +1975,7 @@ describe('ResizeObserver', () => {
 
   describe('resize loop error', () => {
     let originalConsoleError;
-    let consoleErrorMock: JestMockFn<[...Array<mixed>], void>;
+    let consoleErrorMock;
 
     // Fantom's mock functions have no `mockClear`, so "clearing" installs a
     // fresh mock.
@@ -2223,12 +2223,12 @@ describe('ResizeObserver', () => {
       const nodeA = ensureReactNativeElement(nodeARef.current);
       const nodeB = ensureReactNativeElement(nodeBRef.current);
       let scheduled = false;
-      const callbackA = jest.fn(() => {
+      const callbackA: ResizeObserverMockCallback = jest.fn(() => {
         if (!scheduled) {
           setWidthARef.current?.(150);
         }
       });
-      const callbackB = jest.fn(() => {
+      const callbackB: ResizeObserverMockCallback = jest.fn(() => {
         if (!scheduled) {
           setWidthBRef.current?.(120);
           scheduled = true;
