@@ -199,11 +199,13 @@ export function unobserve(
  * This function is called from native when there are `ResizeObserver`
  * entries to dispatch.
  */
-function notifyResizeObservers(): void {
-  trace('ResizeObserverManager.notifyResizeObservers', doNotifyResizeObservers);
+function notifyResizeObservers(hasResizeLoopError: boolean): void {
+  trace('ResizeObserverManager.notifyResizeObservers', () => {
+    doNotifyResizeObservers(hasResizeLoopError);
+  });
 }
 
-function doNotifyResizeObservers(): void {
+function doNotifyResizeObservers(hasResizeLoopError: boolean): void {
   if (NativeResizeObserver == null) {
     throwIfNoNativeResizeObserver();
     return;
@@ -227,7 +229,9 @@ function doNotifyResizeObservers(): void {
       nativeEntry.targetInstanceHandle,
     );
     if (target == null) {
-      console.warn('Could not find target to create ResizeObserverEntry');
+      console.warn(
+        'ResizeObserverManager: could not find target to create ResizeObserverEntry',
+      );
       continue;
     }
 
@@ -258,6 +262,12 @@ function doNotifyResizeObservers(): void {
     } catch (error) {
       console.error(error);
     }
+  }
+
+  if (hasResizeLoopError) {
+    console.error(
+      'ResizeObserver loop completed with undelivered notifications.',
+    );
   }
 }
 

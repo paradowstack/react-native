@@ -24,6 +24,7 @@ namespace facebook::react {
 using NativeResizeObserverResizeObserverId = ResizeObserverObserverId;
 using RectAsTuple = std::tuple<Float, Float, Float, Float>;
 using SizeAsTuple = std::tuple<Float, Float>;
+using NativeResizeObserverNotifyCallback = SyncCallback<void(bool)>;
 
 using NativeResizeObserverObserveOptions =
     NativeResizeObserverNativeResizeObserverObserveOptions<
@@ -74,7 +75,7 @@ class NativeResizeObserver
 
   void connect(
       jsi::Runtime& runtime,
-      AsyncCallback<> notifyResizeObserversFunction);
+      NativeResizeObserverNotifyCallback notifyResizeObserversFunction);
 
   void disconnect(jsi::Runtime& runtime);
 

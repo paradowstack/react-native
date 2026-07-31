@@ -24,27 +24,6 @@ NativeResizeObserverModuleProvider(
 
 namespace facebook::react {
 
-namespace {
-
-jsi::Object tokenFromShadowNodeFamily(
-    jsi::Runtime& runtime,
-    ShadowNodeFamily::Shared shadowNodeFamily) {
-  jsi::Object obj{runtime};
-  // Need to const_cast since JSI only allows non-const pointees
-  obj.setNativeState(
-      runtime,
-      std::const_pointer_cast<ShadowNodeFamily>(std::move(shadowNodeFamily)));
-  return obj;
-}
-
-ShadowNodeFamily::Shared shadowNodeFamilyFromToken(
-    jsi::Runtime& runtime,
-    jsi::Object token) {
-  return token.getNativeState<ShadowNodeFamily>(runtime);
-}
-
-} // namespace
-
 NativeResizeObserver::NativeResizeObserver(
     std::shared_ptr<CallInvoker> jsInvoker)
     : NativeResizeObserverCxxSpec(std::move(jsInvoker)) {}
@@ -75,12 +54,22 @@ void NativeResizeObserver::unobserve(
 
 void NativeResizeObserver::connect(
     jsi::Runtime& runtime,
-    AsyncCallback<> notifyResizeObserversFunction) {
+    NativeResizeObserverNotifyCallback notifyResizeObserversFunction) {
   auto& uiManager = getUIManagerFromRuntime(runtime);
+
+  // `SyncCallback` is move-only, so share it: the manager copies the callable
+  // before invoking it, so that a `disconnect()` from within a callback can't
+  // destroy it mid-call. It also already holds the runtime it was created with,
+  // hence the unused parameter.
+  auto callback = std::make_shared<NativeResizeObserverNotifyCallback>(
+      std::move(notifyResizeObserversFunction));
+
   resizeObserverManager_.connect(
       *RuntimeSchedulerBinding::getBinding(runtime)->getRuntimeScheduler(),
       uiManager,
-      std::move(notifyResizeObserversFunction));
+      [callback](jsi::Runtime& /*runtime*/, bool hasResizeLoopError) {
+        (*callback)(hasResizeLoopError);
+      });
 }
 
 void NativeResizeObserver::disconnect(jsi::Runtime& runtime) {

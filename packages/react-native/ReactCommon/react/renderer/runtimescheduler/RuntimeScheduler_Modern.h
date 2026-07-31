@@ -194,7 +194,7 @@ class RuntimeScheduler_Modern final : public RuntimeSchedulerBase {
 
   void executeTask(jsi::Runtime &runtime, Task &task, bool didUserCallbackTimeout);
 
-  void updateRendering(HighResTimeStamp taskEndTime);
+  void updateRendering(jsi::Runtime &runtime, HighResTimeStamp taskEndTime);
 
   void handleTaskError(jsi::Runtime &runtime, jsi::JSError &error);
 

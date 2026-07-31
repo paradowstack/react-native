@@ -6,6 +6,7 @@
  */
 
 #include "ResizeObserver.h"
+#include <react/debug/react_native_assert.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
 #include <react/renderer/core/ShadowNode.h>
 #include <react/renderer/core/ShadowNodeTraits.h>
@@ -97,42 +98,43 @@ ResizeObserver::ResizeObserver(
       boxOptions_{boxOptions},
       observationSequence_{observationSequence} {}
 
-// Partially equivalent to
-// https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-active-resize-observations
-std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
-    const RootShadowNode& rootShadowNode) {
+ResizeObservationResult ResizeObserver::computeActiveObservation(
+    const RootShadowNode& rootShadowNode) const {
   auto ancestors = targetShadowNodeFamily_->getAncestors(rootShadowNode);
   const auto* targetShadowNode =
       ancestors.empty() ? nullptr : getTargetShadowNode(ancestors);
+
+  // Spec "calculate depth for node": number of nodes on the parent-traversal
+  // path from the target to the root (inclusive). `ancestors` excludes the
+  // target, so add one.
+  ResizeObservationResult result{.targetDepth = ancestors.size() + 1};
 
   if (targetShadowNode == nullptr) {
     // Target left the tree. Per spec, removal fires one final 0x0 entry. Keep
     // `lastReportedSize_` at 0x0 so we don't re-deliver, and mark detached to
     // stop re-checking until it's reinserted (via the dirty-family path).
+    // Every box is 0x0, so the observed box is too, whichever was requested.
     auto zeroSize = Size{0, 0};
-    auto observedSize =
-        getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
+    auto observedSize = zeroSize;
+
+    result.detached = true;
 
     const auto alreadyDelivered = lastReportedSize_.has_value() &&
         lastReportedSize_.value() == observedSize;
-    detached_ = true;
     if (alreadyDelivered) {
-      return std::nullopt;
+      return result;
     }
 
-    lastReportedSize_ = observedSize;
-
-    return makeResizeObserverEntry(
+    result.observedSize = observedSize;
+    result.entry = makeResizeObserverEntry(
         resizeObserverId_,
         targetShadowNodeFamily_,
         zeroSize,
         zeroSize,
         zeroSize,
         Rect{.origin = {0, 0}, .size = zeroSize});
+    return result;
   }
-
-  // Attached: clear any detached state.
-  detached_ = false;
 
   const auto isInitialDelivery = !lastReportedSize_.has_value();
 
@@ -141,22 +143,21 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   if (isHidden(*targetShadowNode) || hasHiddenAncestor(ancestors)) {
     auto zeroSize = Size{0, 0};
     auto zeroContentRect = Rect{.origin = {0, 0}, .size = zeroSize};
-    auto observedSize =
-        getObservedSize(boxOptions_, zeroSize, zeroSize, zeroSize);
+    auto observedSize = zeroSize;
 
     if (!isInitialDelivery && lastReportedSize_.value() == observedSize) {
-      return std::nullopt;
+      return result;
     }
 
-    lastReportedSize_ = observedSize;
-
-    return makeResizeObserverEntry(
+    result.observedSize = observedSize;
+    result.entry = makeResizeObserverEntry(
         resizeObserverId_,
         targetShadowNodeFamily_,
         zeroSize,
         zeroSize,
         zeroSize,
         zeroContentRect);
+    return result;
   }
 
   // Only the target's size matters here, never its position, so we read its own
@@ -164,11 +165,10 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   const auto* layoutableShadowNode =
       dynamic_cast<const LayoutableShadowNode*>(targetShadowNode);
 
-  // No size we can report. Emit nothing and reset `lastReportedSize_` so the
-  // next successful read delivers fresh.
+  // Not layoutable, so there is no size to report. Observed targets are always
+  // host components, so this is not expected to happen.
   if (layoutableShadowNode == nullptr) {
-    lastReportedSize_.reset();
-    return std::nullopt;
+    return result;
   }
 
   auto layoutMetrics = layoutableShadowNode->getLayoutMetrics();
@@ -205,18 +205,27 @@ std::optional<ResizeObserverEntry> ResizeObserver::updateStateIfNeeded(
   // Skip when the observed box is unchanged. The first delivery always runs
   // (including 0x0 content-box), matching browser behavior on `observe()`.
   if (!isInitialDelivery && lastReportedSize_.value() == observedSize) {
-    return std::nullopt;
+    return result;
   }
 
-  lastReportedSize_ = observedSize;
-
-  return makeResizeObserverEntry(
+  result.observedSize = observedSize;
+  result.entry = makeResizeObserverEntry(
       resizeObserverId_,
       targetShadowNodeFamily_,
       borderBoxSize,
       contentBoxSize,
       devicePixelContentBoxSize,
       contentRect);
+  return result;
+}
+
+void ResizeObserver::markAsReported(const ResizeObservationResult& result) {
+  // Only broadcast results carry a size to report; marking anything else
+  // would regress `lastReportedSize_` to 0x0.
+  react_native_assert(result.entry.has_value());
+
+  lastReportedSize_ = result.observedSize;
+  detached_ = result.detached;
 }
 
 } // namespace facebook::react

@@ -49,6 +49,21 @@ inline static jsi::Value valueFromShadowNode(
   return obj;
 }
 
+inline static jsi::Object tokenFromShadowNodeFamily(
+    jsi::Runtime &runtime,
+    ShadowNodeFamily::Shared shadowNodeFamily)
+{
+  jsi::Object obj(runtime);
+  // Need to const_cast since JSI only allows non-const pointees
+  obj.setNativeState(runtime, std::const_pointer_cast<ShadowNodeFamily>(std::move(shadowNodeFamily)));
+  return obj;
+}
+
+inline static ShadowNodeFamily::Shared shadowNodeFamilyFromToken(jsi::Runtime &runtime, jsi::Object token)
+{
+  return token.getNativeState<ShadowNodeFamily>(runtime);
+}
+
 // TODO: once we no longer need to mutate the return value (appendChildToSet)
 // make this a SharedListOfShared
 inline static std::shared_ptr<std::vector<std::shared_ptr<const ShadowNode>>> shadowNodeListFromValue(

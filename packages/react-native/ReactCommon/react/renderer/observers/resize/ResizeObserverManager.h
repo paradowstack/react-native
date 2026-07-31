@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <jsi/jsi.h>
 #include <react/renderer/core/ShadowNodeFamily.h>
 #include <react/renderer/mounting/ShadowTree.h>
 #include <react/renderer/mounting/ShadowTreeRegistry.h>
@@ -18,6 +19,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -44,7 +46,7 @@ class ResizeObserverManager final
   void connect(
       RuntimeScheduler& runtimeScheduler,
       UIManager& uiManager,
-      std::function<void()> notifyResizeObserversFunction);
+      std::function<void(jsi::Runtime&, bool)> notifyResizeObserversFunction);
 
   void disconnect(RuntimeScheduler& runtimeScheduler, UIManager& uiManager);
 
@@ -52,7 +54,7 @@ class ResizeObserverManager final
 
 #pragma mark - RuntimeSchedulerResizeObserverDelegate
 
-  void runResizeObservations() override;
+  void runResizeObservations(jsi::Runtime& runtime) override;
 
 #pragma mark - UIManagerCommitHook
 
@@ -66,6 +68,21 @@ class ResizeObserverManager final
           affectedLayoutableNodes) noexcept override;
 
  private:
+  struct ActiveObservation {
+    // Owned by `observersBySurfaceId_`. Safe to dereference for the whole
+    // broadcast because every `markAsReported` runs before any JS does, so a
+    // callback cannot free these while they are still in use.
+    ResizeObserver* observer;
+    ResizeObservationResult result;
+  };
+
+  struct GatherResult {
+    std::vector<ActiveObservation> activeObservations;
+    // An active observation was too shallow for the round's depth, so it was
+    // not delivered and stays active for a later pass.
+    bool hasSkippedObservations{false};
+  };
+
   mutable std::
       unordered_map<SurfaceId, std::vector<std::unique_ptr<ResizeObserver>>>
           observersBySurfaceId_;
@@ -95,8 +112,13 @@ class ResizeObserverManager final
   std::unordered_set<SurfaceId> committedSurfaceIds_;
   std::mutex dirtyFamiliesMutex_;
 
-  std::function<void()> notifyResizeObserversFunction_;
+  std::function<void(jsi::Runtime&, bool)> notifyResizeObserversFunction_;
   bool commitHookRegistered_{};
+
+  // Set for the duration of `runResizeObservations`. The broadcast runs JS,
+  // which may commit synchronously; that must not start a nested pass.
+  // JS-thread-only, so no mutex.
+  bool isRunningResizeObservations_{false};
 
   // This is only accessed from the JS thread at the end of the event loop
   // tick, so it is safe to retain it as a raw pointer.
@@ -106,10 +128,19 @@ class ResizeObserverManager final
 
   mutable std::vector<ResizeObserverEntry> pendingEntries_;
   mutable std::mutex pendingEntriesMutex_;
-  mutable bool notifiedResizeObservers_{};
 
-  void notifyObserversIfNecessary();
-  void notifyObservers();
+  // https://w3c.github.io/csswg-drafts/resize-observer/#gather-active-observations-h
+  GatherResult gatherActiveResizeObservations(size_t depth);
+
+  // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-active-resize-observations
+  // Returns the shallowest broadcast target depth, or std::nullopt if nothing
+  // was delivered.
+  std::optional<size_t> broadcastActiveResizeObservations(
+      jsi::Runtime& runtime,
+      std::vector<ActiveObservation>& active);
+
+  // Calls into JS. Returns false if there is nothing connected to notify.
+  bool notifyResizeObservers(jsi::Runtime& runtime, bool hasResizeLoopError);
 };
 
 } // namespace facebook::react

@@ -7,13 +7,15 @@
 
 #pragma once
 
+#include <jsi/jsi.h>
+
 namespace facebook::react {
 
 class RuntimeSchedulerResizeObserverDelegate {
  public:
   virtual ~RuntimeSchedulerResizeObserverDelegate() = default;
 
-  virtual void runResizeObservations() = 0;
+  virtual void runResizeObservations(jsi::Runtime& runtime) = 0;
 };
 
 } // namespace facebook::react

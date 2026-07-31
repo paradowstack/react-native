@@ -38,7 +38,9 @@ export interface Spec extends TurboModule {
     resizeObserverId: number,
     targetToken: NativeResizeObserverToken,
   ) => void;
-  readonly connect: (notifyResizeObserversFunction: () => void) => void;
+  readonly connect: (
+    notifyResizeObserversFunction: (hasResizeLoopError: boolean) => void,
+  ) => void;
   readonly disconnect: () => void;
   readonly takeRecords: () => ReadonlyArray<NativeResizeObserverEntry>;
 }

@@ -34,12 +34,17 @@ struct ResizeObserverEntry {
   Size borderBoxSize;
   Size contentBoxSize;
   Size devicePixelContentBoxSize;
+};
 
-  bool sameShadowNodeFamily(
-      const ShadowNodeFamily& otherShadowNodeFamily) const {
-    return std::addressof(*shadowNodeFamily) ==
-        std::addressof(otherShadowNodeFamily);
-  }
+struct ResizeObservationResult {
+  // Set when the observed box changed (i.e. the observation is active).
+  std::optional<ResizeObserverEntry> entry;
+  // The size to store in `lastReportedSize_` when this is broadcast.
+  Size observedSize{};
+  // Spec "calculate depth for node": nodes on the path from target to root.
+  size_t targetDepth{0};
+  // Whether the target was found outside the tree.
+  bool detached{false};
 };
 
 class ResizeObserver {
@@ -50,10 +55,14 @@ class ResizeObserver {
       ResizeObserverBoxOptions boxOptions,
       uint64_t observationSequence);
 
-  // Partially equivalent to
-  // https://w3c.github.io/csswg-drafts/resize-observer/#broadcast-active-resize-observations
-  std::optional<ResizeObserverEntry> updateStateIfNeeded(
-      const RootShadowNode& rootShadowNode);
+  // Computes whether the observation is active and builds a pending entry. It
+  // must not change any state that decides future deliveries: a skipped
+  // observation has to stay active for a later round.
+  ResizeObservationResult computeActiveObservation(
+      const RootShadowNode& rootShadowNode) const;
+
+  // Applies the state the spec assigns during broadcast.
+  void markAsReported(const ResizeObservationResult& result);
 
   ResizeObserverObserverId getResizeObserverId() const {
     return resizeObserverId_;
@@ -61,10 +70,6 @@ class ResizeObserver {
 
   ShadowNodeFamily::Shared getTargetShadowNodeFamily() const {
     return targetShadowNodeFamily_;
-  }
-
-  ResizeObserverBoxOptions getBoxOptions() const {
-    return boxOptions_;
   }
 
   // Monotonic order of `observe()` registration for this observation.

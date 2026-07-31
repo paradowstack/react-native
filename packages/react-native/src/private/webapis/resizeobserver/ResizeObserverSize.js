@@ -54,13 +54,6 @@ export default class ResizeObserverSize {
 
 setPlatformObject(ResizeObserverSize);
 
-export function createResizeObserverSize(
-  inlineSize: number,
-  blockSize: number,
-): ResizeObserverSize {
-  return new ResizeObserverSize(inlineSize, blockSize);
-}
-
 // `ResizeObserverSize` is not constructible from user code on the Web (its IDL
 // declares no constructor). We expose this wrapper as the global instead of the
 // class above, which we still use internally to build entries.

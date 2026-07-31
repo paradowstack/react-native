@@ -7,20 +7,19 @@
 
 #include "ResizeObserverManager.h"
 #include <cxxreact/TraceSection.h>
+#include <glog/logging.h>
 #include <react/renderer/core/LayoutableShadowNode.h>
+#include <react/utils/OnScopeExit.h>
 #include <algorithm>
 #include <unordered_set>
 #include <utility>
-#include "ResizeObserver.h"
 
 namespace facebook::react {
 
 namespace {
-struct PendingObservation {
-  ResizeObserverEntry entry;
-  ResizeObserverObserverId resizeObserverId;
-  uint64_t observationSequence;
-};
+
+constexpr size_t kMaxResizeObservationLoopIterations = 100;
+
 } // namespace
 
 ResizeObserverManager::ResizeObserverManager() = default;
@@ -126,7 +125,7 @@ void ResizeObserverManager::unobserve(
 void ResizeObserverManager::connect(
     RuntimeScheduler& runtimeScheduler,
     UIManager& uiManager,
-    std::function<void()> notifyResizeObserversFunction) {
+    std::function<void(jsi::Runtime&, bool)> notifyResizeObserversFunction) {
   TraceSection s{"ResizeObserverManager::connect"};
 
   // Fail-safe in case the caller doesn't guarantee consistency.
@@ -156,14 +155,33 @@ void ResizeObserverManager::disconnect(
   uiManager.unregisterCommitHook(*this);
   shadowTreeRegistry_ = nullptr;
 
+  // May run from inside `broadcastActiveResizeObservations` (a callback can
+  // disconnect the last observer), which copies the callable before invoking
+  // it, so clearing it here can't destroy the function we're executing.
   notifyResizeObserversFunction_ = nullptr;
   commitHookRegistered_ = false;
+
+  // Nothing can consume any of this anymore; don't leak it into a later
+  // `connect`.
+  {
+    std::unique_lock lock{observersMutex_};
+    observersBySurfaceId_.clear();
+  }
+  {
+    std::unique_lock lock{dirtyFamiliesMutex_};
+    dirtyFamiliesBySurfaceId_.clear();
+    committedSurfaceIds_.clear();
+  }
+  surfaceIdsWithPendingInitialDelivery_.clear();
+
+  {
+    std::unique_lock lock{pendingEntriesMutex_};
+    pendingEntries_.clear();
+  }
 }
 
 std::vector<ResizeObserverEntry> ResizeObserverManager::takeRecords() {
   std::unique_lock lock{pendingEntriesMutex_};
-
-  notifiedResizeObservers_ = false;
 
   std::vector<ResizeObserverEntry> entries;
   pendingEntries_.swap(entries);
@@ -225,10 +243,67 @@ void ResizeObserverManager::shadowTreeDidCommit(
 
 #pragma mark - RuntimeSchedulerResizeObserverDelegate
 
-void ResizeObserverManager::runResizeObservations() {
+void ResizeObserverManager::runResizeObservations(jsi::Runtime& runtime) {
   TraceSection s{"ResizeObserverManager::runResizeObservations"};
 
-  // Drain what the commit hook collected since the last run.
+  // The broadcast below runs JS, which may commit synchronously and re-enter
+  // this step. Never start a nested pass: the families it dirties stay queued
+  // for the next gather iteration below, not a nested `runResizeObservations`.
+  if (isRunningResizeObservations_) {
+    return;
+  }
+  isRunningResizeObservations_ = true;
+  OnScopeExit resetIsRunningResizeObservations{
+      [&]() { isRunningResizeObservations_ = false; }};
+
+  size_t depth{0};
+  size_t iteration{0};
+  auto hasSkippedObservations = false;
+
+  // Bounded by construction: `depth` strictly increases each round, so this
+  // runs at most as many times as the tree is deep. The hard cap turns a
+  // future bug into a log line instead of a frozen app.
+  while (true) {
+    if (++iteration > kMaxResizeObservationLoopIterations) {
+      LOG(WARNING)
+          << "ResizeObserverManager: resize observation loop hit iteration cap";
+      // Treat as undelivered notifications so JS reports the spec loop error.
+      hasSkippedObservations = true;
+      break;
+    }
+
+    auto gathered = gatherActiveResizeObservations(depth);
+    hasSkippedObservations =
+        hasSkippedObservations || gathered.hasSkippedObservations;
+
+    if (gathered.activeObservations.empty()) {
+      break;
+    }
+
+    auto shallowest =
+        broadcastActiveResizeObservations(runtime, gathered.activeObservations);
+    if (!shallowest.has_value()) {
+      break;
+    }
+
+    depth = shallowest.value();
+  }
+
+  // https://w3c.github.io/csswg-drafts/resize-observer/#deliver-resize-loop-error
+  if (hasSkippedObservations) {
+    notifyResizeObservers(runtime, true);
+  }
+}
+
+#pragma mark - Private methods
+
+ResizeObserverManager::GatherResult
+ResizeObserverManager::gatherActiveResizeObservations(size_t depth) {
+  TraceSection s{"ResizeObserverManager::gatherActiveResizeObservations"};
+
+  // Drain what the commit hook collected since the last gather. This must run
+  // every loop iteration so a callback's synchronous commit is visible to the
+  // next round.
   std::unordered_map<SurfaceId, std::unordered_set<const ShadowNodeFamily*>>
       dirtyFamiliesBySurfaceId;
   std::unordered_set<SurfaceId> committedSurfaceIds;
@@ -246,11 +321,12 @@ void ResizeObserverManager::runResizeObservations() {
       surfaceIdsWithPendingInitialDelivery_.begin(),
       surfaceIdsWithPendingInitialDelivery_.end());
 
-  if (candidateSurfaceIds.empty()) {
-    return;
-  }
+  GatherResult gatherResult;
 
-  std::vector<PendingObservation> pendingObservations;
+  // Null once `disconnect` ran; nothing left to observe against.
+  if (candidateSurfaceIds.empty() || shadowTreeRegistry_ == nullptr) {
+    return gatherResult;
+  }
 
   for (auto surfaceId : candidateSurfaceIds) {
     auto rootShadowNode = std::shared_ptr<const RootShadowNode>{};
@@ -258,6 +334,11 @@ void ResizeObserverManager::runResizeObservations() {
       rootShadowNode = shadowTree.getCurrentRevision().rootShadowNode;
     });
     if (rootShadowNode == nullptr) {
+      // The surface was stopped, so its families are dead and can never report
+      // again. Drop the bookkeeping instead of rescanning it on every tick.
+      std::unique_lock lock{observersMutex_};
+      observersBySurfaceId_.erase(surfaceId);
+      surfaceIdsWithPendingInitialDelivery_.erase(surfaceId);
       continue;
     }
 
@@ -301,14 +382,21 @@ void ResizeObserverManager::runResizeObservations() {
         continue;
       }
 
-      auto entry = observer->updateStateIfNeeded(*rootShadowNode);
-      if (entry) {
-        pendingObservations.push_back(
-            PendingObservation{
-                .entry = std::move(entry).value(),
-                .resizeObserverId = observer->getResizeObserverId(),
-                .observationSequence = observer->getObservationSequence(),
-            });
+      auto result = observer->computeActiveObservation(*rootShadowNode);
+      if (!result.entry.has_value()) {
+        stillNeedsInitialDelivery =
+            stillNeedsInitialDelivery || observer->needsInitialDeliveryCheck();
+        continue;
+      }
+
+      if (result.targetDepth > depth) {
+        gatherResult.activeObservations.push_back(
+            ActiveObservation{
+                .observer = observer.get(), .result = std::move(result)});
+      } else {
+        // Too shallow for this round. It keeps its state, so it stays active
+        // and is delivered the next time this surface is gathered.
+        gatherResult.hasSkippedObservations = true;
       }
 
       stillNeedsInitialDelivery =
@@ -322,59 +410,67 @@ void ResizeObserverManager::runResizeObservations() {
     }
   }
 
-  if (pendingObservations.empty()) {
-    return;
+  return gatherResult;
+}
+
+std::optional<size_t> ResizeObserverManager::broadcastActiveResizeObservations(
+    jsi::Runtime& runtime,
+    std::vector<ActiveObservation>& active) {
+  TraceSection s{"ResizeObserverManager::broadcastActiveResizeObservations"};
+
+  if (active.empty() || notifyResizeObserversFunction_ == nullptr) {
+    return std::nullopt;
   }
 
   // Deliver in spec order: observers by registration, then targets by
-  // `observe()` order. Depth doesn't matter here — in the spec it only gates
-  // the re-layout loop (which RN doesn't run), not entry order.
-  std::sort(
-      pendingObservations.begin(),
-      pendingObservations.end(),
-      [](const auto& a, const auto& b) {
-        if (a.resizeObserverId != b.resizeObserverId) {
-          return a.resizeObserverId < b.resizeObserverId;
-        }
-        return a.observationSequence < b.observationSequence;
-      });
+  // `observe()` order.
+  std::sort(active.begin(), active.end(), [](const auto& a, const auto& b) {
+    if (a.observer->getResizeObserverId() !=
+        b.observer->getResizeObserverId()) {
+      return a.observer->getResizeObserverId() <
+          b.observer->getResizeObserverId();
+    }
+    return a.observer->getObservationSequence() <
+        b.observer->getObservationSequence();
+  });
+
+  std::optional<size_t> shallowestDepth{};
 
   {
     std::unique_lock lock{pendingEntriesMutex_};
-    pendingEntries_.reserve(
-        pendingEntries_.size() + pendingObservations.size());
-    for (auto& observation : pendingObservations) {
-      pendingEntries_.push_back(std::move(observation.entry));
+    pendingEntries_.reserve(pendingEntries_.size() + active.size());
+    for (auto& observation : active) {
+      observation.observer->markAsReported(observation.result);
+      shallowestDepth = shallowestDepth.has_value()
+          ? std::min(shallowestDepth.value(), observation.result.targetDepth)
+          : observation.result.targetDepth;
+      pendingEntries_.push_back(std::move(*observation.result.entry));
     }
   }
 
-  notifyObserversIfNecessary();
+  if (!notifyResizeObservers(runtime, false)) {
+    return std::nullopt;
+  }
+
+  return shallowestDepth;
 }
 
-#pragma mark - Private methods
-
-void ResizeObserverManager::notifyObserversIfNecessary() {
-  auto dispatchNotification = false;
-
-  {
-    std::unique_lock lock{pendingEntriesMutex_};
-
-    if (!pendingEntries_.empty() && !notifiedResizeObservers_) {
-      notifiedResizeObservers_ = true;
-      dispatchNotification = true;
-    }
+bool ResizeObserverManager::notifyResizeObservers(
+    jsi::Runtime& runtime,
+    bool hasResizeLoopError) {
+  // Copy the callable: the notification runs JS, and a callback may
+  // `disconnect()` the last observer, which clears the member while we are
+  // still executing it.
+  auto notifyResizeObserversFunction = notifyResizeObserversFunction_;
+  if (notifyResizeObserversFunction == nullptr) {
+    return false;
   }
 
-  if (dispatchNotification) {
-    notifyObservers();
-  }
-}
-
-void ResizeObserverManager::notifyObservers() {
-  TraceSection s{"ResizeObserverManager::notifyObservers"};
-  if (notifyResizeObserversFunction_) {
-    notifyResizeObserversFunction_();
-  }
+  // No lock may be held here. JS pulls the entries with `takeRecords` and the
+  // callbacks it then invokes can re-enter `observe`/`unobserve`/`disconnect`,
+  // or commit synchronously (which re-enters the commit hook on this thread).
+  notifyResizeObserversFunction(runtime, hasResizeLoopError);
+  return true;
 }
 
 } // namespace facebook::react

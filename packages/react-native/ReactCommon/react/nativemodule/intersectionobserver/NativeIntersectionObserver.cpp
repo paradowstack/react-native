@@ -24,27 +24,6 @@ NativeIntersectionObserverModuleProvider(
 
 namespace facebook::react {
 
-namespace {
-
-jsi::Object tokenFromShadowNodeFamily(
-    jsi::Runtime& runtime,
-    ShadowNodeFamily::Shared shadowNodeFamily) {
-  jsi::Object obj(runtime);
-  // Need to const_cast since JSI only allows non-const pointees
-  obj.setNativeState(
-      runtime,
-      std::const_pointer_cast<ShadowNodeFamily>(std::move(shadowNodeFamily)));
-  return obj;
-}
-
-ShadowNodeFamily::Shared shadowNodeFamilyFromToken(
-    jsi::Runtime& runtime,
-    jsi::Object token) {
-  return token.getNativeState<ShadowNodeFamily>(runtime);
-}
-
-} // namespace
-
 NativeIntersectionObserver::NativeIntersectionObserver(
     std::shared_ptr<CallInvoker> jsInvoker)
     : NativeIntersectionObserverCxxSpec(std::move(jsInvoker)) {}

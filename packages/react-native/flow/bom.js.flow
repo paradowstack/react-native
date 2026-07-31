@@ -432,7 +432,7 @@ declare class ResizeObserverEntry {
 }
 
 declare type ResizeObserverCallback = (
-  entries: Array<ResizeObserverEntry>,
+  entries: ReadonlyArray<ResizeObserverEntry>,
   observer: ResizeObserver,
 ) => unknown;
 
