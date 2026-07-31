@@ -3537,6 +3537,7 @@ using facebook::react::NativePerformancePerformanceObserverObserveOptions = face
 using facebook::react::NativeReloadAndProfileConfig = facebook::react::NativeReactDevToolsRuntimeSettingsModuleReloadAndProfileConfig<bool, bool>;
 using facebook::react::NativeRequestIdleCallbackOptions = facebook::react::NativeIdleCallbacksRequestIdleCallbackOptions<std::optional<facebook::react::HighResDuration>>;
 using facebook::react::NativeResizeObserverEntry = facebook::react::NativeResizeObserverNativeResizeObserverEntry<facebook::react::NativeResizeObserverResizeObserverId, facebook::jsi::Value, facebook::react::RectAsTuple, facebook::react::SizeAsTuple, facebook::react::SizeAsTuple, facebook::react::SizeAsTuple>;
+using facebook::react::NativeResizeObserverNotifyCallback = facebook::react::SyncCallback<void(bool)>;
 using facebook::react::NativeResizeObserverObserveOptions = facebook::react::NativeResizeObserverNativeResizeObserverObserveOptions<facebook::react::NativeResizeObserverResizeObserverId, std::shared_ptr<const facebook::react::ShadowNode>, std::optional<std::string>>;
 using facebook::react::NativeResizeObserverResizeObserverId = facebook::react::ResizeObserverObserverId;
 using facebook::react::OnMutations = std::function<void(std::vector<facebook::react::MutationRecord>&)>;
@@ -6059,7 +6060,7 @@ class facebook::react::NativeResizeObserver : public facebook::react::NativeResi
   public NativeResizeObserver(std::shared_ptr<facebook::react::CallInvoker> jsInvoker);
   public facebook::jsi::Object observe(facebook::jsi::Runtime& runtime, facebook::react::NativeResizeObserverObserveOptions options);
   public std::vector<facebook::react::NativeResizeObserverEntry> takeRecords(facebook::jsi::Runtime& runtime);
-  public void connect(facebook::jsi::Runtime& runtime, facebook::react::AsyncCallback<> notifyResizeObserversFunction);
+  public void connect(facebook::jsi::Runtime& runtime, facebook::react::NativeResizeObserverNotifyCallback notifyResizeObserversFunction);
   public void disconnect(facebook::jsi::Runtime& runtime);
   public void unobserve(facebook::jsi::Runtime& runtime, facebook::react::NativeResizeObserverResizeObserverId resizeObserverId, facebook::jsi::Object targetToken);
 }
@@ -6547,11 +6548,11 @@ class facebook::react::ResizeObserver {
   public ResizeObserver(facebook::react::ResizeObserverObserverId resizeObserverId, facebook::react::ShadowNodeFamily::Shared targetShadowNodeFamily, facebook::react::ResizeObserverBoxOptions boxOptions, uint64_t observationSequence);
   public bool hasDeliveredDetachedState() const;
   public bool needsInitialDeliveryCheck() const;
-  public facebook::react::ResizeObserverBoxOptions getBoxOptions() const;
+  public facebook::react::ResizeObservationResult evaluateObservation(const facebook::react::RootShadowNode& rootShadowNode) const;
   public facebook::react::ResizeObserverObserverId getResizeObserverId() const;
   public facebook::react::ShadowNodeFamily::Shared getTargetShadowNodeFamily() const;
-  public std::optional<facebook::react::ResizeObserverEntry> updateStateIfNeeded(const facebook::react::RootShadowNode& rootShadowNode);
   public uint64_t getObservationSequence() const;
+  public void commitObservation(const facebook::react::ResizeObservationResult& result);
 }
 
 class facebook::react::ResizeObserverManager : public facebook::react::UIManagerCommitHook, public facebook::react::RuntimeSchedulerResizeObserverDelegate {
@@ -6559,9 +6560,9 @@ class facebook::react::ResizeObserverManager : public facebook::react::UIManager
   public std::vector<facebook::react::ResizeObserverEntry> takeRecords();
   public virtual void commitHookWasRegistered(const facebook::react::UIManager& uiManager) noexcept override;
   public virtual void commitHookWasUnregistered(const facebook::react::UIManager& uiManager) noexcept override;
-  public virtual void runResizeObservations() override;
+  public virtual void runResizeObservations(facebook::jsi::Runtime& runtime) override;
   public virtual void shadowTreeDidCommit(const facebook::react::ShadowTree& shadowTree, const facebook::react::RootShadowNode::Shared& rootShadowNode, const std::vector<const facebook::react::LayoutableShadowNode*>& affectedLayoutableNodes) noexcept override;
-  public void connect(facebook::react::RuntimeScheduler& runtimeScheduler, facebook::react::UIManager& uiManager, std::function<void()> notifyResizeObserversFunction);
+  public void connect(facebook::react::RuntimeScheduler& runtimeScheduler, facebook::react::UIManager& uiManager, std::function<void(facebook::jsi::Runtime&, bool)> notifyResizeObserversFunction);
   public void disconnect(facebook::react::RuntimeScheduler& runtimeScheduler, facebook::react::UIManager& uiManager);
   public void observe(facebook::react::ResizeObserverObserverId resizeObserverId, const facebook::react::ShadowNodeFamily::Shared& shadowNodeFamily, facebook::react::ResizeObserverBoxOptions boxOptions, facebook::react::UIManager& uiManager);
   public void unobserve(facebook::react::ResizeObserverObserverId resizeObserverId, const facebook::react::ShadowNodeFamily::Shared& shadowNodeFamily);
@@ -6699,7 +6700,7 @@ class facebook::react::RuntimeSchedulerIntersectionObserverDelegate {
 }
 
 class facebook::react::RuntimeSchedulerResizeObserverDelegate {
-  public virtual void runResizeObservations() = 0;
+  public virtual void runResizeObservations(facebook::jsi::Runtime& runtime) = 0;
   public virtual ~RuntimeSchedulerResizeObserverDelegate() = default;
 }
 
@@ -9929,8 +9930,14 @@ struct facebook::react::RequestInfo {
   public std::string url;
 }
 
+struct facebook::react::ResizeObservationResult {
+  public bool detached;
+  public facebook::react::Size observedSize;
+  public size_t targetDepth;
+  public std::optional<facebook::react::ResizeObserverEntry> entry;
+}
+
 struct facebook::react::ResizeObserverEntry {
-  public bool sameShadowNodeFamily(const facebook::react::ShadowNodeFamily& otherShadowNodeFamily) const;
   public facebook::react::Rect contentRect;
   public facebook::react::ResizeObserverObserverId resizeObserverId;
   public facebook::react::ShadowNodeFamily::Shared shadowNodeFamily;
