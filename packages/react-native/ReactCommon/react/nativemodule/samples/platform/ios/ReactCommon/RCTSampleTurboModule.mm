@@ -6,6 +6,8 @@
  */
 
 #import "RCTSampleTurboModule.h"
+
+#import <React/RCTArrayBuffer.h>
 #import "RCTSampleTurboModulePlugin.h"
 
 #import <React/RCTAssert.h>
@@ -145,21 +147,23 @@ RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD(NSDictionary *, getValue : (double)x y : (NS
   };
 }
 
-// Arguments arrive as an immutable NSData, but an ArrayBuffer return must be
-// NSMutableData: it is handed to JS as a jsi::MutableBuffer, whose data() is
-// non-const. Echoing the argument back therefore needs a mutable copy.
-RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD(NSMutableData *, getArrayBuffer : (NSData *)buffer)
+// The argument aliases the JS ArrayBuffer's bytes, so mutating in place is visible to JS.
+RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD(RCTArrayBuffer *, getArrayBuffer : (RCTArrayBuffer *)buffer)
 {
-  return [buffer mutableCopy];
+  auto *bytes = static_cast<uint8_t *>(buffer.mutableBytes);
+  for (NSUInteger i = 0; i < buffer.length; ++i) {
+    bytes[i] = static_cast<uint8_t>(bytes[i] * 2);
+  }
+  return buffer;
 }
 
-RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD(NSMutableData *, createNativeBuffer : (double)size)
+RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD(RCTArrayBuffer *, createNativeBuffer : (double)size)
 {
-  return [NSMutableData dataWithLength:(NSUInteger)size];
+  return [RCTArrayBuffer arrayBufferWithLength:(NSUInteger)size];
 }
 
 RCT_EXPORT_METHOD(
-    processAsyncBuffer : (NSData *)payload resolve : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)
+    processAsyncBuffer : (RCTArrayBuffer *)payload resolve : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)
         reject)
 {
   resolve(@(payload.length));
