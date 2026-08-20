@@ -36,16 +36,26 @@ internal class CxxArrayBufferCallbackImpl @DoNotStrip private constructor() :
     }
     when (val arg = args.firstOrNull()) {
       null -> nativeInvoke(null, null)
-      is ArrayBuffer ->
-          if (arg.isOwningBytes) {
-            nativeInvoke(arg, null)
-          } else {
+      is ArrayBuffer -> {
+        if (arg.isOwningBytes) {
+          val buf = arg.bytes
+          if (buf.position() != 0 || buf.limit() != buf.capacity()) {
             nativeInvoke(
                 null,
-                "expected an ArrayBuffer that owns its bytes; the bytes of a non-owning one are " +
-                    "no longer valid by the time the Promise resolves. Copy them with " +
-                    "ArrayBuffer.arrayBufferWithCopiedBytes().")
+                "the ArrayBuffer's position must be 0 and its limit must equal its capacity; " +
+                    "position and limit are not preserved when the buffer is handed to " +
+                    "JavaScript.")
+            return
           }
+          nativeInvoke(arg, null)
+        } else {
+          nativeInvoke(
+              null,
+              "expected an ArrayBuffer that owns its bytes; the bytes of a non-owning one are " +
+                  "no longer valid by the time the Promise resolves. Copy them with " +
+                  "ArrayBuffer.arrayBufferWithCopiedBytes().")
+        }
+      }
       else -> nativeInvoke(null, "expected an ArrayBuffer or null, got ${arg.javaClass.name}")
     }
   }

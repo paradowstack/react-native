@@ -179,4 +179,36 @@ static void dispatch_async_mock([[maybe_unused]] dispatch_queue_t queue, dispatc
   XCTAssertThrows([_module createFromParts:@[ binaryPart ] binaryParts:@[ [NSNull null] ] withId:resultId]);
 }
 
+- (void)testResolveBufferReturnsIndependentCopy
+{
+  RCTArrayBuffer *buffer = [_module resolveBuffer:_blobId offset:0 size:_data.length];
+  XCTAssertNotNil(buffer);
+  XCTAssertEqual(buffer.length, _data.length);
+
+  uint8_t originalFirst = ((const uint8_t *)_data.bytes)[0];
+  ((uint8_t *)buffer.mutableBytes)[0] = (uint8_t)(originalFirst + 1);
+
+  NSData *stored = [_module resolve:_blobId offset:0 size:_data.length];
+  XCTAssertTrue([_data isEqualToData:stored]);
+  XCTAssertEqual(((const uint8_t *)stored.bytes)[0], originalFirst);
+}
+
+- (void)testResolveBufferUnknownIdReturnsNil
+{
+  XCTAssertNil([_module resolveBuffer:@"no-such-id" offset:0 size:4]);
+}
+
+- (void)testResolveBufferWithOffsetAndSize
+{
+  NSInteger offset = 10;
+  NSInteger size = 20;
+  RCTArrayBuffer *buffer = [_module resolveBuffer:_blobId offset:offset size:size];
+  XCTAssertNotNil(buffer);
+  XCTAssertEqual(buffer.length, (NSUInteger)size);
+
+  NSData *expected = [_data subdataWithRange:NSMakeRange((NSUInteger)offset, (NSUInteger)size)];
+  NSData *actual = [NSData dataWithBytes:buffer.mutableBytes length:buffer.length];
+  XCTAssertTrue([expected isEqualToData:actual]);
+}
+
 @end

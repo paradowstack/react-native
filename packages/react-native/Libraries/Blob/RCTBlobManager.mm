@@ -117,6 +117,26 @@ RCT_EXPORT_MODULE(BlobModule)
   return data;
 }
 
+- (RCTArrayBuffer *)resolveBuffer:(NSString *)blobId offset:(NSInteger)offset size:(NSInteger)size
+{
+  NSData *stored;
+  {
+    std::lock_guard<std::mutex> lock(_blobsMutex);
+    stored = _blobs[blobId];
+  }
+  if (!stored) {
+    return nil;
+  }
+  NSInteger length = size == -1 ? (NSInteger)stored.length - offset : size;
+  if (offset < 0 || length < 0 || offset + length > (NSInteger)stored.length) {
+    return nil;
+  }
+  // One copy: the requested range goes straight into the new buffer. The copy is
+  // required because this RCTArrayBuffer is handed to JS zero-copy, and Blobs are
+  // immutable per the W3C File API — JS must not write through to blob storage.
+  return [RCTArrayBuffer arrayBufferWithCopiedBytes:(const uint8_t *)stored.bytes + offset length:(NSUInteger)length];
+}
+
 - (NSData *)resolveURL:(NSURL *)url
 {
   NSURLComponents *components = [[NSURLComponents alloc] initWithURL:url resolvingAgainstBaseURL:NO];

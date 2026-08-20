@@ -197,6 +197,25 @@ public class BlobModule(reactContext: ReactApplicationContext) :
     return resolve(blob.getString("blobId"), blob.getInt("offset"), blob.getInt("size"))
   }
 
+  /**
+   * Returns a newly allocated [ArrayBuffer] holding a copy of the requested range, or null if the
+   * blob is unknown.
+   *
+   * The copy is required: the returned buffer is handed to JS as an ArrayBuffer, and Blobs are
+   * immutable per the W3C File API — JS must not be able to write through to blob storage.
+   */
+  public fun resolveBuffer(blobId: String?, offset: Int, size: Int): ArrayBuffer? {
+    synchronized(blobs) {
+      val data = blobs[blobId] ?: return null
+      val length = if (size == -1) data.size - offset else size
+      val copy = ArrayBuffer(length)
+      val dest = copy.bytes
+      dest.put(data, offset, length)
+      dest.rewind()
+      return copy
+    }
+  }
+
   @Throws(IOException::class)
   private fun getBytesFromUri(contentUri: Uri): ByteArray {
     val inputStream =

@@ -81,6 +81,37 @@ class BlobModuleTest {
   }
 
   @Test
+  fun testResolveBufferReturnsIndependentDirectCopy() {
+    val buffer = checkNotNull(blobModule.resolveBuffer(blobId, 0, bytes.size))
+
+    assertThat(buffer.bytes.isDirect).isTrue()
+
+    // Mutating the returned buffer must not affect blob storage.
+    buffer.bytes.put(0, (bytes[0] + 1).toByte())
+    assertThat(blobModule.resolve(blobId, 0, bytes.size)).isEqualTo(bytes)
+
+    // Two reads must not alias each other.
+    val second = checkNotNull(blobModule.resolveBuffer(blobId, 0, bytes.size))
+    assertThat(second.bytes.get(0)).isEqualTo(bytes[0])
+  }
+
+  @Test
+  fun testResolveBufferReturnsIndependentDirectCopyWithOffset() {
+    val offset = 30
+    val size = bytes.size - offset
+    val buffer = checkNotNull(blobModule.resolveBuffer(blobId, offset, size))
+
+    assertThat(buffer.bytes.isDirect).isTrue()
+
+    buffer.bytes.put(0, (bytes[offset] + 1).toByte())
+    assertThat(blobModule.resolve(blobId, offset, size))
+        .isEqualTo(bytes.copyOfRange(offset, offset + size))
+
+    val second = checkNotNull(blobModule.resolveBuffer(blobId, offset, size))
+    assertThat(second.bytes.get(0)).isEqualTo(bytes[offset])
+  }
+
+  @Test
   fun testCreateFromPartsBinaryPartIsCopiedNotAliased() {
     val id = UUID.randomUUID().toString()
     val binaryData = byteArrayOf(1, 2, 3, 4)
@@ -274,6 +305,41 @@ class BlobModuleTest {
     blobModule.createFromParts(parts, buffers, id)
 
     assertThat(blobModule.resolve(id, 0, 4)).isEqualTo(byteArrayOf(30, 40, 10, 20))
+  }
+
+  @Test
+  fun testResolveBufferForByteArrayBackedBlob() {
+    val data = byteArrayOf(1, 2, 3, 4)
+    val id = blobModule.store(data)
+    val buffer = checkNotNull(blobModule.resolveBuffer(id, 0, data.size))
+
+    assertThat(buffer.bytes.isDirect).isTrue()
+    val copy = ByteArray(data.size)
+    buffer.bytes.get(copy)
+    assertThat(copy).isEqualTo(data)
+  }
+
+  @Test
+  fun testResolveBufferWithOffsetAndSize() {
+    val offset = 10
+    val size = 20
+    val buffer = checkNotNull(blobModule.resolveBuffer(blobId, offset, size))
+
+    assertThat(buffer.bytes.isDirect).isTrue()
+    assertThat(buffer.size).isEqualTo(size)
+
+    val copy = ByteArray(size)
+    buffer.bytes.get(copy)
+    assertThat(copy).isEqualTo(bytes.copyOfRange(offset, offset + size))
+  }
+
+  @Test
+  fun testResolveBufferReturnsFullWindowBuffer() {
+    val buffer = checkNotNull(blobModule.resolveBuffer(blobId, 10, 20))
+
+    assertThat(buffer.bytes.position()).isEqualTo(0)
+    assertThat(buffer.bytes.limit()).isEqualTo(buffer.bytes.capacity())
+    assertThat(buffer.size).isEqualTo(20)
   }
 
   @Test

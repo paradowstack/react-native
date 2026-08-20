@@ -8568,6 +8568,17 @@ struct facebook::react::NativeBlobModuleBlobDescriptor {
 }
 
 template <typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
+struct facebook::react::NativeFileReaderModuleBlobDescriptor {
+  public P0 blobId;
+  public P1 offset;
+  public P2 size;
+  public P3 name;
+  public P4 type;
+  public P5 lastModified;
+  public bool operator==(const facebook::react::NativeFileReaderModuleBlobDescriptor& other) const;
+}
+
+template <typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
 struct facebook::react::NativeIntersectionObserverNativeIntersectionObserverObserveOptions {
   public P0 intersectionObserverId;
   public P1 rootShadowNode;
@@ -9497,6 +9508,19 @@ struct facebook::react::NativeExceptionsManagerStackFrameBridging {
   public static std::optional<double> columnToJs(facebook::jsi::Runtime& rt, decltype(types.column) value);
   public static std::optional<double> lineNumberToJs(facebook::jsi::Runtime& rt, decltype(types.lineNumber) value);
   public static std::optional<facebook::jsi::String> fileToJs(facebook::jsi::Runtime& rt, decltype(types.file) value);
+}
+
+template <typename T>
+struct facebook::react::NativeFileReaderModuleBlobDescriptorBridging {
+  public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+  public static T types;
+  public static double lastModifiedToJs(facebook::jsi::Runtime& rt, decltype(types.lastModified) value);
+  public static double offsetToJs(facebook::jsi::Runtime& rt, decltype(types.offset) value);
+  public static double sizeToJs(facebook::jsi::Runtime& rt, decltype(types.size) value);
+  public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+  public static facebook::jsi::String blobIdToJs(facebook::jsi::Runtime& rt, decltype(types.blobId) value);
+  public static facebook::jsi::String nameToJs(facebook::jsi::Runtime& rt, decltype(types.name) value);
+  public static facebook::jsi::String typeToJs(facebook::jsi::Runtime& rt, decltype(types.type) value);
 }
 
 template <typename T>

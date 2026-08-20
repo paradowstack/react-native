@@ -185,6 +185,10 @@ category RCTCxxConvert(NativeExceptionsManager_StackFrame) {
   public virtual static RCTManagedPointer* JS_NativeExceptionsManager_StackFrame:(id json);
 }
 
+category RCTCxxConvert(NativeFileReaderModule_BlobDescriptor) {
+  public virtual static RCTManagedPointer* JS_NativeFileReaderModule_BlobDescriptor:(id json);
+}
+
 category RCTCxxConvert(NativeFrameRateLogger_SpecSetGlobalOptionsOptions) {
   public virtual static RCTManagedPointer* JS_NativeFrameRateLogger_SpecSetGlobalOptionsOptions:(id json);
 }
@@ -690,6 +694,7 @@ interface RCTBlobManager : public NSObject <RCTBridgeModule, RCTURLRequestHandle
   public virtual NSData* resolveURL:(NSURL* url);
   public virtual NSString* store:(NSData* data);
   public virtual NSUInteger lengthOfBlobWithId:(NSString* blobId);
+  public virtual RCTArrayBuffer* resolveBuffer:offset:size:(NSString* blobId, NSInteger offset, NSInteger size);
   public virtual void createFromParts:binaryParts:withId:(NSArray<NSDictionary<NSString*, id>*>* parts, NSArray<RCTArrayBuffer*>* binaryParts, NSString* blobId);
   public virtual void remove:(NSString* blobId);
   public virtual void store:withId:(NSData* data, NSString* blobId);
@@ -2387,8 +2392,9 @@ protocol NativeExceptionsManagerSpec : public NSObjectRCTBridgeModule, public RC
 }
 
 protocol NativeFileReaderModuleSpec : public NSObjectRCTBridgeModule, public RCTTurboModule {
-  public virtual void readAsDataURL:resolve:reject:(NSDictionary* data, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject);
-  public virtual void readAsText:encoding:resolve:reject:(NSDictionary* data, NSString* encoding, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject);
+  public virtual void readAsArrayBuffer:resolve:reject:(JS::NativeFileReaderModule::BlobDescriptor& data, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject);
+  public virtual void readAsDataURL:resolve:reject:(JS::NativeFileReaderModule::BlobDescriptor& data, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject);
+  public virtual void readAsText:encoding:resolve:reject:(JS::NativeFileReaderModule::BlobDescriptor& data, NSString* encoding, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject);
 }
 
 protocol NativeFrameRateLoggerSpec : public NSObjectRCTBridgeModule, public RCTTurboModule {
@@ -10357,6 +10363,17 @@ struct facebook::react::NativeBlobModuleBlobDescriptor {
 }
 
 template <typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
+struct facebook::react::NativeFileReaderModuleBlobDescriptor {
+  public P0 blobId;
+  public P1 offset;
+  public P2 size;
+  public P3 name;
+  public P4 type;
+  public P5 lastModified;
+  public bool operator==(const facebook::react::NativeFileReaderModuleBlobDescriptor& other) const;
+}
+
+template <typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
 struct facebook::react::NativeIntersectionObserverNativeIntersectionObserverObserveOptions {
   public P0 intersectionObserverId;
   public P1 rootShadowNode;
@@ -11143,6 +11160,13 @@ struct facebook::react::NativeExceptionsManagerExceptionDataBridging {
 
 template <typename T>
 struct facebook::react::NativeExceptionsManagerStackFrameBridging {
+  public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+  public static T types;
+  public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
+}
+
+template <typename T>
+struct facebook::react::NativeFileReaderModuleBlobDescriptorBridging {
   public static T fromJs(facebook::jsi::Runtime& rt, const facebook::jsi::Object& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
   public static T types;
   public static facebook::jsi::Object toJs(facebook::jsi::Runtime& rt, const T& value, const std::shared_ptr<facebook::react::CallInvoker>& jsInvoker);
@@ -15641,6 +15665,17 @@ struct JS::NativeExceptionsManager::StackFrame {
   protected std::optional<bool> collapse() const;
   protected std::optional<double> column() const;
   protected std::optional<double> lineNumber() const;
+}
+
+
+struct JS::NativeFileReaderModule::BlobDescriptor {
+  protected BlobDescriptor(NSDictionary* const v);
+  protected NSString* blobId() const;
+  protected NSString* name() const;
+  protected NSString* type() const;
+  protected double offset() const;
+  protected double size() const;
+  protected std::optional<double> lastModified() const;
 }
 
 
