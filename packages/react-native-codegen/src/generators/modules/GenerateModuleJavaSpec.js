@@ -25,7 +25,11 @@ import type {AliasResolver} from './Utils';
 const {unwrapNullable} = require('../../parsers/parsers-commons');
 const {wrapOptional} = require('../TypeUtils/Java');
 const {parseValidUnionType, toPascalCase} = require('../Utils');
-const {createAliasResolver, getModules} = require('./Utils');
+const {
+  createAliasResolver,
+  getModules,
+  isArrayBufferElementType,
+} = require('./Utils');
 
 type FilesOutput = Map<string, string>;
 
@@ -272,6 +276,10 @@ function translateFunctionParamToJavaType(
       imports.add('com.facebook.react.bridge.ReadableMap');
       return wrapOptional('ReadableMap', isRequired);
     case 'ArrayTypeAnnotation':
+      if (isArrayBufferElementType(realTypeAnnotation.elementType)) {
+        imports.add('com.facebook.react.bridge.ArrayBuffer');
+        return wrapOptional('ArrayBuffer[]', isRequired);
+      }
       imports.add('com.facebook.react.bridge.ReadableArray');
       return wrapOptional('ReadableArray', isRequired);
     case 'FunctionTypeAnnotation':

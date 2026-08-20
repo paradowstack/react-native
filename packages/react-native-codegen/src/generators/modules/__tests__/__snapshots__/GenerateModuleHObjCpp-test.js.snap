@@ -111,6 +111,7 @@ Map {
                     reject:(RCTPromiseRejectBlock)reject;
 - (void)promiseNullableArrayBuffer:(RCTPromiseResolveBlock)resolve
                             reject:(RCTPromiseRejectBlock)reject;
+- (NSNumber *)arrayBufferArray:(NSArray<RCTArrayBuffer *> *)values;
 
 @end
 

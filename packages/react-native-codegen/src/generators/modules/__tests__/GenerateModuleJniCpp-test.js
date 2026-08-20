@@ -29,4 +29,15 @@ describe('GenerateModuleJniCpp', () => {
         ).toMatchSnapshot();
       });
     });
+
+  it('generates a JNI ArrayBuffer array signature for a top-level Array<ArrayBuffer> parameter', () => {
+    const output = generator.generate(
+      'array_buffer_native_module',
+      fixtures.array_buffer_native_module,
+      'com.facebook.fbreact.specs',
+    );
+    expect([...output.values()].join('\n')).toContain(
+      '[Lcom/facebook/react/bridge/ArrayBuffer;',
+    );
+  });
 });

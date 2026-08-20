@@ -2692,6 +2692,28 @@ const ARRAY_BUFFER_NATIVE_MODULE: SchemaType = {
               params: [],
             },
           },
+          {
+            name: 'arrayBufferArray',
+            optional: false,
+            typeAnnotation: {
+              type: 'FunctionTypeAnnotation',
+              returnTypeAnnotation: {
+                type: 'NumberTypeAnnotation',
+              },
+              params: [
+                {
+                  name: 'values',
+                  optional: false,
+                  typeAnnotation: {
+                    type: 'ArrayTypeAnnotation',
+                    elementType: {
+                      type: 'ArrayBufferTypeAnnotation',
+                    },
+                  },
+                },
+              ],
+            },
+          },
         ],
       },
       moduleName: 'SampleTurboModule',

@@ -12,11 +12,13 @@
 
 import type {
   NativeModuleAliasMap,
+  NativeModuleBaseTypeAnnotation,
   NativeModuleObjectTypeAnnotation,
   NativeModuleSchema,
   NativeModuleTypeAnnotation,
   Nullable,
   SchemaType,
+  UnsafeAnyTypeAnnotation,
 } from '../../CodegenSchema';
 
 const {unwrapNullable} = require('../../parsers/parsers-commons');
@@ -77,9 +79,29 @@ function isArrayRecursiveMember(
   );
 }
 
+/**
+ * Whether an array's element type is `ArrayBuffer`. Rejects nullable elements
+ * (`Array<?ArrayBuffer>`) so generators fall back to an untyped array. Handles
+ * the `AnyTypeAnnotation` that `emitArrayType` substitutes when the element
+ * type failed to parse.
+ */
+function isArrayBufferElementType(
+  elementType:
+    Nullable<NativeModuleBaseTypeAnnotation> | UnsafeAnyTypeAnnotation,
+): boolean {
+  if (elementType == null || elementType.type === 'AnyTypeAnnotation') {
+    return false;
+  }
+  if (elementType.type === 'NullableTypeAnnotation') {
+    return false;
+  }
+  return elementType.type === 'ArrayBufferTypeAnnotation';
+}
+
 module.exports = {
   createAliasResolver,
   getModules,
   isDirectRecursiveMember,
   isArrayRecursiveMember,
+  isArrayBufferElementType,
 };

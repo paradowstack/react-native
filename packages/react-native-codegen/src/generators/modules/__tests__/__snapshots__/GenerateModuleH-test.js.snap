@@ -69,6 +69,7 @@ protected:
     methodMap_[\\"voidNullableArrayBuffer\\"] = MethodMetadata {.argCount = 1, .invoker = __voidNullableArrayBuffer};
     methodMap_[\\"promiseArrayBuffer\\"] = MethodMetadata {.argCount = 0, .invoker = __promiseArrayBuffer};
     methodMap_[\\"promiseNullableArrayBuffer\\"] = MethodMetadata {.argCount = 0, .invoker = __promiseNullableArrayBuffer};
+    methodMap_[\\"arrayBufferArray\\"] = MethodMetadata {.argCount = 1, .invoker = __arrayBufferArray};
   }
   
 private:
@@ -107,6 +108,14 @@ private:
       bridging::getParameterCount(&T::promiseNullableArrayBuffer) == 1,
       \\"Expected promiseNullableArrayBuffer(...) to have 1 parameters\\");
     return bridging::callFromJs<jsi::Value>(rt, &T::promiseNullableArrayBuffer,  static_cast<NativeSampleTurboModuleCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
+  }
+
+  static jsi::Value __arrayBufferArray(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
+    static_assert(
+      bridging::getParameterCount(&T::arrayBufferArray) == 2,
+      \\"Expected arrayBufferArray(...) to have 2 parameters\\");
+    return bridging::callFromJs<double>(rt, &T::arrayBufferArray,  static_cast<NativeSampleTurboModuleCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
+      count <= 0 ? throw jsi::JSError(rt, \\"Expected argument in position 0 to be passed\\") : args[0].asObject(rt).asArray(rt));
   }
 };
 

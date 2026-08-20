@@ -195,6 +195,23 @@ RCT_EXPORT_MODULE()
   resolve(buffer);
 }
 
+- (NSNumber *)arrayBufferArray:(NSArray<RCTArrayBuffer *> *)values
+{
+  uint64_t checksum = 0;
+  for (RCTArrayBuffer *value in values) {
+    const auto *bytes = static_cast<const uint8_t *>(value.mutableBytes);
+    if (bytes == nullptr) {
+      continue;
+    }
+
+    std::span<const uint8_t> byteSpan(bytes, static_cast<size_t>(value.length));
+    for (auto byte : byteSpan) {
+      checksum += byte;
+    }
+  }
+  return @(checksum);
+}
+
 - (void)getValueWithCallback:(RCTResponseSenderBlock)callback
 {
   if (callback == nullptr) {

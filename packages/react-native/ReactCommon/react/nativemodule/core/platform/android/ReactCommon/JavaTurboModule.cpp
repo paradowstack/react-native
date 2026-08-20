@@ -5,14 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <cstring>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
 
 #include <cxxreact/TraceSection.h>
-#include <fbjni/ByteBuffer.h>
 #include <fbjni/fbjni.h>
 #include <glog/logging.h>
 #include <jsi/jsi.h>
@@ -431,6 +429,67 @@ int32_t getUniqueId() {
   return counter++;
 }
 
+jni::local_ref<JArrayBuffer::javaobject> convertJSIArrayBufferToJArrayBuffer(
+    jsi::Runtime& rt,
+    const jsi::Value* arg,
+    int argIndex,
+    const std::string& methodName,
+    bool isSyncInvocation,
+    std::vector<jni::local_ref<JArrayBuffer::javaobject>>* borrowedBuffers) {
+  if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
+    throw JavaTurboModuleArgumentConversionException(
+        "ArrayBuffer", argIndex, methodName, arg, &rt);
+  }
+
+  auto arrayBuffer = arg->getObject(rt).getArrayBuffer(rt);
+  AsyncArrayBuffer::throwIfDetached(
+      rt, arrayBuffer, "JavaTurboModule::convertJSIArgsToJNIArgs");
+
+  auto size = arrayBuffer.size(rt);
+  if (size > static_cast<size_t>(std::numeric_limits<jint>::max())) {
+    throw jsi::JSError(
+        rt,
+        "JavaTurboModule::convertJSIArgsToJNIArgs: ArrayBuffer exceeds maximum size.");
+  }
+
+  // Runtimes without a native buffer for this ArrayBuffer return nullptr,
+  // but the Static Hermes tracing runtime throws instead, and argument
+  // conversion runs outside any std::exception handler. Treat a failed
+  // probe as "no native buffer" so a traced session copies the bytes rather
+  // than aborting the process.
+  std::shared_ptr<jsi::MutableBuffer> mutableBuffer;
+  try {
+    mutableBuffer = arrayBuffer.tryGetMutableBuffer(rt);
+  } catch (const std::exception&) {
+    mutableBuffer = nullptr;
+  }
+
+  bool borrowsJSBytes = false;
+  auto jArrayBuffer = [&]() {
+    // Backed by a native buffer: alias it and retain its owner, so the
+    // bytes stay valid for as long as the module holds the ArrayBuffer.
+    if (mutableBuffer) {
+      return JArrayBuffer::createOwning(std::move(mutableBuffer));
+    }
+
+    // JS heap bytes on a synchronous call: lend them for the duration of
+    // the call.
+    if (isSyncInvocation) {
+      borrowsJSBytes = true;
+      return JArrayBuffer::createUnowned(arrayBuffer.data(rt), size);
+    }
+
+    // JS heap bytes that outlive the call: copy.
+    return JArrayBuffer::createOwned(arrayBuffer.data(rt), size);
+  }();
+
+  if (borrowsJSBytes) {
+    borrowedBuffers->push_back(jni::make_local(jArrayBuffer));
+  }
+
+  return jArrayBuffer;
+}
+
 // fbjni already does this conversion, but since we are using plain JNI, this
 // needs to be done again
 // TODO (axe) Reuse existing implementation as needed - the exist in
@@ -587,57 +646,53 @@ JNIArgs convertJSIArgsToJNIArgs(
       auto jParams = JDynamicNative::newObjectCxxArgs(dynamicFromValue);
       jarg->l = makeGlobalIfNecessary(jParams.release());
     } else if (type == "Lcom/facebook/react/bridge/ArrayBuffer;") {
-      if (!(arg->isObject() && arg->getObject(rt).isArrayBuffer(rt))) {
+      auto jArrayBuffer = convertJSIArrayBufferToJArrayBuffer(
+          rt,
+          arg,
+          argIndex,
+          methodName,
+          isSyncInvocation,
+          &jniArgs.borrowedBuffers);
+      jarg->l = makeGlobalIfNecessary(jArrayBuffer.release());
+    } else if (type == "[Lcom/facebook/react/bridge/ArrayBuffer;") {
+      if (!(arg->isObject() && arg->getObject(rt).isArray(rt))) {
         throw JavaTurboModuleArgumentConversionException(
-            "ArrayBuffer", argIndex, methodName, arg, &rt);
+            "Array<ArrayBuffer>", argIndex, methodName, arg, &rt);
       }
 
-      auto arrayBuffer = arg->getObject(rt).getArrayBuffer(rt);
-      AsyncArrayBuffer::throwIfDetached(
-          rt, arrayBuffer, "JavaTurboModule::convertJSIArgsToJNIArgs");
-
-      auto size = arrayBuffer.size(rt);
-      if (size > static_cast<size_t>(std::numeric_limits<jint>::max())) {
+      auto jsArray = arg->getObject(rt).getArray(rt);
+      auto arraySize = jsArray.size(rt);
+      if (arraySize > static_cast<size_t>(std::numeric_limits<jint>::max())) {
         throw jsi::JSError(
             rt,
-            "JavaTurboModule::convertJSIArgsToJNIArgs: ArrayBuffer exceeds maximum size.");
+            "JavaTurboModule::convertJSIArgsToJNIArgs: Array<ArrayBuffer> exceeds maximum size.");
       }
 
-      // Runtimes without a native buffer for this ArrayBuffer return nullptr,
-      // but the Static Hermes tracing runtime throws instead, and argument
-      // conversion runs outside any std::exception handler. Treat a failed
-      // probe as "no native buffer" so a traced session copies the bytes rather
-      // than aborting the process.
-      std::shared_ptr<jsi::MutableBuffer> mutableBuffer;
-      try {
-        mutableBuffer = arrayBuffer.tryGetMutableBuffer(rt);
-      } catch (const std::exception&) {
-        mutableBuffer = nullptr;
-      }
+      auto result =
+          jni::JArrayClass<JArrayBuffer::javaobject>::newArray(arraySize);
 
-      bool borrowsJSBytes = false;
-      auto jArrayBuffer = [&]() {
-        // Backed by a native buffer: alias it and retain its owner, so the
-        // bytes stay valid for as long as the module holds the ArrayBuffer.
-        if (mutableBuffer) {
-          return JArrayBuffer::createOwning(std::move(mutableBuffer));
+      for (size_t i = 0; i < arraySize; i++) {
+        auto element = jsArray.getValueAtIndex(rt, i);
+        try {
+          auto jArrayBuffer = convertJSIArrayBufferToJArrayBuffer(
+              rt,
+              &element,
+              argIndex,
+              methodName,
+              isSyncInvocation,
+              &jniArgs.borrowedBuffers);
+          result->setElement(i, jArrayBuffer.get());
+        } catch (const JavaTurboModuleArgumentConversionException&) {
+          throw JavaTurboModuleArgumentConversionException(
+              "ArrayBuffer at index " + std::to_string(i),
+              argIndex,
+              methodName,
+              &element,
+              &rt);
         }
-
-        // JS heap bytes on a synchronous call: lend them for the duration of
-        // the call.
-        if (isSyncInvocation) {
-          borrowsJSBytes = true;
-          return JArrayBuffer::createUnowned(arrayBuffer.data(rt), size);
-        }
-
-        // JS heap bytes that outlive the call: copy.
-        return JArrayBuffer::createOwned(arrayBuffer.data(rt), size);
-      }();
-
-      if (borrowsJSBytes) {
-        jniArgs.borrowedBuffers.push_back(jni::make_local(jArrayBuffer));
       }
-      jarg->l = makeGlobalIfNecessary(jArrayBuffer.release());
+
+      jarg->l = makeGlobalIfNecessary(result.release());
     } else {
       throw JavaTurboModuleInvalidArgumentTypeException(
           type, argIndex, methodName);

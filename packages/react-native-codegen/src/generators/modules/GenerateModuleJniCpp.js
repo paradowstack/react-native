@@ -24,7 +24,11 @@ import type {AliasResolver} from './Utils';
 
 const {unwrapNullable} = require('../../parsers/parsers-commons');
 const {parseValidUnionType} = require('../Utils');
-const {createAliasResolver, getModules} = require('./Utils');
+const {
+  createAliasResolver,
+  getModules,
+  isArrayBufferElementType,
+} = require('./Utils');
 
 type FilesOutput = Map<string, string>;
 
@@ -308,7 +312,9 @@ function translateParamTypeToJniType(
     case 'ObjectTypeAnnotation':
       return 'Lcom/facebook/react/bridge/ReadableMap;';
     case 'ArrayTypeAnnotation':
-      return 'Lcom/facebook/react/bridge/ReadableArray;';
+      return isArrayBufferElementType(realTypeAnnotation.elementType)
+        ? '[Lcom/facebook/react/bridge/ArrayBuffer;'
+        : 'Lcom/facebook/react/bridge/ReadableArray;';
     case 'FunctionTypeAnnotation':
       return 'Lcom/facebook/react/bridge/Callback;';
     case 'ArrayBufferTypeAnnotation':

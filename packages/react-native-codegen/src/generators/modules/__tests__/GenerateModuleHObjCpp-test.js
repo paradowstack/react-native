@@ -31,4 +31,16 @@ describe('GenerateModuleHObjCpp', () => {
         ).toMatchSnapshot();
       });
     });
+
+  it('generates NSArray<RCTArrayBuffer *> for a top-level Array<ArrayBuffer> parameter', () => {
+    const output = generator.generate(
+      'array_buffer_native_module',
+      fixtures.array_buffer_native_module,
+      'com.facebook.fbreact.specs',
+      false,
+    );
+    expect([...output.values()].join('\n')).toContain(
+      'arrayBufferArray:(NSArray<RCTArrayBuffer *> *)values',
+    );
+  });
 });

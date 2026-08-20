@@ -98,6 +98,10 @@ public abstract class NativeSampleTurboModuleSpec extends ReactContextBaseJavaMo
   @ReactMethod
   @DoNotStrip
   public abstract void promiseNullableArrayBuffer(Promise promise);
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  @DoNotStrip
+  public abstract double arrayBufferArray(ArrayBuffer[] values);
 }
 ",
 }

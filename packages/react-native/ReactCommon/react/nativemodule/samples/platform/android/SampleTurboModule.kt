@@ -207,6 +207,23 @@ public class SampleTurboModule(private val context: ReactApplicationContext) :
     promise.resolve(buffer)
   }
 
+  // Every element borrows the bytes of the matching JS ArrayBuffer for the duration of this
+  // synchronous call, so they are read here and never retained. Summing every byte proves the
+  // whole array crossed the boundary, not just its shape.
+  @DoNotStrip
+  @Suppress("unused")
+  override fun arrayBufferArray(values: Array<ArrayBuffer>): Double {
+    var checksum = 0L
+    for (value in values) {
+      val bytes = value.bytes
+      for (i in 0 until bytes.capacity()) {
+        checksum += (bytes.get(i).toInt() and 0xFF).toLong()
+      }
+    }
+    log("arrayBufferArray", values.size, checksum)
+    return checksum.toDouble()
+  }
+
   @DoNotStrip
   @Suppress("unused")
   override fun getValueWithCallback(callback: Callback?) {
