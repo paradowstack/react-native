@@ -775,9 +775,7 @@ type URLBackgroundImageValue = {
 };
 
 export type BackgroundImageValue =
-  | LinearGradientValue
-  | RadialGradientValue
-  | URLBackgroundImageValue;
+  LinearGradientValue | RadialGradientValue | URLBackgroundImageValue;
 
 export type BackgroundSizeValue = {
   x: string | number,
@@ -908,6 +906,10 @@ export type ____ViewStyle_InternalBase = Readonly<{
     ReadonlyArray<BackgroundPositionValue> | string,
   backgroundRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
   experimental_backgroundRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
+  maskImage?: ReadonlyArray<BackgroundImageValue> | string,
+  maskSize?: ReadonlyArray<BackgroundSizeValue> | string,
+  maskPosition?: ReadonlyArray<BackgroundPositionValue> | string,
+  maskRepeat?: ReadonlyArray<BackgroundRepeatValue> | string,
   isolation?: 'auto' | 'isolate',
 }>;
 

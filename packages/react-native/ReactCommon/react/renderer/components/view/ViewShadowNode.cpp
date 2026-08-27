@@ -61,6 +61,7 @@ void ViewShadowNode::initialize() noexcept {
       !viewProps.filter.empty() ||
       viewProps.mixBlendMode != BlendMode::Normal ||
       viewProps.isolation == Isolation::Isolate ||
+      !viewProps.maskImage.empty() ||
       HostPlatformViewTraitsInitializer::formsStackingContext(viewProps) ||
       !viewProps.accessibilityOrder.empty();
 
@@ -105,24 +106,30 @@ void ViewShadowNode::updateStateIfNeeded() {
   ensureUnsealed();
 
   const auto& viewProps = static_cast<const ViewProps&>(*props_);
-  const auto& backgroundImages = viewProps.backgroundImage;
 
   std::vector<BackgroundImageURLRequest> newRequests;
-  for (const auto& bgImage : backgroundImages) {
-    if (std::holds_alternative<URLBackgroundImage>(bgImage)) {
-      const auto& urlBgImage = std::get<URLBackgroundImage>(bgImage);
-      if (!urlBgImage.uri.empty()) {
-        BackgroundImageURLRequest request;
-        request.imageSource.uri = urlBgImage.uri;
-        if (urlBgImage.uri.find("__packager_asset") != std::string::npos) {
-          request.imageSource.type = ImageSource::Type::Local;
-        } else {
-          request.imageSource.type = ImageSource::Type::Remote;
-        }
-        newRequests.push_back(std::move(request));
+  auto collectRequests = [&](const std::vector<BackgroundImage>& images) {
+    for (const auto& image : images) {
+      if (!std::holds_alternative<URLBackgroundImage>(image)) {
+        continue;
       }
+      const auto& urlImage = std::get<URLBackgroundImage>(image);
+      if (urlImage.uri.empty()) {
+        continue;
+      }
+      BackgroundImageURLRequest request;
+      request.imageSource.uri = urlImage.uri;
+      request.imageSource.type =
+          urlImage.uri.find("__packager_asset") != std::string::npos
+          ? ImageSource::Type::Local
+          : ImageSource::Type::Remote;
+      newRequests.push_back(std::move(request));
     }
-  }
+  };
+
+  // `background-image` and `mask-image` share the same image loading pipeline.
+  collectRequests(viewProps.backgroundImage);
+  collectRequests(viewProps.maskImage);
 
   if (newRequests.empty()) {
     return;
