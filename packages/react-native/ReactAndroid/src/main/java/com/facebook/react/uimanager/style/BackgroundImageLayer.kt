@@ -66,13 +66,4 @@ public sealed class BackgroundImageLayer {
       }
     }
   }
-
-  /**
-   * Creates a shader for rendering this background layer.
-   *
-   * @param width The width of the area to fill
-   * @param height The height of the area to fill
-   * @return A Shader instance for rendering the gradient
-   */
-  public fun getShader(width: Float, height: Float): Shader = gradient.getShader(width, height)
 }
